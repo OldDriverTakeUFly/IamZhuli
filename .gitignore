@@ -1,0 +1,81 @@
+# ──────────────────────────────
+# .NET / C#
+# ──────────────────────────────
+## Build results
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+
+## .NET Core / SDK
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.nuget.props
+*.nuget.targets
+*.user
+*.suo
+*.userprefs
+*.csproj.user
+
+## Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.DotSettings.user
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+
+## Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResults/
+coverage*
+*.coverage
+*.coveragexml
+
+# ──────────────────────────────
+# Unity (后期表现层)
+# ──────────────────────────────
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+MemoryCaptures/
+[Rr]ecordings/
+sysinfo.txt
+*.unitypackage
+*.apk
+*.aab
+*.app
+# Crashlytics generated file
+crashlytics-build.properties
+# 但保留这些必要文件
+!Assets/
+!Packages/
+!ProjectSettings/
+
+# ──────────────────────────────
+# OS / Editor 杂项
+# ──────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+*.tmp
+
+# ──────────────────────────────
+# 本地配置(含密钥/个人配置不入库)
+# ──────────────────────────────
+.env
+.env.local
+*.local
+secrets.json
