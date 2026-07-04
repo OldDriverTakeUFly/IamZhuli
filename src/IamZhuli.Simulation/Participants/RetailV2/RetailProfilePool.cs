@@ -92,6 +92,17 @@ public sealed class RetailProfilePool : IParticipant
         _volTracker.AdvanceTick();
     }
 
+    /// <summary>日切:情绪延续(70%延续前日收盘情绪+30%回归中性)。二期盘后操作可在此加码。</summary>
+    public void OnNewDay()
+    {
+        // 情绪延续:新日开盘情绪 = 前日收盘×70% + 中性50%×30%
+        decimal prev = _sentiment.Value;
+        decimal carried = prev * 0.7m + 0.5m * 0.3m;
+        _sentiment.Reset();
+        // Reset 设回 0.5,这里把延续值写入(通过 Update 让它趋近 carried)
+        for (int i = 0; i < 10; i++) _sentiment.Update((carried - 0.5m) / 15m, 0, 0);
+    }
+
     /// <summary>根据当前市场信号抽取新画像进场。</summary>
     private void TryRecruit(RetailMarketContext ctx)
     {

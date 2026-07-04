@@ -140,7 +140,56 @@ public sealed class MatchingEngine
         return false;
     }
 
-    /// <summary>撤销某参与者的全部挂单(如玩家关卡通不过/退出)。返回被撤订单数。</summary>
+    /// <summary>清空订单簿(日切隔夜挂单清零)。返回被撤销的订单。</summary>
+    public List<Order> ClearBook() => _book.Clear();
+
+    /// <summary>
+    /// 集合竞价:基于当前订单簿的所有挂单,按"最大成交量原则"撮出唯一价格。
+    /// 算法:遍历可能的成交价(所有买价∩卖价),找使成交量最大的价格。
+    /// 返回 (开盘价, 成交量);无交叉则返回 null。
+    /// </summary>
+    public (Price Price, int Volume)? CallAuction()
+    {
+        var bids = View.TopBids(50);
+        var asks = View.TopAsks(50);
+        if (bids.Count == 0 || asks.Count == 0) return null;
+
+        // 收集所有候选价格(买价和卖价的交集范围)
+        decimal bestAsk = asks[^1].Price.Value;   // 最低卖价(asks是升序,最后一个是最优=最低? 不对)
+        // asks 从 TopAsks 返回的是升序(卖1最低在前),bids降序(买1最高在前)
+        decimal lowestAsk = asks[0].Price.Value;
+        decimal highestBid = bids[0].Price.Value;
+        if (highestBid < lowestAsk) return null;   // 无交叉,无法集合竞价
+
+        // 遍历候选价(从最高买到最低卖),找最大成交量
+        Price? bestPrice = null;
+        int bestVol = 0;
+        // 候选价格集:所有买价 + 所有卖价(取并集中落在交叉区间的)
+        var candidatePrices = new HashSet<decimal>();
+        foreach (var b in bids) candidatePrices.Add(b.Price.Value);
+        foreach (var a in asks) candidatePrices.Add(a.Price.Value);
+        candidatePrices.Add(highestBid);   // 确保边界
+
+        foreach (decimal candidate in candidatePrices)
+        {
+            // 在该价格下:买单中价格>=candidate的总量,卖单中价格<=candidate的总量
+            int buyVol = bids.Where(b => b.Price.Value >= candidate).Sum(b => b.TotalQty.Value);
+            int sellVol = asks.Where(a => a.Price.Value <= candidate).Sum(a => a.TotalQty.Value);
+            int matched = Math.Min(buyVol, sellVol);
+            if (matched > bestVol || (matched == bestVol && candidate < (bestPrice?.Value ?? decimal.MaxValue)))
+            {
+                // 成交量更大,或成交量相同取更接近前收盘的价格(简化:取较小的)
+                bestVol = matched;
+                bestPrice = new Price(candidate);
+            }
+        }
+
+        if (bestPrice == null || bestVol == 0) return null;
+        return (bestPrice.Value, bestVol);
+    }
+
+    /// <summary>设置现价(集合竞价后确立开盘价用)。</summary>
+    public void SetLastPrice(Price price) => _book.RecordTrade(price);
     public int CancelAll(ParticipantId participant)
     {
         // 简化实现:遍历索引撤单(M1 阶段挂单量不大,够用)

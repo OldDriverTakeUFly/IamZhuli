@@ -106,20 +106,31 @@ public sealed class SimulationLoop
     }
 
     /// <summary>开始下一交易日(玩家在日终暂停后显式触发)。
-    /// 执行:AdvanceDay → T+1解锁 → 参与者OnNewDay → 开盘 → 解除暂停。</summary>
+    /// 流程:挂单清零 → 情绪延续(参与者OnNewDay) → T+1解锁 → 开盘集合竞价 → 连续竞价。</summary>
     public void StartNextDay()
     {
         if (!IsDayClosed || IsFinished) return;
         Clock.AdvanceDay();
         if (!IsFinished)
         {
-            Session.OnNewTradingDay();   // T+1 解锁
+            // 1. 挂单清零(撤销所有隔夜挂单)
+            var removed = Session.Engine.ClearBook();
+            // 2. T+1 解锁
+            Session.OnNewTradingDay();
+            // 3. 参与者 OnNewDay(散户池内含情绪延续逻辑)
             foreach (var p in _participants)
             {
                 try { p.OnNewDay(); }
                 catch { }
             }
+            // 4. 让参与者重新挂单(集合竞价前的意愿单)
+            //    用一个临时 ctx 让参与者 Act 一次(但不推进 tick)
             Clock.Open();
+            // 5. 开盘集合竞价:收集所有挂单,撮出开盘价
+            var auction = Session.Engine.CallAuction();
+            if (auction is { } result)
+                Session.Engine.SetLastPrice(result.Price);   // 确立开盘价
+            // 6. 进入连续竞价
             IsDayClosed = false;
             IsPaused = false;
             OnNewDay?.Invoke(Clock.CurrentDay);

@@ -94,6 +94,17 @@ public sealed class OrderBook
     public int BidLevelCount => _bids.Count;
     public int AskLevelCount => _asks.Count;
 
+    /// <summary>清空订单簿(日切时撤销所有隔夜挂单)。返回被撤销的订单列表(供账户释放冻结)。</summary>
+    public List<Order> Clear()
+    {
+        var removed = _ordersById.Values.Where(o => !o.IsDone).ToList();
+        foreach (var o in removed) o.Status = OrderStatus.Cancelled;
+        _bids.Clear();
+        _asks.Clear();
+        _ordersById.Clear();
+        return removed;
+    }
+
     /// <summary>枚举指定参与者当前在簿的全部挂单 ID(用于批量撤单)。</summary>
     public IEnumerable<OrderId> AllRestingOrderIds(ParticipantId participant)
         => _ordersById.Values
