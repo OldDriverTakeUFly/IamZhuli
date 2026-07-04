@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>我是主力 · 网页版 POC</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", monospace; background: #1a1d24; color: #e0e0e0; font-size: 14px; }
+  .header { background: #23272f; padding: 10px 20px; display: flex; gap: 30px; align-items: center; border-bottom: 1px solid #333; }
+  .header .symbol { font-size: 18px; font-weight: bold; }
+  .header .price { font-size: 24px; font-weight: bold; }
+  .up { color: #ef5350; }
+  .down { color: #26a69a; }
+  .flat { color: #e0e0e0; }
+  .main { display: grid; grid-template-columns: 1fr 1fr 320px; gap: 1px; background: #333; height: calc(100vh - 56px); }
+  .panel { background: #1a1d24; padding: 16px; overflow-y: auto; }
+  .panel h3 { font-size: 13px; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  /* 盘口 */
+  .level { display: grid; grid-template-columns: 40px 80px 1fr 70px; gap: 8px; padding: 3px 0; align-items: center; font-size: 13px; }
+  .level .tag { color: #888; }
+  .level .bar { height: 16px; background: linear-gradient(90deg, transparent, rgba(239,83,80,0.15)); position: relative; }
+  .level .bar.buy { background: linear-gradient(90deg, transparent, rgba(38,166,154,0.15)); }
+  .level .bar span { position: absolute; right: 6px; top: -1px; font-size: 12px; color: #aaa; }
+  .lastprice { border-top: 1px solid #444; border-bottom: 1px solid #444; padding: 8px 0; margin: 6px 0; text-align: center; font-size: 22px; font-weight: bold; }
+  /* 账户 */
+  .acc-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #2a2e36; }
+  .acc-row .lbl { color: #888; }
+  .acc-row .val { font-family: monospace; }
+  /* 下单 */
+  .order-form { background: #23272f; padding: 12px; border-radius: 6px; }
+  .order-form .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .seg { display: flex; border: 1px solid #444; border-radius: 4px; overflow: hidden; }
+  .seg button { background: #2a2e36; color: #aaa; border: none; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+  .seg button.active { background: #3a5a8c; color: #fff; }
+  input[type=number], input[type=text] { background: #1a1d24; border: 1px solid #444; color: #e0e0e0; padding: 6px 8px; border-radius: 4px; width: 100%; font-size: 13px; }
+  .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; width: 100%; }
+  .btn-buy { background: #ef5350; color: #fff; }
+  .btn-sell { background: #26a69a; color: #fff; }
+  .btn-ctrl { background: #3a5a8c; color: #fff; width: auto; }
+  .btn-ctrl.warn { background: #8c6a3a; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ctrl-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .ctrl-row .btn { width: auto; padding: 6px 10px; font-size: 12px; }
+  .msg { margin-top: 6px; font-size: 12px; min-height: 16px; }
+  /* 成交 */
+  .trade-list { font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+  .trade-item { display: grid; grid-template-columns: 1fr 1fr 40px; gap: 6px; padding: 2px 0; }
+  .status-bar { background: #23272f; padding: 6px 20px; font-size: 12px; color: #888; display: flex; gap: 20px; border-top: 1px solid #333; }
+  .conn-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+  .conn-dot.on { background: #26a69a; }
+  .conn-dot.off { background: #ef5350; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="symbol">鼎鼎集团</span>
+  <span class="price flat" id="hPrice">--</span>
+  <span id="hChange" class="flat">--</span>
+  <span style="margin-left:auto;font-size:12px;color:#888;" id="hLimit">涨跌停 --/--</span>
+</div>
+
+<div class="main">
+  <!-- 盘口 -->
+  <div class="panel">
+    <h3>盘口五档</h3>
+    <div id="asks"></div>
+    <div class="lastprice flat" id="lastPrice">--</div>
+    <div id="bids"></div>
+  </div>
+
+  <!-- 下单 + 控制 -->
+  <div class="panel">
+    <h3>下单</h3>
+    <div class="order-form">
+      <div class="row">
+        <div class="seg" id="sideSeg">
+          <button class="active" data-side="buy">买入</button>
+          <button data-side="sell">卖出</button>
+        </div>
+        <div class="seg" id="typeSeg">
+          <button class="active" data-type="limit">限价</button>
+          <button data-type="market">市价</button>
+        </div>
+      </div>
+      <div class="row" id="priceRow">
+        <span style="color:#888;width:50px;align-self:center;">价格</span>
+        <input type="number" id="price" step="0.01" value="10.00">
+      </div>
+      <div class="row">
+        <span style="color:#888;width:50px;align-self:center;">数量</span>
+        <input type="number" id="qty" step="100" value="100">
+        <span style="color:#888;font-size:12px;align-self:center;">手</span>
+      </div>
+      <div class="ctrl-row">
+        <button class="btn btn-ctrl" data-qty="100">1板</button>
+        <button class="btn btn-ctrl" data-qty="500">半仓</button>
+        <button class="btn btn-ctrl" data-qty="1000">千手</button>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn btn-buy" id="submitBtn">确认买入</button>
+      </div>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <h3 style="margin-top:16px;">时间控制</h3>
+    <div class="ctrl-row">
+      <button class="btn btn-ctrl" id="pauseBtn">⏸ 暂停</button>
+      <button class="btn btn-ctrl" id="resumeBtn">▶ 继续</button>
+      <button class="btn btn-ctrl warn" id="skipDayBtn">⏭ 跳日</button>
+    </div>
+
+    <h3 style="margin-top:16px;">最近成交</h3>
+    <div class="trade-list" id="tradeList"></div>
+  </div>
+
+  <!-- 账户 -->
+  <div class="panel">
+    <h3>账户</h3>
+    <div class="acc-row"><span class="lbl">总权益</span><span class="val" id="equity">--</span></div>
+    <div class="acc-row"><span class="lbl">总现金</span><span class="val" id="cash">--</span></div>
+    <div class="acc-row"><span class="lbl">可用现金</span><span class="val" id="avail">--</span></div>
+    <div class="acc-row"><span class="lbl">浮盈</span><span class="val" id="floatP">--</span></div>
+    <h3 style="margin-top:16px;">持仓</h3>
+    <div class="acc-row"><span class="lbl">总持仓</span><span class="val" id="posTotal">--</span></div>
+    <div class="acc-row"><span class="lbl">可卖</span><span class="val" id="posAvail">--</span></div>
+    <div class="acc-row"><span class="lbl">T+1锁定</span><span class="val" id="posT1">--</span></div>
+    <div class="acc-row"><span class="lbl">成本价</span><span class="val" id="cost">--</span></div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span><span class="conn-dot off" id="connDot"></span><span id="connTxt">连接中...</span></span>
+  <span id="clockTxt">--</span>
+  <span id="phaseTxt">--</span>
+  <span style="margin-left:auto">我是主力 POC · 后台每400ms自动tick · 玩家1亿资金</span>
+</div>
+
+<script src="lib/signalr.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let side = 'buy', type = 'limit';
+
+// —— 价格颜色辅助 ——
+function colorClass(p) { return p > 0 ? 'up' : (p < 0 ? 'down' : 'flat'); }
+function fmtW(v) { return (v / 10000).toFixed(2) + '万'; }
+function fmt(v, d=2) { return Number(v).toFixed(d); }
+
+// —— 段选切换 ——
+$('sideSeg').addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  side = e.target.dataset.side;
+  [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === e.target));
+  const btn = $('submitBtn');
+  btn.className = 'btn ' + (side === 'buy' ? 'btn-buy' : 'btn-sell');
+  btn.textContent = '确认' + (side === 'buy' ? '买入' : '卖出');
+});
+$('typeSeg').addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  type = e.target.dataset.type;
+  [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === e.target));
+  $('priceRow').style.display = type === 'market' ? 'none' : 'flex';
+});
+document.querySelectorAll('[data-qty]').forEach(b => b.addEventListener('click', () => $('qty').value = b.dataset.qty));
+
+// —— 下单 ——
+$('submitBtn').addEventListener('click', async () => {
+  $('msg').textContent = '提交中...';
+  const body = {
+    side, type,
+    price: type === 'limit' ? parseFloat($('price').value) : null,
+    qty: parseInt($('qty').value)
+  };
+  try {
+    const r = await fetch('/api/order', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.error) { $('msg').innerHTML = `<span style="color:#ef5350">✗ ${d.error}</span>`; }
+    else {
+      $('msg').innerHTML = `<span style="color:#26a69a">✓ 订单#${d.orderId} ${d.status} 成交${d.totalFilled}手 均价${d.avgFillPrice.toFixed(2)} 剩${d.remainingQty}手</span>`;
+      if (d.status === 'Active') $('msg').innerHTML += `<br><button class="btn btn-ctrl" style="width:auto;margin-top:4px;" onclick="cancelOrder(${d.orderId})">撤销订单#${d.orderId}</button>`;
+    }
+  } catch (e) { $('msg').innerHTML = `<span style="color:#ef5350">✗ ${e.message}</span>`; }
+});
+async function cancelOrder(orderId) {
+  await fetch('/api/cancel?orderId=' + orderId, { method: 'POST' });
+  $('msg').innerHTML = `<span style="color:#888">已撤销 #${orderId}</span>`;
+}
+
+// —— 时间控制 ——
+$('pauseBtn').onclick = () => fetch('/api/pause', { method: 'POST' });
+$('resumeBtn').onclick = () => fetch('/api/resume', { method: 'POST' });
+$('skipDayBtn').onclick = () => fetch('/api/skipday', { method: 'POST' });
+
+// —— 渲染盘口 ——
+function renderBook(snap) {
+  const asksHtml = snap.asks.map((lv, i) => {
+    const n = snap.asks.length - i;
+    return `<div class="level"><span class="tag">卖${n}</span><span class="up">${lv.price.toFixed(2)}</span><div class="bar"><span>${lv.qty}</span></div><span style="color:#aaa;text-align:right;">${lv.qty}</span></div>`;
+  }).join('');
+  const bidsHtml = snap.bids.map((lv, i) => {
+    return `<div class="level"><span class="tag">买${i+1}</span><span class="down">${lv.price.toFixed(2)}</span><div class="bar buy"><span>${lv.qty}</span></div><span style="color:#aaa;text-align:right;">${lv.qty}</span></div>`;
+  }).join('');
+  $('asks').innerHTML = asksHtml;
+  $('bids').innerHTML = bidsHtml;
+  const lp = snap.lastPrice;
+  $('lastPrice').textContent = lp != null ? lp.toFixed(2) : '--';
+  $('lastPrice').className = 'lastprice ' + (lp == null ? 'flat' : (lp >= 10 ? 'up' : 'down'));
+}
+
+// —— 渲染账户 ——
+function renderAccount(snap) {
+  const a = snap.account;
+  $('equity').textContent = fmtW(a.totalEquity);
+  $('cash').textContent = fmtW(a.cash);
+  $('avail').textContent = fmtW(a.availableCash);
+  $('floatP').textContent = fmtW(a.floatingProfit);
+  $('floatP').className = 'val ' + (a.floatingProfit >= 0 ? 'up' : 'down');
+  $('posTotal').textContent = a.positionTotal + ' 手';
+  $('posAvail').textContent = a.positionAvailable + ' 手';
+  $('posT1').textContent = a.positionT1Locked + ' 手';
+  $('cost').textContent = a.positionTotal > 0 ? a.averageCost.toFixed(2) : '--';
+}
+
+// —— 渲染头部/状态 ——
+function renderHeader(snap) {
+  const lp = snap.lastPrice;
+  $('hPrice').textContent = lp != null ? lp.toFixed(2) : '--';
+  if (lp != null) {
+    const chg = (lp - 10) / 10 * 100;
+    $('hChange').textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+    $('hChange').className = chg > 0 ? 'up' : (chg < 0 ? 'down' : 'flat');
+    $('hPrice').className = 'price ' + (chg >= 0 ? 'up' : 'down');
+  }
+  $('hLimit').textContent = `涨跌停 ${snap.upperLimit.toFixed(2)} / ${snap.lowerLimit.toFixed(2)}`;
+  $('clockTxt').textContent = `第${snap.currentDay}/${snap.totalDays}日 · tick ${snap.tickOfDay}/${snap.ticksPerDay}`;
+  $('phaseTxt').textContent = snap.phase + (snap.isPaused ? ' · 已暂停' : '');
+}
+
+// —— 成交列表 ——
+const trades = [];
+function addTrade(t) {
+  trades.unshift(t);
+  if (trades.length > 30) trades.pop();
+  $('tradeList').innerHTML = trades.map(t =>
+    `<div class="trade-item"><span class="${t.takerSide==='Buy'?'up':'down'}">${t.price.toFixed(2)}</span><span>${t.qty}</span><span style="color:#888">${t.takerSide==='Buy'?'买':'卖'}</span></div>`
+  ).join('');
+}
+
+// —— SignalR 连接 ——
+const conn = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
+conn.on('snapshot', snap => { renderBook(snap); renderAccount(snap); renderHeader(snap); });
+conn.on('trade', t => addTrade(t));
+conn.start().then(() => {
+  $('connDot').className = 'conn-dot on';
+  $('connTxt').textContent = '已连接';
+}).catch(e => {
+  $('connDot').className = 'conn-dot off';
+  $('connTxt').textContent = '连接失败: ' + e;
+});
+conn.onclose(() => { $('connDot').className = 'conn-dot off'; $('connTxt').textContent = '已断开'; });
+</script>
+</body>
+</html>
