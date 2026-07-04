@@ -378,14 +378,14 @@ refreshAI();
 // —— 图表(lightweight-charts v5)——
 const LWT = LightweightCharts;
 let chartMode = 'timeshare';
+// 禁止用户拖动/缩放(分时固定从左到右,不需要交互)
 const baseChartOpts = { layout: { background:{color:'#1a1d24'}, textColor:'#aaa', fontSize:11 },
   grid: { vertLines:{color:'#23272f'}, horzLines:{color:'#23272f'} },
-  rightPriceScale: { borderColor:'#333' }, timeScale: { borderColor:'#333' }, crosshair: { mode: 0 } };
+  rightPriceScale: { borderColor:'#333' },
+  timeScale: { borderColor:'#333', handleScroll: false, handleScale: false },
+  crosshair: { mode: 0 } };
 const pc = LWT.createChart(document.getElementById('priceChart'), { ...baseChartOpts, width: 600, height: 400 });
 const vc = LWT.createChart(document.getElementById('volChart'), { ...baseChartOpts, width: 600, height: 120 });
-// 量价图表x轴联动:价格图缩放/平移时,成交量图同步
-pc.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r) vc.timeScale().setVisibleLogicalRange(r); });
-vc.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r) pc.timeScale().setVisibleLogicalRange(r); });
 let priceSeries = pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2, priceLineVisible: false });
 let baselineSeries = pc.addSeries(LWT.LineSeries, { color: '#555', lineStyle: 2, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
 let volSeries = vc.addSeries(LWT.HistogramSeries, { color: '#4a7a8c', priceFormat: { type: 'volume' } });
@@ -399,50 +399,84 @@ function resizeCharts() {
 window.addEventListener('resize', resizeCharts);
 setTimeout(resizeCharts, 100);
 
+// 切换图表模式:重建series + 重置缓存
 document.getElementById('chartSeg').addEventListener('click', e => {
   if (e.target.tagName !== 'BUTTON') return;
   chartMode = e.target.dataset.chart;
   [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === e.target));
-  pc.removeSeries(priceSeries);
-  priceSeries = chartMode === 'timeshare'
-    ? pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2, priceLineVisible: false })
-    : pc.addSeries(LWT.CandlestickSeries, { upColor:'#ef5350', downColor:'#26a69a', borderUpColor:'#ef5350', borderDownColor:'#26a69a', wickUpColor:'#ef5350', wickDownColor:'#26a69a' });
-  pc.timeScale().fitContent();
-  vc.timeScale().fitContent();
+  rebuildSeries();
+  resetChartCache();
 });
 
-let lastTimeshareLen = -1;
-let lastDay = -1;
+function rebuildSeries() {
+  pc.removeSeries(priceSeries);
+  if (chartMode === 'timeshare')
+    priceSeries = pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2, priceLineVisible: false });
+  else
+    priceSeries = pc.addSeries(LWT.CandlestickSeries, { upColor:'#ef5350', downColor:'#26a69a', borderUpColor:'#ef5350', borderDownColor:'#26a69a', wickUpColor:'#ef5350', wickDownColor:'#26a69a' });
+}
+
+// —— 缓存(切换模式或跨日时重置)——
+let lastTsLen = -1, lastDay = -1, lastDailyLen = -1;
+function resetChartCache() { lastTsLen = -1; lastDay = -1; lastDailyLen = -1; }
+
+// —— 分时降采样:每N个tick取一个点,让曲线更平滑 ——
+const TS_DOWNSAMPLE = 5;
+
 function updateCharts(snap) {
   if (chartMode === 'timeshare') {
-    const ts = snap.timeshare || [];
-    // 分时x轴固定为整天范围[0, TicksPerDay],曲线从左到右逐渐填满
-    const range = { from: -1, to: snap.ticksPerDay + 1 };
-    pc.timeScale().setVisibleLogicalRange(range);
-    vc.timeScale().setVisibleLogicalRange(range);
-    // 新的一天或首次:全量重画(价格+量同步);否则增量追加
-    if (snap.currentDay !== lastDay || lastTimeshareLen < 0 || ts.length < lastTimeshareLen) {
+    const rawTs = snap.timeshare || [];
+    // 降采样:每TS_DOWNSAMPLE个tick取末点
+    const ts = [];
+    for (let i = 0; i < rawTs.length; i += TS_DOWNSAMPLE) {
+      const end = Math.min(i + TS_DOWNSAMPLE - 1, rawTs.length - 1);
+      ts.push(rawTs[end]);
+    }
+    // 确保最后一个点包含(实时性)
+    if (rawTs.length > 0 && (ts.length === 0 || ts[ts.length-1].tickOfDay !== rawTs[rawTs.length-1].tickOfDay))
+      ts.push(rawTs[rawTs.length-1]);
+
+    const totalTicks = snap.ticksPerDay;
+    // 新日或长度回退:全量重画(从最左侧开始)
+    if (snap.currentDay !== lastDay || lastTsLen < 0 || ts.length < lastTsLen) {
       priceSeries.setData(ts.map(t => ({ time: t.tickOfDay, value: t.price })));
       let prev = 0;
       volSeries.setData(ts.map(t => { let v = t.cumVol - prev; prev = t.cumVol; return { time: t.tickOfDay, value: v, color: '#4a7a8c' }; }));
-      lastTimeshareLen = ts.length;
+      lastTsLen = ts.length;
       lastDay = snap.currentDay;
-    } else if (ts.length > lastTimeshareLen) {
-      let prev = ts.length > 1 ? ts[lastTimeshareLen - 1].cumVol : 0;
-      for (let i = lastTimeshareLen; i < ts.length; i++) {
+    } else if (ts.length > lastTsLen) {
+      // 增量追加新点
+      let prev = lastTsLen > 0 ? ts[lastTsLen-1].cumVol : 0;
+      for (let i = lastTsLen; i < ts.length; i++) {
         priceSeries.update({ time: ts[i].tickOfDay, value: ts[i].price });
         let v = ts[i].cumVol - prev; prev = ts[i].cumVol;
         volSeries.update({ time: ts[i].tickOfDay, value: v, color: '#4a7a8c' });
       }
-      lastTimeshareLen = ts.length;
+      lastTsLen = ts.length;
     }
-    if (snap.previousClose) baselineSeries.setData([{time:0,value:snap.previousClose},{time:snap.ticksPerDay,value:snap.previousClose}]);
+    // 固定x轴范围[0, totalTicks](不可拖动)
+    pc.timeScale().setVisibleLogicalRange({ from: 0, to: totalTicks });
+    vc.timeScale().setVisibleLogicalRange({ from: 0, to: totalTicks });
+    if (snap.previousClose) baselineSeries.setData([{time:0,value:snap.previousClose},{time:totalTicks,value:snap.previousClose}]);
   } else {
-    // 日K模式:历史K线+当日,量和K线用相同day序号(对齐)
-    const daily = [...(snap.dailyCandles||[])];
-    if (snap.todayCandle) daily.push(snap.todayCandle);
-    priceSeries.setData(daily.map(c => ({ time: c.day, open: c.open, high: c.high, low: c.low, close: c.close })));
-    volSeries.setData(daily.map(c => ({ time: c.day, value: c.volume, color: c.close>=c.open?'#ef5350':'#26a69a' })));
+    // 日K模式:历史K线 + 当日(用update增量更新当日,避免全量闪烁)
+    const hist = snap.dailyCandles || [];
+    if (snap.todayCandle) {
+      // 历史部分只在数量变化时setData(跨日新增了一根历史)
+      if (hist.length !== lastDailyLen) {
+        priceSeries.setData(hist.map(c => ({ time: c.day, open: c.open, high: c.high, low: c.low, close: c.close })));
+        volSeries.setData(hist.map(c => ({ time: c.day, value: c.volume, color: c.close>=c.open?'#ef5350':'#26a69a' })));
+        lastDailyLen = hist.length;
+      }
+      // 当日K线用update(不闪烁,只更新最后一根)
+      const tc = snap.todayCandle;
+      priceSeries.update({ time: tc.day, open: tc.open, high: tc.high, low: tc.low, close: tc.close });
+      volSeries.update({ time: tc.day, value: tc.volume, color: tc.close>=tc.open?'#ef5350':'#26a69a' });
+    } else {
+      priceSeries.setData(hist.map(c => ({ time: c.day, open: c.open, high: c.high, low: c.low, close: c.close })));
+      volSeries.setData(hist.map(c => ({ time: c.day, value: c.volume, color: c.close>=c.open?'#ef5350':'#26a69a' })));
+      lastDailyLen = hist.length;
+    }
     pc.timeScale().fitContent();
     vc.timeScale().fitContent();
   }
