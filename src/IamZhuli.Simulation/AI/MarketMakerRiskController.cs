@@ -112,13 +112,13 @@ public sealed class MarketMakerRiskController
         _ => 1.0m
     };
 
-    /// <summary>根据风险等级建议价差放大(正常0.01,风险高时扩大)。</summary>
+    /// <summary>根据风险等级建议价差放大(正常0.02,风险高时扩大)。价差给波动留空间。</summary>
     public static decimal SpreadFactor(RiskLevel level) => level switch
     {
-        RiskLevel.Low => 0.01m,
-        RiskLevel.Medium => 0.015m,
-        RiskLevel.High => 0.025m,
-        RiskLevel.Critical => 0.04m,
-        _ => 0.01m
+        RiskLevel.Low => 0.02m,
+        RiskLevel.Medium => 0.03m,
+        RiskLevel.High => 0.05m,
+        RiskLevel.Critical => 0.08m,
+        _ => 0.02m
     };
 }

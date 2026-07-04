@@ -56,6 +56,20 @@ public sealed class MarketDataCollector
         loop.OnNewDay += OnNewDay;
     }
 
+    /// <summary>预加载历史K线(关卡背景)。玩家进场即看到过去的走势。</summary>
+    public void PreloadHistory(IEnumerable<DailyCandle> historyCandles)
+    {
+        DailyCandles.Clear();
+        foreach (var c in historyCandles)
+        {
+            DailyCandles.Add(c);
+            PreviousClose = c.Close;
+        }
+        // 更新涨跌停基准为历史最后收盘
+        if (DailyCandles.Count > 0)
+            _loop.Session.Engine.Rules.PreviousClose = new Price(DailyCandles[^1].Close);
+    }
+
     /// <summary>每笔成交:更新开盘/最高/最低/累计量。</summary>
     private void OnTrade(Price price, Quantity qty, Side side)
     {

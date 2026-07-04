@@ -137,25 +137,35 @@ public sealed class RetailProfilePool : IParticipant
         if (_active.Count == 0) return;
         var view = session.Engine.View;
         decimal price = view.LastPrice?.Value ?? view.BestBid?.Value ?? view.BestAsk?.Value ?? _intrinsic.Value;
-        // 每个在场画像有 8% 概率做一笔随机小额交易
+        // 每个在场画像有 15% 概率做一笔随机交易(提高活跃度)
         foreach (var p in _active)
         {
-            if (Rand() > 0.08) continue;
+            if (Rand() > 0.15) continue;
             bool buy = Rand() > 0.5;
-            int qty = RandInt(1, 4) * 10;   // 10~30手
+            int qty = RandInt(2, 8) * 10;   // 20~70手
+            // 一部分用市价(吃对手盘,推动价格),一部分挂限价
+            bool aggressive = Rand() > 0.5;
             try
             {
                 if (buy)
                 {
-                    decimal p2 = view.BestAsk?.Value ?? price;
-                    session.Submit(new OrderRequest(p.Account.Id, Side.Buy, OrderType.Limit,
-                        new Price(Math.Round(p2, 2)), new Quantity(qty)));
+                    if (aggressive)
+                        session.Submit(new OrderRequest(p.Account.Id, Side.Buy, OrderType.Market, Price.Zero, new Quantity(qty)));
+                    else
+                    {
+                        decimal p2 = view.BestAsk?.Value ?? price;
+                        session.Submit(new OrderRequest(p.Account.Id, Side.Buy, OrderType.Limit, new Price(Math.Round(p2, 2)), new Quantity(qty)));
+                    }
                 }
                 else if (p.Account.Position.Available.Value >= qty)
                 {
-                    decimal p2 = view.BestBid?.Value ?? price;
-                    session.Submit(new OrderRequest(p.Account.Id, Side.Sell, OrderType.Limit,
-                        new Price(Math.Round(p2, 2)), new Quantity(qty)));
+                    if (aggressive)
+                        session.Submit(new OrderRequest(p.Account.Id, Side.Sell, OrderType.Market, Price.Zero, new Quantity(qty)));
+                    else
+                    {
+                        decimal p2 = view.BestBid?.Value ?? price;
+                        session.Submit(new OrderRequest(p.Account.Id, Side.Sell, OrderType.Limit, new Price(Math.Round(p2, 2)), new Quantity(qty)));
+                    }
                 }
             }
             catch { /* 资金/持仓不足忽略 */ }
@@ -180,6 +190,12 @@ public sealed class RetailProfilePool : IParticipant
         {
             decimal cost = ctx.LastPrice?.Value ?? _intrinsic.Value;
             acc.Position.Seed(new Quantity(RandInt(20, 100) * 10), new Price(cost * (1.05m + (decimal)Rand() * 0.1m)));
+        }
+        else if (Rand() > 0.5)
+        {
+            // 其他画像有50%概率带初始持仓(模拟已在场的散户,有货可卖)
+            decimal cost = ctx.LastPrice?.Value ?? _intrinsic.Value;
+            acc.Position.Seed(new Quantity(RandInt(5, 30) * 10), new Price(cost * (0.97m + (decimal)Rand() * 0.06m)));
         }
 
         var jitter = (decimal)Rand();

@@ -383,9 +383,12 @@ const baseChartOpts = { layout: { background:{color:'#1a1d24'}, textColor:'#aaa'
   rightPriceScale: { borderColor:'#333' }, timeScale: { borderColor:'#333' }, crosshair: { mode: 0 } };
 const pc = LWT.createChart(document.getElementById('priceChart'), { ...baseChartOpts, width: 600, height: 400 });
 const vc = LWT.createChart(document.getElementById('volChart'), { ...baseChartOpts, width: 600, height: 120 });
-let priceSeries = pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2 });
-let baselineSeries = pc.addSeries(LWT.LineSeries, { color: '#555', lineStyle: 2, lineWidth: 1 });
-let volSeries = vc.addSeries(LWT.HistogramSeries, { color: '#4a7a8c' });
+// 量价图表x轴联动:价格图缩放/平移时,成交量图同步
+pc.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r) vc.timeScale().setVisibleLogicalRange(r); });
+vc.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r) pc.timeScale().setVisibleLogicalRange(r); });
+let priceSeries = pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2, priceLineVisible: false });
+let baselineSeries = pc.addSeries(LWT.LineSeries, { color: '#555', lineStyle: 2, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+let volSeries = vc.addSeries(LWT.HistogramSeries, { color: '#4a7a8c', priceFormat: { type: 'volume' } });
 
 function resizeCharts() {
   const pp = document.getElementById('priceChart').parentElement;
@@ -402,9 +405,10 @@ document.getElementById('chartSeg').addEventListener('click', e => {
   [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === e.target));
   pc.removeSeries(priceSeries);
   priceSeries = chartMode === 'timeshare'
-    ? pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2 })
+    ? pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2, priceLineVisible: false })
     : pc.addSeries(LWT.CandlestickSeries, { upColor:'#ef5350', downColor:'#26a69a', borderUpColor:'#ef5350', borderDownColor:'#26a69a', wickUpColor:'#ef5350', wickDownColor:'#26a69a' });
   pc.timeScale().fitContent();
+  vc.timeScale().fitContent();
 });
 
 let lastTimeshareLen = -1;
@@ -412,9 +416,11 @@ let lastDay = -1;
 function updateCharts(snap) {
   if (chartMode === 'timeshare') {
     const ts = snap.timeshare || [];
-    // 分时x轴固定为整天范围[0, TicksPerDay],曲线从左到右逐渐填满(进度感)
-    pc.timeScale().setVisibleLogicalRange({ from: 0, to: snap.ticksPerDay });
-    // 新的一天或首次:全量重画;否则增量追加新点(从左到右延伸)
+    // 分时x轴固定为整天范围[0, TicksPerDay],曲线从左到右逐渐填满
+    const range = { from: -1, to: snap.ticksPerDay + 1 };
+    pc.timeScale().setVisibleLogicalRange(range);
+    vc.timeScale().setVisibleLogicalRange(range);
+    // 新的一天或首次:全量重画(价格+量同步);否则增量追加
     if (snap.currentDay !== lastDay || lastTimeshareLen < 0 || ts.length < lastTimeshareLen) {
       priceSeries.setData(ts.map(t => ({ time: t.tickOfDay, value: t.price })));
       let prev = 0;
@@ -422,17 +428,23 @@ function updateCharts(snap) {
       lastTimeshareLen = ts.length;
       lastDay = snap.currentDay;
     } else if (ts.length > lastTimeshareLen) {
+      let prev = ts.length > 1 ? ts[lastTimeshareLen - 1].cumVol : 0;
       for (let i = lastTimeshareLen; i < ts.length; i++) {
         priceSeries.update({ time: ts[i].tickOfDay, value: ts[i].price });
+        let v = ts[i].cumVol - prev; prev = ts[i].cumVol;
+        volSeries.update({ time: ts[i].tickOfDay, value: v, color: '#4a7a8c' });
       }
       lastTimeshareLen = ts.length;
     }
     if (snap.previousClose) baselineSeries.setData([{time:0,value:snap.previousClose},{time:snap.ticksPerDay,value:snap.previousClose}]);
   } else {
+    // 日K模式:历史K线+当日,量和K线用相同day序号(对齐)
     const daily = [...(snap.dailyCandles||[])];
     if (snap.todayCandle) daily.push(snap.todayCandle);
     priceSeries.setData(daily.map(c => ({ time: c.day, open: c.open, high: c.high, low: c.low, close: c.close })));
     volSeries.setData(daily.map(c => ({ time: c.day, value: c.volume, color: c.close>=c.open?'#ef5350':'#26a69a' })));
+    pc.timeScale().fitContent();
+    vc.timeScale().fitContent();
   }
   if (snap.turnoverRate != null) $('turnoverInfo').textContent = `换手 ${snap.turnoverRate}% · 昨收 ${(snap.previousClose||0).toFixed(2)}`;
 }

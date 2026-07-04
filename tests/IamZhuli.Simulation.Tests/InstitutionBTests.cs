@@ -80,7 +80,7 @@ public class InstitutionBTests
     public void SpreadFactor_IncreasesWithRisk()
     {
         // 风险越高,价差越大
-        Assert.Equal(0.01m, MarketMakerRiskController.SpreadFactor(RiskLevel.Low));
+        Assert.Equal(0.02m, MarketMakerRiskController.SpreadFactor(RiskLevel.Low));
         Assert.True(MarketMakerRiskController.SpreadFactor(RiskLevel.High) > MarketMakerRiskController.SpreadFactor(RiskLevel.Medium));
     }
 

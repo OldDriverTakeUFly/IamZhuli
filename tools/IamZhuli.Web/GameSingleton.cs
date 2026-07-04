@@ -75,7 +75,7 @@ public sealed class GameSingleton
         // 正常时做市提供流动性,风险升高时收紧,盘口深度成动态稀缺资源
         _institutionB = new InstitutionB(_loop.Session, new ParticipantId("机构B"), intrinsic,
             cash: 1_000_000_000m, initialHolding: level.MarketMakerHolding,
-            baseDepthPerLevel: 400, levels: 6, seed: 88);
+            baseDepthPerLevel: 150, levels: 8, seed: 88);
         _loop.AddParticipant(_institutionB);
 
         // 散户画像池(动态进出,每画像独立账户)—— 取代旧的固定4群体
@@ -88,6 +88,13 @@ public sealed class GameSingleton
         _loop.AddParticipant(_ai);
 
         _collector = new MarketDataCollector(_loop, level.IntrinsicValue);
+        // 生成历史K线作为背景(玩家进场即看到过去走势)
+        var history = new MarketHistory(intrinsic);
+        history.Generate(days: 30, dailyVolatility: 0.025m, seed: level.Id.GetHashCode());
+        var historyCandles = history.Candles.Select((c, i) => new DailyCandle(
+            i - 30, Math.Round(c.Open, 2), Math.Round(c.High, 2),
+            Math.Round(c.Low, 2), Math.Round(c.Close, 2), c.Volume)).ToList();
+        _collector.PreloadHistory(historyCandles);
         _regulator = new Regulator(Player);
         _judge = new LevelJudge(level);
 
