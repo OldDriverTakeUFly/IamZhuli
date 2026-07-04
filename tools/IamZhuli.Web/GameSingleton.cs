@@ -6,6 +6,7 @@ using IamZhuli.Simulation.AI;
 using IamZhuli.Simulation.Levels;
 using IamZhuli.Simulation.MarketData;
 using IamZhuli.Simulation.Participants;
+using IamZhuli.Simulation.Participants.RetailV2;
 using IamZhuli.Simulation.Regulators;
 using IamZhuli.Simulation.Sessions;
 using IamZhuli.Simulation.Time;
@@ -32,6 +33,7 @@ public sealed class GameSingleton
     private decimal _maxHeatReached;
     private decimal _initialCash;
     private decimal? _prevPriceForVolatility;
+    private RetailProfilePool _retail = null!;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
@@ -72,9 +74,9 @@ public sealed class GameSingleton
         mm.Position.Seed(new Quantity(level.MarketMakerHolding), intrinsic);
         SeedMarket(_loop.Session, level.IntrinsicValue);
 
-        var retail = new RetailMarket(_loop.Session, new ParticipantId("散户"),
-            intrinsic, level.RetailCash, level.RetailHolding, seed: 42);
-        _loop.AddParticipant(retail);
+        // 散户画像池(动态进出,每画像独立账户)—— 取代旧的固定4群体
+        _retail = new RetailProfilePool(_loop.Session, new ParticipantId("散户池"), intrinsic, seed: 42);
+        _loop.AddParticipant(_retail);
 
         _ai = new AIMainForce(_loop.Session, new ParticipantId("AI主力"),
             intrinsic, cash: 100_000_000m, initialHolding: level.AiHolding, initialCost: intrinsic,
@@ -196,7 +198,9 @@ public sealed class GameSingleton
             LatestRegulatorEvent: _regulator.RecentEvents.Count > 0 ? _regulator.RecentEvents[0] : "",
             Objectives: _judge.EvaluateProgress(view.LastPrice, _player, _level.FloatShares, _maxHeatReached)
                 .Select(o => new ObjectiveProgressDto(o.Description, o.Achieved, Math.Round(o.Progress, 2), o.Detail)).ToList(),
-            IsLevelOver: IsLevelOver);
+            IsLevelOver: IsLevelOver,
+            Sentiment: Math.Round(_retail.Sentiment.Value * 100m, 0),     // 0~100 情绪温度计
+            RetailActiveCount: _retail.ActiveCount);
     }
 
     /// <summary>提交下单。返回订单结果;失败返回带 Error 的 DTO。</summary>

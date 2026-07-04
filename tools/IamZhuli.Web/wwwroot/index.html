@@ -64,6 +64,12 @@
     <span id="heatTxt" style="color:#888;">0%</span>
     <span id="penaltyTxt" style="color:#666;margin-left:4px;"></span>
   </span>
+  <span style="margin-left:16px;font-size:12px;">
+    <span style="color:#888;">散户情绪</span>
+    <span id="sentimentTxt" style="color:#888;margin:0 4px;">50</span>
+    <span style="color:#888;">在场</span>
+    <span id="retailCountTxt" style="color:#888;margin-left:4px;">0</span>
+  </span>
   <span style="margin-left:auto;font-size:12px;color:#888;" id="hLimit">涨跌停 --/--</span>
 </div>
 
@@ -275,6 +281,11 @@ function renderRegulator(snap) {
   $('heatTxt').style.color = h >= 80 ? '#ef5350' : (h >= 50 ? '#e8c44a' : '#888');
   $('penaltyTxt').textContent = penaltyLabel[snap.penaltyLevel] || '';
   $('penaltyTxt').style.color = h >= 80 ? '#ef5350' : (h >= 50 ? '#e8c44a' : '#666');
+  // 散户情绪温度计(0恐慌~100贪婪)
+  const s = snap.sentiment ?? 50;
+  $('sentimentTxt').textContent = s.toFixed(0);
+  $('sentimentTxt').style.color = s >= 70 ? '#ef5350' : (s <= 30 ? '#26a69a' : '#e8c44a');
+  $('retailCountTxt').textContent = snap.retailActiveCount ?? 0;
   if (snap.isLevelOver) showResult();
 }
 function renderObjectives(snap) {

@@ -21,7 +21,8 @@ public record MarketSnapshotDto(
     List<DailyCandleDto> DailyCandles,
     List<MacdDto> Macd,
     decimal RegulatorHeat, string PenaltyLevel, string LatestRegulatorEvent,
-    List<ObjectiveProgressDto> Objectives, bool IsLevelOver);
+    List<ObjectiveProgressDto> Objectives, bool IsLevelOver,
+    decimal Sentiment, int RetailActiveCount);
 
 // ── 关卡结算 ──
 public record LevelResultDto(bool IsVictory, int Stars, string CoachComment, string FailureReason,
