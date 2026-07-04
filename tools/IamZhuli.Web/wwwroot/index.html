@@ -111,6 +111,11 @@
 
     <h3 style="margin-top:16px;">最近成交</h3>
     <div class="trade-list" id="tradeList"></div>
+
+    <h3 style="margin-top:16px;">🤖 AI 主力动向 <span style="font-size:11px;color:#666;font-weight:normal">(盘口推测,持仓不可见)</span></h3>
+    <div id="aiPanel" style="background:#23272f;padding:8px;border-radius:6px;font-size:12px;min-height:40px;color:#888;">
+      等待AI动向...
+    </div>
   </div>
 
   <!-- 账户 -->
@@ -245,7 +250,26 @@ function addTrade(t) {
   ).join('');
 }
 
-// —— SignalR 连接 ——
+// —— AI 动向(定时拉取,展示最近状态供玩家感知博弈) ——
+const stateLabel = {
+  Observe: '👁 观察', Defend: '🛡 护盘', Wash: '🌊 洗盘',
+  Distribute: '💰 出货', Follow: '🔥 跟风', Counter: '⚔ 反杀'
+};
+async function refreshAI() {
+  try {
+    const r = await fetch('/api/ai?count=3');
+    const list = await r.json();
+    if (!list || list.length === 0) return;
+    $('aiPanel').innerHTML = list.map(t =>
+      `<div style="padding:3px 0;border-bottom:1px solid #2a2e36;">
+         <span style="color:#e8c44a;">${stateLabel[t.state]||t.state}</span>
+         <span style="color:#888;"> 识别:${t.detectedIntent==='None'?'无明显信号':t.detectedIntent}${t.detectedIntent!=='None'?`(${(t.confidence*100).toFixed(0)}%)`:''}</span>
+         <div style="color:#666;font-size:11px;margin-top:2px;">${t.reason}</div>
+       </div>`).join('');
+  } catch {}
+}
+setInterval(refreshAI, 2000);
+refreshAI();
 const conn = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
 conn.on('snapshot', snap => { renderBook(snap); renderAccount(snap); renderHeader(snap); });
 conn.on('trade', t => addTrade(t));

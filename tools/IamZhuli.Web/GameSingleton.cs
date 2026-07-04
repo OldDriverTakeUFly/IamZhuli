@@ -2,6 +2,7 @@ using IamZhuli.Core;
 using IamZhuli.Engine;
 using IamZhuli.Simulation;
 using IamZhuli.Simulation.Accounts;
+using IamZhuli.Simulation.AI;
 using IamZhuli.Simulation.Participants;
 using IamZhuli.Simulation.Sessions;
 using IamZhuli.Simulation.Time;
@@ -46,9 +47,15 @@ public sealed class GameSingleton
         var retail = new RetailMarket(_loop.Session, new ParticipantId("散户"),
             intrinsic, cash: 200_000_000m, initialHolding: 50000, seed: 42);
         _loop.AddParticipant(retail);
+        // AI 主力:玩家真正的对手。持仓2万手(中等),成本10,中等灵敏度
+        _ai = new AIMainForce(_loop.Session, new ParticipantId("AI主力"),
+            intrinsic, cash: 100_000_000m, initialHolding: 20000, initialCost: intrinsic,
+            sensitivity: 0.6, profile: StrategyProfile.Balanced, seed: 99);
+        _loop.AddParticipant(_ai);
         _loop.Start();
         IsInitialized = true;
     }
+    private readonly AIMainForce _ai;
 
     private static void SeedMarket(TradingSession s)
     {
@@ -158,6 +165,21 @@ public sealed class GameSingleton
     {
         await _gate.WaitAsync();
         try { _loop.SkipToNextDay(); }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>获取 AI 主力最近的内心独白(调试/复盘用;盘中 AI 持仓仍不可见)。</summary>
+    public async Task<List<AIDto>> GetAIThoughtsAsync(int count = 20)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            return _ai.Thoughts
+                .TakeLast(count)
+                .Select(t => new AIDto(t.Day, t.TickOfDay, t.State.ToString(),
+                                       t.DetectedIntent.ToString(), t.Confidence, t.Reason))
+                .Reverse().ToList();
+        }
         finally { _gate.Release(); }
     }
 

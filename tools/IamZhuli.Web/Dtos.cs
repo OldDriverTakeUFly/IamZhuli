@@ -32,3 +32,6 @@ public record OrderResultDto(
 // ── 成交推送 ──
 public record TradeDto(decimal Price, int Qty, string TakerSide);
 public record PriceDto(decimal Price);
+
+// ── AI 内心独白(调试/复盘)——
+public record AIDto(int Day, int TickOfDay, string State, string DetectedIntent, double Confidence, string Reason);
