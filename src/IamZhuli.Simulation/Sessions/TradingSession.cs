@@ -28,6 +28,12 @@ public sealed class TradingSession
     /// <summary>每笔成交触发(参数=成交价、量、主动方方向)。</summary>
     public event Action<Price, Quantity, Side>? OnTrade;
 
+    /// <summary>每笔成交触发(完整 Trade,含 taker/maker 身份,供监管对倒检测)。</summary>
+    public event Action<Trade>? OnTradeDetailed;
+
+    /// <summary>订单撤销时触发(撤单者、订单价、量、挂单时的 tick)。供监管虚假挂单检测。</summary>
+    public event Action<ParticipantId, Price, Quantity, long>? OnOrderCancelled;
+
     public Account GetOrCreateAccount(ParticipantId id, decimal initialCash = 0m)
     {
         if (!_accounts.TryGetValue(id, out var acc))
@@ -82,6 +88,7 @@ public sealed class TradingSession
                 maker.ApplyBuyFill(trade.MakerOrderId, trade.Quantity, trade.Price);
             }
             OnTrade?.Invoke(trade.Price, trade.Quantity, trade.TakerSide);
+            OnTradeDetailed?.Invoke(trade);
         }
 
         // —— taker 买单结束处理:未挂簿(成交/作废)则释放剩余冻结记录 ——

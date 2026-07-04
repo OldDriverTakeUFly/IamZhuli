@@ -1,3 +1,4 @@
+using IamZhuli.Simulation.Levels;
 using IamZhuli.Web;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +35,24 @@ app.MapPost("/api/skipday", async (GameSingleton game) =>
 
 app.MapGet("/api/ai", async (GameSingleton game, int? count) =>
     Results.Ok(await game.GetAIThoughtsAsync(count ?? 20)));
+
+app.MapPost("/api/endlevel", async (GameSingleton game) =>
+    Results.Ok(await game.EndLevelAsync()));
+
+app.MapPost("/api/retry", async (GameSingleton game) =>
+{ await game.RetryAsync(); return Results.Ok(); });
+
+app.MapPost("/api/loadlevel", async (GameSingleton game, string id) =>
+{
+    var lvl = id switch
+    {
+        "tutorial" => LevelDefinition.Tutorial(),
+        "accumulate" => LevelDefinition.Accumulate(),
+        _ => LevelDefinition.PumpAndDump()
+    };
+    await game.RetryAsync();   // 简化:重试当前关卡(切关卡待扩展)
+    return Results.Ok();
+});
 
 // —— SignalR Hub ——
 app.MapHub<GameHub>("/gamehub");

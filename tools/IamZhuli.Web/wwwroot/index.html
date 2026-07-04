@@ -56,6 +56,14 @@
   <span class="symbol">鼎鼎集团</span>
   <span class="price flat" id="hPrice">--</span>
   <span id="hChange" class="flat">--</span>
+  <span style="margin-left:20px;font-size:12px;">
+    <span style="color:#888;">监管关注</span>
+    <span id="heatBar" style="display:inline-block;width:120px;height:8px;background:#333;border-radius:4px;vertical-align:middle;margin:0 6px;position:relative;">
+      <span id="heatFill" style="display:block;height:100%;width:0%;background:linear-gradient(90deg,#26a69a,#e8c44a,#ef5350);border-radius:4px;"></span>
+    </span>
+    <span id="heatTxt" style="color:#888;">0%</span>
+    <span id="penaltyTxt" style="color:#666;margin-left:4px;"></span>
+  </span>
   <span style="margin-left:auto;font-size:12px;color:#888;" id="hLimit">涨跌停 --/--</span>
 </div>
 
@@ -145,6 +153,23 @@
     <div class="acc-row"><span class="lbl">可卖</span><span class="val" id="posAvail">--</span></div>
     <div class="acc-row"><span class="lbl">T+1锁定</span><span class="val" id="posT1">--</span></div>
     <div class="acc-row"><span class="lbl">成本价</span><span class="val" id="cost">--</span></div>
+    <h3 style="margin-top:16px;">🎯 关卡目标</h3>
+    <div id="objectives" style="font-size:12px;"></div>
+    <div class="ctrl-row" style="margin-top:8px;">
+      <button class="btn btn-ctrl" id="endBtn" style="font-size:11px;">结束结算</button>
+      <button class="btn btn-ctrl warn" id="retryBtn" style="font-size:11px;">重新开始</button>
+    </div>
+  </div>
+</div>
+
+<!-- 结算弹窗 -->
+<div id="resultModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:#23272f;padding:30px 40px;border-radius:12px;max-width:480px;text-align:center;">
+    <div id="resultTitle" style="font-size:24px;font-weight:bold;margin-bottom:8px;"></div>
+    <div id="resultStars" style="font-size:28px;margin-bottom:12px;"></div>
+    <div id="resultObjectives" style="text-align:left;margin:12px 0;font-size:13px;"></div>
+    <div id="resultCoach" style="background:#1a1d24;padding:12px;border-radius:8px;font-size:13px;color:#e8c44a;margin:12px 0;text-align:left;"></div>
+    <button class="btn btn-ctrl" onclick="document.getElementById('resultModal').style.display='none';" style="width:auto;padding:8px 24px;">关闭</button>
   </div>
 </div>
 
@@ -241,6 +266,49 @@ function renderAccount(snap) {
   $('cost').textContent = a.positionTotal > 0 ? a.averageCost.toFixed(2) : '--';
 }
 
+// —— 渲染监管条 + 目标 ——
+const penaltyLabel = { None:'', Inquiry:'⚠问询', Warning:'⚠警告', Investigation:'🚨立案', ForcedLiquidation:'⛔强平' };
+function renderRegulator(snap) {
+  const h = snap.regulatorHeat || 0;
+  $('heatFill').style.width = Math.min(100, h) + '%';
+  $('heatTxt').textContent = h.toFixed(0) + '%';
+  $('heatTxt').style.color = h >= 80 ? '#ef5350' : (h >= 50 ? '#e8c44a' : '#888');
+  $('penaltyTxt').textContent = penaltyLabel[snap.penaltyLevel] || '';
+  $('penaltyTxt').style.color = h >= 80 ? '#ef5350' : (h >= 50 ? '#e8c44a' : '#666');
+  if (snap.isLevelOver) showResult();
+}
+function renderObjectives(snap) {
+  if (!snap.objectives || snap.objectives.length === 0) { $('objectives').innerHTML = '<span style="color:#666;">无目标</span>'; return; }
+  $('objectives').innerHTML = snap.objectives.map(o =>
+    `<div style="padding:4px 0;border-bottom:1px solid #2a2e36;">
+       <span style="color:${o.achieved?'#26a69a':'#888'};">${o.achieved?'✓':'○'}</span>
+       <span style="color:#ccc;">${o.description}</span>
+       <div style="color:#666;font-size:11px;">${o.detail} <span style="color:#4a7a8c;">${(o.progress*100).toFixed(0)}%</span></div>
+     </div>`).join('');
+}
+let resultShown = false;
+async function showResult() {
+  if (resultShown) return;
+  resultShown = true;
+  try {
+    const r = await (await fetch('/api/endlevel', { method: 'POST' })).json();
+    $('resultTitle').textContent = r.isVictory ? '🏆 关卡通关' : '💀 关卡失败';
+    $('resultTitle').style.color = r.isVictory ? '#26a69a' : '#ef5350';
+    $('resultStars').textContent = '★'.repeat(r.stars) + '☆'.repeat(3 - r.stars);
+    $('resultStars').style.color = '#e8c44a';
+    $('resultObjectives').innerHTML = (r.objectives||[]).map(o =>
+      `<div style="color:${o.achieved?'#26a69a':'#ef5350'};">${o.achieved?'✓':'✗'} ${o.description}</div>`).join('');
+    $('resultCoach').textContent = '🤖 AI教练: ' + r.coachComment;
+    $('resultModal').style.display = 'flex';
+  } catch (e) { resultShown = false; }
+}
+$('endBtn').onclick = () => { showResult(); };
+$('retryBtn').onclick = async () => {
+  resultShown = false;
+  $('resultModal').style.display = 'none';
+  await fetch('/api/retry', { method: 'POST' });
+};
+
 // —— 渲染头部/状态 ——
 function renderHeader(snap) {
   const lp = snap.lastPrice;
@@ -335,7 +403,7 @@ function updateCharts(snap) {
 }
 
 const conn = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
-conn.on('snapshot', snap => { renderBook(snap); renderAccount(snap); renderHeader(snap); updateCharts(snap); });
+conn.on('snapshot', snap => { renderBook(snap); renderAccount(snap); renderHeader(snap); updateCharts(snap); renderRegulator(snap); renderObjectives(snap); });
 conn.on('trade', t => addTrade(t));
 conn.start().then(() => {
   $('connDot').className = 'conn-dot on';

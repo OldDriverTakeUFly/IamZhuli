@@ -5,6 +5,7 @@ public record PriceLevelDto(decimal Price, int Qty);
 public record TimesharePointDto(int TickOfDay, decimal Price, int CumVolume);
 public record DailyCandleDto(int Day, decimal Open, decimal High, decimal Low, decimal Close, int Volume);
 public record MacdDto(decimal Dif, decimal Dea, decimal Hist);
+public record ObjectiveProgressDto(string Description, bool Achieved, decimal Progress, string Detail);
 public record MarketSnapshotDto(
     int CurrentDay, int TotalDays,
     int TickOfDay, int TicksPerDay,
@@ -12,13 +13,19 @@ public record MarketSnapshotDto(
     decimal? LastPrice, decimal? BestBid, decimal? BestAsk,
     decimal UpperLimit, decimal LowerLimit,
     decimal PreviousClose, decimal TurnoverRate,
-    List<PriceLevelDto> Asks,   // 卖5→卖1(展示顺序)
-    List<PriceLevelDto> Bids,   // 买1→买5
+    List<PriceLevelDto> Asks,
+    List<PriceLevelDto> Bids,
     AccountDto Account,
-    List<TimesharePointDto> Timeshare,        // 当日分时点
-    DailyCandleDto? TodayCandle,              // 当日实时K(未收盘)
-    List<DailyCandleDto> DailyCandles,        // 历史日K
-    List<MacdDto> Macd);                      // MACD序列(对齐日K)
+    List<TimesharePointDto> Timeshare,
+    DailyCandleDto? TodayCandle,
+    List<DailyCandleDto> DailyCandles,
+    List<MacdDto> Macd,
+    decimal RegulatorHeat, string PenaltyLevel, string LatestRegulatorEvent,
+    List<ObjectiveProgressDto> Objectives, bool IsLevelOver);
+
+// ── 关卡结算 ──
+public record LevelResultDto(bool IsVictory, int Stars, string CoachComment, string FailureReason,
+    List<ObjectiveProgressDto> Objectives);
 
 // ── 账户 ──
 public record AccountDto(

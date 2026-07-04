@@ -3,8 +3,10 @@ using IamZhuli.Engine;
 using IamZhuli.Simulation;
 using IamZhuli.Simulation.Accounts;
 using IamZhuli.Simulation.AI;
+using IamZhuli.Simulation.Levels;
 using IamZhuli.Simulation.MarketData;
 using IamZhuli.Simulation.Participants;
+using IamZhuli.Simulation.Regulators;
 using IamZhuli.Simulation.Sessions;
 using IamZhuli.Simulation.Time;
 using Microsoft.AspNetCore.SignalR;
@@ -12,79 +14,137 @@ using Microsoft.AspNetCore.SignalR;
 namespace IamZhuli.Web;
 
 /// <summary>
-/// 游戏大脑的托管单例。持有 SimulationLoop + 全局锁,所有读写(含读盘口)串行化。
-/// 初始化逻辑照搬 SimCli:做市商预挂五档、玩家账户1亿、loop.Start()。
+/// 游戏大脑的托管单例。基于关卡定义构建,持有 SimulationLoop + Regulator + 全局锁。
+/// 支持加载关卡、监管事件接入、目标进度查询、结算、重试。
 /// </summary>
 public sealed class GameSingleton
 {
     private static readonly ParticipantId Player = new("Player");
     private static readonly ParticipantId MarketMaker = new("做市商");
 
-    private readonly SimulationLoop _loop;
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly Account _player;
+    private SimulationLoop _loop = null!;
+    private Account _player = null!;
+    private AIMainForce _ai = null!;
+    private MarketDataCollector _collector = null!;
+    private Regulator _regulator = null!;
+    private LevelJudge _judge = null!;
+    private LevelDefinition _level = null!;
+    private decimal _maxHeatReached;
+    private decimal _initialCash;
+    private decimal? _prevPriceForVolatility;
 
+    private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
     public bool IsInitialized { get; private set; }
+    public LevelResult? LastResult { get; private set; }
+    public bool IsLevelOver { get; private set; }
 
     public GameSingleton(IHubContext<GameHub> hub)
     {
         Hub = hub;
-        var intrinsic = new Price(10.00m);
+        LoadLevel(LevelDefinition.PumpAndDump());   // 默认关卡
+    }
+
+    /// <summary>加载关卡:重建整个大脑。</summary>
+    public void LoadLevel(LevelDefinition level)
+    {
+        _level = level;
+        _initialCash = level.PlayerCash;
+        _maxHeatReached = 0;
+        LastResult = null;
+        IsLevelOver = false;
+        _prevPriceForVolatility = null;
+
+        var intrinsic = new Price(level.IntrinsicValue);
         var rules = new MarketRules
         {
             PreviousClose = intrinsic,
             PriceLimitRatio = 0.10m,
             TickSize = new Price(0.01m),
-            FloatShares = new Quantity(200000)   // 流通盘20万手(换手率基准)
+            FloatShares = new Quantity(level.FloatShares)
         };
         var engine = new MatchingEngine(rules);
-        // 网页版用较小的 ticksPerDay(60)便于观察,POC 可调
-        _loop = new SimulationLoop(engine, new SimulationClock(ticksPerDay: 60, totalDays: 30));
-        _player = _loop.Session.GetOrCreateAccount(Player, 100_000_000m);
+        _loop = new SimulationLoop(engine, new SimulationClock(level.TicksPerDay, level.TotalDays));
+        _player = _loop.Session.GetOrCreateAccount(Player, level.PlayerCash);
+        if (level.PlayerInitialHolding > 0) _player.Position.Seed(new Quantity(level.PlayerInitialHolding), intrinsic);
+
         var mm = _loop.Session.GetOrCreateAccount(MarketMaker, 1_000_000_000m);
-        mm.Position.Seed(new Quantity(100000), intrinsic);
-        SeedMarket(_loop.Session);
-        // 散户市场:初始持仓5万手(让止损盘有货),现金充足
+        mm.Position.Seed(new Quantity(level.MarketMakerHolding), intrinsic);
+        SeedMarket(_loop.Session, level.IntrinsicValue);
+
         var retail = new RetailMarket(_loop.Session, new ParticipantId("散户"),
-            intrinsic, cash: 200_000_000m, initialHolding: 50000, seed: 42);
+            intrinsic, level.RetailCash, level.RetailHolding, seed: 42);
         _loop.AddParticipant(retail);
-        // AI 主力:玩家真正的对手。持仓2万手(中等),成本10,中等灵敏度
+
         _ai = new AIMainForce(_loop.Session, new ParticipantId("AI主力"),
-            intrinsic, cash: 100_000_000m, initialHolding: 20000, initialCost: intrinsic,
-            sensitivity: 0.6, profile: StrategyProfile.Balanced, seed: 99);
+            intrinsic, cash: 100_000_000m, initialHolding: level.AiHolding, initialCost: intrinsic,
+            sensitivity: level.AiSensitivity, profile: StrategyProfile.Balanced, seed: 99);
         _loop.AddParticipant(_ai);
-        // 市场数据采集器(分时/K线/成交量/换手/MACD)
-        _collector = new MarketDataCollector(_loop, intrinsic.Value);
+
+        _collector = new MarketDataCollector(_loop, level.IntrinsicValue);
+        _regulator = new Regulator(Player);
+        _judge = new LevelJudge(level);
+
+        // 接入监管事件
+        _loop.Session.OnTradeDetailed += t => _regulator.OnTrade(t,
+            t.TakerId.Equals(Player) || t.MakerId.Equals(Player));
+        _loop.OnTick += _ =>
+        {
+            var cur = _loop.Session.Engine.LastPrice;
+            decimal? ratio = (_prevPriceForVolatility is { } prev && cur is { } c && prev > 0)
+                ? (c.Value - prev) / prev : (decimal?)null;
+            _prevPriceForVolatility = cur?.Value;
+            _regulator.OnTick(ratio);
+            _maxHeatReached = Math.Max(_maxHeatReached, _regulator.Heat);
+            // 监管爆表 → 关卡失败
+            if (_regulator.GetStatus().IsFailed && !IsLevelOver) EndLevel();
+        };
         _loop.Start();
         IsInitialized = true;
     }
-    private readonly AIMainForce _ai;
-    private readonly MarketDataCollector _collector;
 
-    private static void SeedMarket(TradingSession s)
+    /// <summary>结束关卡并结算。</summary>
+    public LevelResult EndLevel()
     {
-        s.Submit(new OrderRequest(MarketMaker, Side.Sell, OrderType.Limit, new Price(10.05m), new Quantity(500)));
-        s.Submit(new OrderRequest(MarketMaker, Side.Sell, OrderType.Limit, new Price(10.04m), new Quantity(300)));
-        s.Submit(new OrderRequest(MarketMaker, Side.Sell, OrderType.Limit, new Price(10.03m), new Quantity(200)));
-        s.Submit(new OrderRequest(MarketMaker, Side.Sell, OrderType.Limit, new Price(10.02m), new Quantity(100)));
-        s.Submit(new OrderRequest(MarketMaker, Side.Sell, OrderType.Limit, new Price(10.01m), new Quantity(50)));
-        s.Submit(new OrderRequest(MarketMaker, Side.Buy, OrderType.Limit, new Price(9.99m), new Quantity(50)));
-        s.Submit(new OrderRequest(MarketMaker, Side.Buy, OrderType.Limit, new Price(9.98m), new Quantity(100)));
-        s.Submit(new OrderRequest(MarketMaker, Side.Buy, OrderType.Limit, new Price(9.97m), new Quantity(200)));
-        s.Submit(new OrderRequest(MarketMaker, Side.Buy, OrderType.Limit, new Price(9.96m), new Quantity(300)));
-        s.Submit(new OrderRequest(MarketMaker, Side.Buy, OrderType.Limit, new Price(9.95m), new Quantity(500)));
+        if (IsLevelOver) return LastResult!;
+        IsLevelOver = true;
+        var failed = _regulator.GetStatus().IsFailed;
+        var result = _judge.Settle(_loop.Session.Engine.LastPrice, _player,
+            _level.FloatShares, _maxHeatReached, _initialCash, failed);
+        LastResult = result;
+        return result;
+    }
+
+    /// <summary>重试关卡(重置到初始)。</summary>
+    public void Retry()
+    {
+        // 事件订阅会随旧 loop 一起丢弃,新 LoadLevel 重新挂载
+        LoadLevel(_level);
+    }
+
+    private static void SeedMarket(TradingSession s, decimal intrinsic)
+    {
+        // 围绕内在价值挂五档买卖盘口
+        for (int i = 1; i <= 5; i++)
+        {
+            var askQty = new[] { 50, 100, 200, 300, 500 }[i - 1];
+            var bidQty = new[] { 50, 100, 200, 300, 500 }[i - 1];
+            s.Submit(new OrderRequest(MarketMaker, Side.Sell, OrderType.Limit, new Price(intrinsic + i * 0.01m), new Quantity(askQty)));
+            s.Submit(new OrderRequest(MarketMaker, Side.Buy, OrderType.Limit, new Price(intrinsic - i * 0.01m), new Quantity(bidQty)));
+        }
     }
 
     /// <summary>推进一个 tick 并返回该 tick 后的快照(由 GameHostService 调用)。
     /// 一次持锁完成 Step + 构建快照,避免事件回调里重新加锁导致死锁。</summary>
     public async Task<MarketSnapshotDto?> StepAsync()
     {
-        if (_loop.IsFinished) return null;
+        if (_loop.IsFinished || IsLevelOver) return null;
         await _gate.WaitAsync();
         try
         {
             _loop.Step();
+            // 关卡时间结束 → 自动结算
+            if (_loop.IsFinished && !IsLevelOver) EndLevel();
             return BuildSnapshotUnsafe();
         }
         finally { _gate.Release(); }
@@ -130,7 +190,13 @@ public sealed class GameSingleton
             DailyCandles: _collector.DailyCandles.TakeLast(60)
                 .Select(c => new DailyCandleDto(c.Day, c.Open, c.High, c.Low, c.Close, c.Volume)).ToList(),
             Macd: _collector.MacdSeries.TakeLast(60)
-                .Select(m => new MacdDto(m.Dif, m.Dea, m.Histogram)).ToList());
+                .Select(m => new MacdDto(m.Dif, m.Dea, m.Histogram)).ToList(),
+            RegulatorHeat: Math.Round(_regulator.Heat, 1),
+            PenaltyLevel: _regulator.CurrentPenalty.ToString(),
+            LatestRegulatorEvent: _regulator.RecentEvents.Count > 0 ? _regulator.RecentEvents[0] : "",
+            Objectives: _judge.EvaluateProgress(view.LastPrice, _player, _level.FloatShares, _maxHeatReached)
+                .Select(o => new ObjectiveProgressDto(o.Description, o.Achieved, Math.Round(o.Progress, 2), o.Detail)).ToList(),
+            IsLevelOver: IsLevelOver);
     }
 
     /// <summary>提交下单。返回订单结果;失败返回带 Error 的 DTO。</summary>
@@ -180,6 +246,25 @@ public sealed class GameSingleton
     {
         await _gate.WaitAsync();
         try { _loop.SkipToNextDay(); }
+        finally { _gate.Release(); }
+    }
+
+    public async Task<LevelResultDto> EndLevelAsync()
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            var r = EndLevel();
+            return new LevelResultDto(r.IsVictory, r.Stars, r.CoachComment, r.FailureReason,
+                r.Objectives.Select(o => new ObjectiveProgressDto(o.Description, o.Achieved, Math.Round(o.Progress, 2), o.Detail)).ToList());
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task RetryAsync()
+    {
+        await _gate.WaitAsync();
+        try { Retry(); }
         finally { _gate.Release(); }
     }
 

@@ -14,6 +14,10 @@ public sealed class Account
     /// <summary>总现金(可用 + 冻结)。</summary>
     public decimal Cash { get; private set; }
     public Position Position { get; } = new();
+    /// <summary>累计买入量(手),供出货比例判定。</summary>
+    public int TotalBoughtQty { get; private set; }
+    /// <summary>累计卖出量(手)。</summary>
+    public int TotalSoldQty { get; private set; }
 
     /// <summary>订单冻结记录:订单ID → (冻结价, 冻结量)。</summary>
     private readonly Dictionary<OrderId, (Price price, Quantity qty)> _buyFreezes = new();
@@ -47,6 +51,7 @@ public sealed class Account
     {
         Cash -= fillPrice.Value * qty.Value * 100;
         Position.ApplyBuy(qty, fillPrice);
+        TotalBoughtQty += qty.Value;
 
         // 释放该成交部分对应的冻结:冻结价×成交量 释放,差额(冻结价-成交价)补回现金
         if (_buyFreezes.TryGetValue(orderId, out var f))
@@ -72,6 +77,7 @@ public sealed class Account
     {
         Position.ApplySell(qty);
         Cash += fillPrice.Value * qty.Value * 100;
+        TotalSoldQty += qty.Value;
     }
 
     /// <summary>T+1 日切:解锁持仓。</summary>
