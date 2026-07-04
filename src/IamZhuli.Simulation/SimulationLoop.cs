@@ -141,6 +141,27 @@ public sealed class SimulationLoop
         }
     }
 
+    /// <summary>预演专用跨日:自动清零挂单→T+1解锁→情绪延续→参与者Act→集合竞价→开盘。
+    /// 供 MarketPreplay 用(不暂停,自动连续跑完历史)。</summary>
+    public void PreplayAdvanceDay()
+    {
+        if (!IsDayClosed) return;
+        Session.Engine.ClearBook();
+        Clock.AdvanceDay();
+        if (!IsFinished)
+        {
+            Session.OnNewTradingDay();
+            foreach (var p in _participants) { try { p.OnNewDay(); } catch { } }
+            Clock.Open();
+            foreach (var p in _participants) { try { p.Act(Session, Clock, _rng); } catch { } }
+            var auction = Session.Engine.CallAuction();
+            if (auction is { } r) Session.Engine.SetLastPrice(r.Price);
+            IsDayClosed = false;
+            IsPaused = false;
+            OnNewDay?.Invoke(Clock.CurrentDay);
+        }
+    }
+
     /// <summary>一键跳到当日收盘(跑完当日剩余tick,停在收盘暂停状态)。</summary>
     public void SkipToNextDay()
     {

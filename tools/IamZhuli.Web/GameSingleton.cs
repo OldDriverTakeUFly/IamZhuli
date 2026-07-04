@@ -7,6 +7,7 @@ using IamZhuli.Simulation.Levels;
 using IamZhuli.Simulation.MarketData;
 using IamZhuli.Simulation.Participants;
 using IamZhuli.Simulation.Participants.RetailV2;
+using IamZhuli.Simulation.Preplay;
 using IamZhuli.Simulation.Regulators;
 using IamZhuli.Simulation.Scenarios;
 using IamZhuli.Simulation.Sessions;
@@ -73,14 +74,18 @@ public sealed class GameSingleton
         _player = _loop.Session.GetOrCreateAccount(Player, level.PlayerCash);
         if (level.PlayerInitialHolding > 0) _player.Position.Seed(new Quantity(level.PlayerInitialHolding), intrinsic);
 
-        // 机构B(做市+风险控制+操盘三合一):取代无限做市商
-        // 正常时做市提供流动性,风险升高时收紧,盘口深度成动态稀缺资源
+        // —— 预演:让市场参与者跑完历史K线,状态真实涌现 ——
+        _scenario = new MarketScenario(ScenarioType.Decline, new Price(intrinsic.Value * 1.2m), intrinsic);
+        var preplay = new MarketPreplay();
+        var preplayResult = preplay.Run(_loop.Session, _loop, _scenario, seed: level.Id.GetHashCode());
+
+        // 机构B(做市+风险控制+操盘三合一)
         _institutionB = new InstitutionB(_loop.Session, new ParticipantId("机构B"), intrinsic,
             cash: 1_000_000_000m, initialHolding: level.MarketMakerHolding,
             baseDepthPerLevel: 80, levels: 8, seed: 88);
         _loop.AddParticipant(_institutionB);
 
-        // 散户画像池(动态进出,每画像独立账户)—— 取代旧的固定4群体
+        // 散户画像池(情绪用预演产出的初始值)
         _retail = new RetailProfilePool(_loop.Session, new ParticipantId("散户池"), intrinsic, seed: 42);
         _loop.AddParticipant(_retail);
 
@@ -89,11 +94,8 @@ public sealed class GameSingleton
             sensitivity: level.AiSensitivity, profile: StrategyProfile.Balanced, seed: 99);
         _loop.AddParticipant(_ai);
 
-        _collector = new MarketDataCollector(_loop, level.IntrinsicValue);
-        // 用剧本生成历史K线(有趋势:下跌/上涨/横盘/V型),作为背景+预演引导目标
-        _scenario = new MarketScenario(ScenarioType.Decline, new Price(intrinsic.Value * 1.2m), intrinsic);
-        var historyCandles = _scenario.GenerateCandles(seed: level.Id.GetHashCode());
-        _collector.PreloadHistory(historyCandles);
+        _collector = new MarketDataCollector(_loop, preplayResult.PreviousClose);
+        _collector.PreloadHistory(preplayResult.HistoryCandles);
         _regulator = new Regulator(Player);
         _judge = new LevelJudge(level);
 

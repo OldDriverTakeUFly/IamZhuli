@@ -70,6 +70,16 @@ public sealed class MarketDataCollector
             _loop.Session.Engine.Rules.PreviousClose = new Price(DailyCandles[^1].Close);
     }
 
+    /// <summary>预演用:直接设置当前价(不经过成交,引导做市商锚定价格时用)。</summary>
+    public void SetPriceForPreplay(Price price)
+    {
+        decimal p = price.Value;
+        _todayOpen ??= p;
+        if (p > _todayHigh) _todayHigh = p;
+        if (p < _todayLow) _todayLow = p;
+        _lastPrice = p;
+    }
+
     /// <summary>每笔成交:更新开盘/最高/最低/累计量。</summary>
     private void OnTrade(Price price, Quantity qty, Side side)
     {
