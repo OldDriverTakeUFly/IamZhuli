@@ -31,14 +31,14 @@ public sealed class MarketSentiment
         _volatility = volatility;
 
         // —— 计算目标情绪 ——
-        // 上涨→贪婪,下跌→恐惧;波动放大→情绪极端化
-        decimal sentimentFromReturn = 0.5m + Math.Clamp(recentReturn * 15m, -0.4m, 0.4m);
+        // 上涨→贪婪,下跌→恐惧;波动放大→情绪极端化。系数调高让情绪更敏感。
+        decimal sentimentFromReturn = 0.5m + Math.Clamp(recentReturn * 35m, -0.45m, 0.45m);
         // 放大波动让情绪更极端(大涨大跌都推离中性)
-        decimal volPush = volatility * 2m * Math.Sign(recentReturn);
-        _target = Math.Clamp(sentimentFromReturn + volPush + volumeSpike * 0.1m, 0.05m, 0.95m);
+        decimal volPush = volatility * 3m * Math.Sign(recentReturn == 0 ? 1 : recentReturn);
+        _target = Math.Clamp(sentimentFromReturn + volPush + volumeSpike * 0.15m, 0.02m, 0.98m);
 
         // —— 非对称趋近:恐慌下跌时趋近更快(跳窗户),贪婪上涨时趋近更慢(爬楼梯)——
-        decimal adjSpeed = _target < Value ? 0.15m : 0.06m;   // 下跌更快
+        decimal adjSpeed = _target < Value ? 0.20m : 0.10m;   // 下跌更快,上涨也加快些
         Value += (_target - Value) * adjSpeed;
         Value = Math.Clamp(Value, 0m, 1m);
     }

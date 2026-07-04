@@ -97,32 +97,31 @@ public sealed class RetailProfilePool : IParticipant
         double greed = (double)ctx.Sentiment.Greed;
         double fear = (double)ctx.Sentiment.Fear;
 
-        // 急涨 → 抽跟风客、羊群
-        if (ret > 0.01m && Rand() < greed * 0.3)
+        // 急涨 → 抽跟风客、羊群(门槛降低,更积极)
+        if (ret > 0.005m && Rand() < greed * 0.5)
         {
-            Spawn(ret > 0.02m ? ProfileType.AggressiveMomentum : ProfileType.MildMomentum, ctx);
-            if (Rand() < greed * 0.15) Spawn(ProfileType.Herd, ctx);
+            Spawn(ret > 0.015m ? ProfileType.AggressiveMomentum : ProfileType.MildMomentum, ctx);
+            if (Rand() < greed * 0.25) Spawn(ProfileType.Herd, ctx);
         }
         // 急跌 → 抄底猎手;同时"激活"潜在止损者(初始被套持仓)
-        if (ret < -0.01m)
+        if (ret < -0.005m)
         {
-            if (Rand() < (double)ctx.Sentiment.Value * 0.2) Spawn(ProfileType.BargainHunter, ctx);
-            if (Rand() < fear * 0.15) Spawn(ProfileType.StopLoss, ctx);   // 被套者恐慌激活
+            if (Rand() < (double)ctx.Sentiment.Value * 0.3) Spawn(ProfileType.BargainHunter, ctx);
+            if (Rand() < fear * 0.25) Spawn(ProfileType.StopLoss, ctx);   // 被套者恐慌激活
         }
         // 严重低估 → 价投
         if (ctx.LastPrice is { } p && ctx.IntrinsicValue > 0
-            && p.Value < ctx.IntrinsicValue * 0.92m && Rand() < 0.1)
+            && p.Value < ctx.IntrinsicValue * 0.92m && Rand() < 0.15)
             Spawn(ProfileType.ValueInvestor, ctx);
         // 波动放大 → 投机客
-        if (vol > 0.015m && Rand() < 0.15)
+        if (vol > 0.01m && Rand() < 0.2)
             Spawn(ProfileType.Speculator, ctx);
 
-        // —— 基础随机进场:即使无明显趋势,也偶尔有零星散户进场(避免冷启动死锁)——
-        // 真实市场总有日常随机交易的散户
-        if (_active.Count < 5 && Rand() < 0.4)
+        // —— 基础随机进场:即使无明显趋势,也有日常散户进场(避免冷启动死锁)——
+        if (_active.Count < 8 && Rand() < 0.5)
         {
             var types = new[] { ProfileType.MildMomentum, ProfileType.ValueInvestor,
-                                 ProfileType.Speculator, ProfileType.Herd };
+                                 ProfileType.Speculator, ProfileType.Herd, ProfileType.BargainHunter };
             Spawn(types[RandInt(0, types.Length)], ctx);
         }
     }

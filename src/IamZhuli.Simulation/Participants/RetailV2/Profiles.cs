@@ -24,9 +24,9 @@ public sealed class AggressiveMomentumProfile : RetailProfile
         // 上涨超阈值 + 情绪偏贪婪 → 概率追涨
         if (ctx.RecentReturn > _chaseThreshold && ctx.Sentiment.Greed > 0.55m)
         {
-            double intensity = Math.Min(1.0, (double)(ctx.RecentReturn / _chaseThreshold) - 0.5)
+            double intensity = Math.Min(1.0, (double)(ctx.RecentReturn / _chaseThreshold) - 0.3)
                              * (double)ctx.Sentiment.Greed * (double)RiskPreference;
-            if (Rand() < intensity * 0.4)
+            if (Rand() < intensity * 0.55)
             {
                 int qty = RandInt(5, 15) * 10;
                 decimal ask = Val(ctx.BestAsk ?? ctx.LastPrice, ctx.IntrinsicValue);

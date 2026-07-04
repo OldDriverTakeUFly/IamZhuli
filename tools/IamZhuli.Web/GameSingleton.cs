@@ -70,9 +70,8 @@ public sealed class GameSingleton
         _player = _loop.Session.GetOrCreateAccount(Player, level.PlayerCash);
         if (level.PlayerInitialHolding > 0) _player.Position.Seed(new Quantity(level.PlayerInitialHolding), intrinsic);
 
-        var mm = _loop.Session.GetOrCreateAccount(MarketMaker, 1_000_000_000m);
-        mm.Position.Seed(new Quantity(level.MarketMakerHolding), intrinsic);
-        SeedMarket(_loop.Session, level.IntrinsicValue);
+        // 持续做市商:每 tick 维护窄价差盘口深度,提供流动性(取代一次性挂盘口)
+        _loop.AddParticipant(new MarketMaker(_loop.Session, MarketMaker, intrinsic, level.MarketMakerHolding));
 
         // 散户画像池(动态进出,每画像独立账户)—— 取代旧的固定4群体
         _retail = new RetailProfilePool(_loop.Session, new ParticipantId("散户池"), intrinsic, seed: 42);
@@ -122,18 +121,6 @@ public sealed class GameSingleton
     {
         // 事件订阅会随旧 loop 一起丢弃,新 LoadLevel 重新挂载
         LoadLevel(_level);
-    }
-
-    private static void SeedMarket(TradingSession s, decimal intrinsic)
-    {
-        // 围绕内在价值挂五档买卖盘口
-        for (int i = 1; i <= 5; i++)
-        {
-            var askQty = new[] { 50, 100, 200, 300, 500 }[i - 1];
-            var bidQty = new[] { 50, 100, 200, 300, 500 }[i - 1];
-            s.Submit(new OrderRequest(MarketMaker, Side.Sell, OrderType.Limit, new Price(intrinsic + i * 0.01m), new Quantity(askQty)));
-            s.Submit(new OrderRequest(MarketMaker, Side.Buy, OrderType.Limit, new Price(intrinsic - i * 0.01m), new Quantity(bidQty)));
-        }
     }
 
     /// <summary>推进一个 tick 并返回该 tick 后的快照(由 GameHostService 调用)。
