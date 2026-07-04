@@ -75,7 +75,7 @@ public sealed class GameSingleton
         // 正常时做市提供流动性,风险升高时收紧,盘口深度成动态稀缺资源
         _institutionB = new InstitutionB(_loop.Session, new ParticipantId("机构B"), intrinsic,
             cash: 1_000_000_000m, initialHolding: level.MarketMakerHolding,
-            baseDepthPerLevel: 150, levels: 8, seed: 88);
+            baseDepthPerLevel: 80, levels: 8, seed: 88);
         _loop.AddParticipant(_institutionB);
 
         // 散户画像池(动态进出,每画像独立账户)—— 取代旧的固定4群体

@@ -148,14 +148,14 @@ public sealed class RetailProfilePool : IParticipant
         if (_active.Count == 0) return;
         var view = session.Engine.View;
         decimal price = view.LastPrice?.Value ?? view.BestBid?.Value ?? view.BestAsk?.Value ?? _intrinsic.Value;
-        // 每个在场画像有 15% 概率做一笔随机交易(提高活跃度)
+        // 每个在场画像有 25% 概率做一笔随机交易(保持市场活跃,避免价格停滞)
         foreach (var p in _active)
         {
-            if (Rand() > 0.15) continue;
+            if (Rand() > 0.25) continue;
             bool buy = Rand() > 0.5;
-            int qty = RandInt(2, 8) * 10;   // 20~70手
-            // 一部分用市价(吃对手盘,推动价格),一部分挂限价
-            bool aggressive = Rand() > 0.5;
+            int qty = RandInt(3, 15) * 10;   // 30~150手
+            // 70%用市价(吃对手盘,推动价格变化),30%挂限价
+            bool aggressive = Rand() > 0.3;
             try
             {
                 if (buy)

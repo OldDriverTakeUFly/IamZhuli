@@ -123,9 +123,13 @@ public sealed class SimulationLoop
                 try { p.OnNewDay(); }
                 catch { }
             }
-            // 4. 让参与者重新挂单(集合竞价前的意愿单)
-            //    用一个临时 ctx 让参与者 Act 一次(但不推进 tick)
+            // 4. 让参与者重新挂单(集合竞价前的意愿单)——清零后盘口空,必须让参与者Act一次
             Clock.Open();
+            foreach (var p in _participants)
+            {
+                try { p.Act(Session, Clock, _rng); }
+                catch { }
+            }
             // 5. 开盘集合竞价:收集所有挂单,撮出开盘价
             var auction = Session.Engine.CallAuction();
             if (auction is { } result)
