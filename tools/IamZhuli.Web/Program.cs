@@ -33,6 +33,9 @@ app.MapPost("/api/resume", async (GameSingleton game) =>
 app.MapPost("/api/skipday", async (GameSingleton game) =>
 { await game.SkipDayAsync(); return Results.Ok(); });
 
+app.MapPost("/api/nextday", async (GameSingleton game) =>
+{ await game.StartNextDayAsync(); return Results.Ok(); });
+
 app.MapGet("/api/ai", async (GameSingleton game, int? count) =>
     Results.Ok(await game.GetAIThoughtsAsync(count ?? 20)));
 

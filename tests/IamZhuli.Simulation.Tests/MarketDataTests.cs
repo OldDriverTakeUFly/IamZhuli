@@ -86,10 +86,11 @@ public class MarketDataTests
         var (loop, collector) = Setup(ticksPerDay: 5);
         // 制造成交
         for (int i = 0; i < 3; i++) { loop.Step(); MakeTrade(loop, 10m + i * 0.1m, 100); }
-        // 跑完当日剩余tick触发收盘固化
-        while (loop.Clock.CurrentDay == 1 && !loop.Clock.IsTradingFinished) loop.Step();
+        // 跑完当日剩余tick(日终会自动暂停进入IsDayClosed)
+        while (!loop.IsDayClosed && !loop.IsFinished) loop.Step();
 
-        Assert.Single(collector.DailyCandles);
+        Assert.True(loop.IsDayClosed, "应进入日终收盘状态");
+        Assert.Single(collector.DailyCandles);   // 收盘固化已触发
         var c = collector.DailyCandles[0];
         Assert.Equal(1, c.Day);
         Assert.True(c.Close >= 10m, $"收盘价应接近最后成交价,实际{c.Close}");

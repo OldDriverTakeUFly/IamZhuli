@@ -245,6 +245,14 @@ public sealed class GameSingleton
         finally { _gate.Release(); }
     }
 
+    /// <summary>开始下一交易日(日终暂停后,玩家显式触发;T+1解锁在此发生)。</summary>
+    public async Task StartNextDayAsync()
+    {
+        await _gate.WaitAsync();
+        try { _loop.StartNextDay(); }
+        finally { _gate.Release(); }
+    }
+
     public async Task<LevelResultDto> EndLevelAsync()
     {
         await _gate.WaitAsync();

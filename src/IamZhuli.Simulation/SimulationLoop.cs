@@ -24,6 +24,8 @@ public sealed class SimulationLoop
     public TradingSession Session { get; }
     public bool IsPaused { get; private set; } = false;
     public bool IsFinished => Clock.IsTradingFinished;
+    /// <summary>当日已收盘(等待玩家开始下一日)。配合"日终自动暂停"机制。</summary>
+    public bool IsDayClosed { get; private set; }
 
     private readonly List<IParticipant> _participants = new();
     private readonly Random _rng = new();
@@ -76,40 +78,48 @@ public sealed class SimulationLoop
 
         OnTick?.Invoke(Clock.TotalTicksElapsed);
 
-        // 日切
+        // 日切:tick 跑完后进入"已收盘"状态并自动暂停(不立即推进下一日)
+        // 玩家通过 StartNextDay() 显式开始新的一天(T+1解锁发生在玩家眼前)
         if (!stillInDay)
         {
-            Clock.AdvanceDay();
-            if (!IsFinished)
-            {
-                Session.OnNewTradingDay();   // T+1 解锁
-                foreach (var p in _participants)
-                {
-                    try { p.OnNewDay(); }
-                    catch { }
-                }
-                Clock.Open();
-                OnNewDay?.Invoke(Clock.CurrentDay);
-            }
+            IsDayClosed = true;
+            IsPaused = true;
         }
     }
 
-    /// <summary>一键跳到下一交易日(日间跳过)。</summary>
-    public void SkipToNextDay()
+    /// <summary>开始下一交易日(由玩家在日终暂停后显式触发)。
+    /// 执行:AdvanceDay → T+1解锁 → 参与者OnNewDay → 开盘。</summary>
+    public void StartNextDay()
     {
-        if (IsFinished) return;
+        if (!IsDayClosed || IsFinished) return;
         Clock.AdvanceDay();
         if (!IsFinished)
         {
-            Session.OnNewTradingDay();
+            Session.OnNewTradingDay();   // T+1 解锁(在玩家眼前发生)
             foreach (var p in _participants)
             {
                 try { p.OnNewDay(); }
                 catch { }
             }
             Clock.Open();
+            IsDayClosed = false;
+            IsPaused = false;
             OnNewDay?.Invoke(Clock.CurrentDay);
         }
+    }
+
+    /// <summary>一键跳到下一交易日:先把当日剩余tick跑完(触发收盘暂停),再开始下一日。
+    /// 用于玩家不想等当日剩余时间的情况。</summary>
+    public void SkipToNextDay()
+    {
+        if (IsFinished) return;
+        // 若当日未收盘,先跑到收盘
+        if (!IsDayClosed)
+        {
+            while (!IsDayClosed && !IsFinished && !IsPaused) Step();
+        }
+        // 开始下一日
+        StartNextDay();
     }
 
     private void EmitTradeAndPriceEvents(Price? before)
