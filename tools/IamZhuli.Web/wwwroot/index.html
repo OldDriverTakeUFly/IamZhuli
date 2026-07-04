@@ -393,13 +393,28 @@ let baselineSeries = pc.addSeries(LWT.LineSeries, { color: '#555', lineStyle: 2,
 let volSeries = vc.addSeries(LWT.HistogramSeries, { color: '#4a7a8c', priceFormat: { type: 'volume' } });
 
 function resizeCharts() {
+  // 读父容器(chart的wrapper)的实际尺寸,让图表填满
   const pp = document.getElementById('priceChart').parentElement;
   const vp = document.getElementById('volChart').parentElement;
-  pc.applyOptions({ width: pp.clientWidth, height: pp.clientHeight });
-  vc.applyOptions({ width: vp.clientWidth, height: vp.clientHeight });
+  const pw = pp.clientWidth, ph = pp.clientHeight;
+  const vw = vp.clientWidth, vh = vp.clientHeight;
+  if (pw > 0 && ph > 0) pc.applyOptions({ width: pw, height: ph });
+  if (vw > 0 && vh > 0) vc.applyOptions({ width: vw, height: vh });
+  // 分时模式重新固定x轴范围(resize后范围会丢失)
+  if (chartMode === 'timeshare') {
+    const tpd = (window._lastSnap && window._lastSnap.ticksPerDay) || 600;
+    pc.timeScale().setVisibleLogicalRange({ from: 0, to: tpd });
+    vc.timeScale().setVisibleLogicalRange({ from: 0, to: tpd });
+  } else {
+    pc.timeScale().fitContent();
+    vc.timeScale().fitContent();
+  }
 }
-window.addEventListener('resize', resizeCharts);
-setTimeout(resizeCharts, 100);
+window.addEventListener('resize', () => requestAnimationFrame(resizeCharts));
+// 多次延迟确保grid布局完成后尺寸正确
+setTimeout(resizeCharts, 50);
+setTimeout(resizeCharts, 200);
+setTimeout(resizeCharts, 500);
 
 // 切换图表模式:重建series + 重置缓存
 document.getElementById('chartSeg').addEventListener('click', e => {
@@ -426,6 +441,7 @@ function resetChartCache() { lastTsLen = -1; lastDay = -1; lastDailyLen = -1; }
 const TS_DOWNSAMPLE = 5;
 
 function updateCharts(snap) {
+  window._lastSnap = snap;   // 缓存供resizeCharts用
   if (chartMode === 'timeshare') {
     const rawTs = snap.timeshare || [];
     // 降采样:每TS_DOWNSAMPLE个tick取末点
