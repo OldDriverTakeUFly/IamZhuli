@@ -74,6 +74,10 @@ public sealed class RetailProfilePool : IParticipant
         // 3. 评估进场(根据价格行为抽取新画像)
         TryRecruit(ctx);
 
+        // 3.5 日常随机交易噪音:让在场画像有小概率做随机小额买卖
+        // 解决"没人买卖时价格不变"——真实市场散户总有日常随机交易
+        InjectDailyNoise(session, ctx);
+
         // 4. 驱动在场画像
         foreach (var p in _active.ToArray())   // ToArray 防止离场时修改集合
         {
@@ -123,6 +127,38 @@ public sealed class RetailProfilePool : IParticipant
             var types = new[] { ProfileType.MildMomentum, ProfileType.ValueInvestor,
                                  ProfileType.Speculator, ProfileType.Herd, ProfileType.BargainHunter };
             Spawn(types[RandInt(0, types.Length)], ctx);
+        }
+    }
+
+    /// <summary>日常随机交易:让在场画像有小概率做随机小额买卖。
+    /// 模拟散户的日常随机交易,让盘口即使没有主力操作也有自然波动。</summary>
+    private void InjectDailyNoise(TradingSession session, RetailMarketContext ctx)
+    {
+        if (_active.Count == 0) return;
+        var view = session.Engine.View;
+        decimal price = view.LastPrice?.Value ?? view.BestBid?.Value ?? view.BestAsk?.Value ?? _intrinsic.Value;
+        // 每个在场画像有 8% 概率做一笔随机小额交易
+        foreach (var p in _active)
+        {
+            if (Rand() > 0.08) continue;
+            bool buy = Rand() > 0.5;
+            int qty = RandInt(1, 4) * 10;   // 10~30手
+            try
+            {
+                if (buy)
+                {
+                    decimal p2 = view.BestAsk?.Value ?? price;
+                    session.Submit(new OrderRequest(p.Account.Id, Side.Buy, OrderType.Limit,
+                        new Price(Math.Round(p2, 2)), new Quantity(qty)));
+                }
+                else if (p.Account.Position.Available.Value >= qty)
+                {
+                    decimal p2 = view.BestBid?.Value ?? price;
+                    session.Submit(new OrderRequest(p.Account.Id, Side.Sell, OrderType.Limit,
+                        new Price(Math.Round(p2, 2)), new Quantity(qty)));
+                }
+            }
+            catch { /* 资金/持仓不足忽略 */ }
         }
     }
 

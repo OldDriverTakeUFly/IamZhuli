@@ -84,12 +84,12 @@ public class MarketDataTests
     public void Collector_FinalizesDay_OnLastTick()
     {
         var (loop, collector) = Setup(ticksPerDay: 5);
-        // 制造成交
         for (int i = 0; i < 3; i++) { loop.Step(); MakeTrade(loop, 10m + i * 0.1m, 100); }
-        // 跑到跨入第2日(自动跨日,收盘固化在跨日时触发)
-        while (loop.Clock.CurrentDay == 1 && !loop.IsFinished) loop.Step();
+        // 跑到日终(会自动暂停在 IsDayClosed)
+        while (!loop.IsDayClosed && !loop.IsFinished) loop.Step();
 
-        Assert.True(collector.DailyCandles.Count >= 1, "跨日后应有日K归档");
+        Assert.True(loop.IsDayClosed, "应进入日终收盘暂停");
+        Assert.Single(collector.DailyCandles);   // 收盘固化已触发
         var c = collector.DailyCandles[0];
         Assert.Equal(1, c.Day);
         Assert.True(c.Close >= 10m, $"收盘价应接近最后成交价,实际{c.Close}");
@@ -102,11 +102,11 @@ public class MarketDataTests
         loop.Step(); MakeTrade(loop, 10.20m, 100);
         Assert.True(collector.TodayTimeshare.Count > 0);
 
-        loop.SkipToNextDay();
-        // 跨日后:当日分时已清空(新日开始),上一日K线归档
-        Assert.True(collector.DailyCandles.Count >= 1, $"应有日K归档,实际{collector.DailyCandles.Count}");
-        // 新日分时应很少(跨日清空后只可能有0~几个点)
-        Assert.True(collector.TodayTimeshare.Count < 5, $"新日分时应<5,实际{collector.TodayTimeshare.Count} 当前日{loop.Clock.CurrentDay}");
+        loop.SkipToNextDay();   // 跑到收盘暂停
+        Assert.True(loop.IsDayClosed, "应在收盘暂停");
+        loop.StartNextDay();    // 玩家显式开始下一日(触发跨日+清空分时)
+        Assert.Empty(collector.TodayTimeshare);
+        Assert.Single(collector.DailyCandles);
     }
 
     [Fact]

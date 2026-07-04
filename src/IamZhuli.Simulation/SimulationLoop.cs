@@ -78,12 +78,12 @@ public sealed class SimulationLoop
 
         OnTick?.Invoke(Clock.TotalTicksElapsed);
 
-        // 日切:tick 跑完后自动推进到下一日(保持时间连续流动)
-        // T+1 解锁在后台自动发生;分时图从左到右填满即体现当日进度
+        // 日切:tick 跑完后进入"已收盘"并暂停(等待玩家开始下一日)
+        // 日内连续流动,日终暂停让玩家喘息/看盘/做盘后操作
         if (!stillInDay)
         {
-            IsDayClosed = true;   // 瞬时标记(供前端识别跨日,做分时清空重画)
-            AdvanceToNextDay();
+            IsDayClosed = true;
+            IsPaused = true;   // 暂停,等玩家显式 StartNextDay
         }
     }
 
@@ -105,20 +105,32 @@ public sealed class SimulationLoop
         }
     }
 
-    /// <summary>开始下一交易日(二期盘后模式用;当前自动跨日,此方法保留)。</summary>
+    /// <summary>开始下一交易日(玩家在日终暂停后显式触发)。
+    /// 执行:AdvanceDay → T+1解锁 → 参与者OnNewDay → 开盘 → 解除暂停。</summary>
     public void StartNextDay()
     {
-        if (IsFinished) return;
-        AdvanceToNextDay();
+        if (!IsDayClosed || IsFinished) return;
+        Clock.AdvanceDay();
+        if (!IsFinished)
+        {
+            Session.OnNewTradingDay();   // T+1 解锁
+            foreach (var p in _participants)
+            {
+                try { p.OnNewDay(); }
+                catch { }
+            }
+            Clock.Open();
+            IsDayClosed = false;
+            IsPaused = false;
+            OnNewDay?.Invoke(Clock.CurrentDay);
+        }
     }
 
-    /// <summary>一键跳到下一交易日:跑完当日剩余tick(含跨日那一步),进入下一日开盘。</summary>
+    /// <summary>一键跳到当日收盘(跑完当日剩余tick,停在收盘暂停状态)。</summary>
     public void SkipToNextDay()
     {
-        if (IsFinished) return;
-        int startDay = Clock.CurrentDay;
-        // 跑到 CurrentDay 增加(说明发生了跨日)
-        while (Clock.CurrentDay == startDay && !IsFinished)
+        if (IsFinished || IsDayClosed) return;
+        while (!IsDayClosed && !IsFinished)
         {
             IsPaused = false;
             Step();
