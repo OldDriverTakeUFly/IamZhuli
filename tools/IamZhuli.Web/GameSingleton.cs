@@ -8,6 +8,7 @@ using IamZhuli.Simulation.MarketData;
 using IamZhuli.Simulation.Participants;
 using IamZhuli.Simulation.Participants.RetailV2;
 using IamZhuli.Simulation.Regulators;
+using IamZhuli.Simulation.Scenarios;
 using IamZhuli.Simulation.Sessions;
 using IamZhuli.Simulation.Time;
 using Microsoft.AspNetCore.SignalR;
@@ -35,6 +36,7 @@ public sealed class GameSingleton
     private decimal? _prevPriceForVolatility;
     private RetailProfilePool _retail = null!;
     private InstitutionB _institutionB = null!;
+    private MarketScenario _scenario = null!;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
@@ -88,12 +90,9 @@ public sealed class GameSingleton
         _loop.AddParticipant(_ai);
 
         _collector = new MarketDataCollector(_loop, level.IntrinsicValue);
-        // 生成历史K线作为背景(玩家进场即看到过去走势)
-        var history = new MarketHistory(intrinsic);
-        history.Generate(days: 30, dailyVolatility: 0.025m, seed: level.Id.GetHashCode());
-        var historyCandles = history.Candles.Select((c, i) => new DailyCandle(
-            i - 30, Math.Round(c.Open, 2), Math.Round(c.High, 2),
-            Math.Round(c.Low, 2), Math.Round(c.Close, 2), c.Volume)).ToList();
+        // 用剧本生成历史K线(有趋势:下跌/上涨/横盘/V型),作为背景+预演引导目标
+        _scenario = new MarketScenario(ScenarioType.Decline, new Price(intrinsic.Value * 1.2m), intrinsic);
+        var historyCandles = _scenario.GenerateCandles(seed: level.Id.GetHashCode());
         _collector.PreloadHistory(historyCandles);
         _regulator = new Regulator(Player);
         _judge = new LevelJudge(level);
