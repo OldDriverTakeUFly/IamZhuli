@@ -331,7 +331,9 @@ function renderHeader(snap) {
   const lp = snap.lastPrice;
   $('hPrice').textContent = lp != null ? lp.toFixed(2) : '--';
   if (lp != null) {
-    const chg = (lp - 10) / 10 * 100;
+    // 涨跌幅基准=前一日收盘价(跨日后自动更新)
+    const base = snap.previousClose || 10;
+    const chg = base > 0 ? (lp - base) / base * 100 : 0;
     $('hChange').textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
     $('hChange').className = chg > 0 ? 'up' : (chg < 0 ? 'down' : 'flat');
     $('hPrice').className = 'price ' + (chg >= 0 ? 'up' : 'down');
