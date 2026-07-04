@@ -137,10 +137,8 @@
       <button class="btn btn-ctrl" id="resumeBtn">▶ 继续</button>
       <button class="btn btn-ctrl warn" id="skipDayBtn">⏭ 跳到收盘</button>
     </div>
-    <div id="dayClosedBanner" style="display:none;margin-top:8px;padding:10px;background:#3a2a1a;border:1px solid #8c6a3a;border-radius:6px;text-align:center;">
-      <div style="color:#e8c44a;font-size:14px;font-weight:bold;">📅 今日收盘</div>
-      <div style="color:#888;font-size:11px;margin-top:2px;">T+1 持仓已解锁 · 盘后操作(二期)</div>
-      <button class="btn btn-ctrl" id="nextDayBtn" style="width:auto;margin-top:6px;padding:6px 16px;">▶ 开始下一交易日</button>
+    <div id="dayClosedBanner" style="display:none;margin-top:8px;padding:8px;background:#3a2a1a;border:1px solid #8c6a3a;border-radius:6px;text-align:center;">
+      <div style="color:#e8c44a;font-size:13px;">📅 新交易日开始 · T+1 持仓已解锁</div>
     </div>
 
     <h3 style="margin-top:16px;">最近成交</h3>
@@ -246,7 +244,6 @@ async function cancelOrder(orderId) {
 $('pauseBtn').onclick = () => fetch('/api/pause', { method: 'POST' });
 $('resumeBtn').onclick = () => fetch('/api/resume', { method: 'POST' });
 $('skipDayBtn').onclick = () => fetch('/api/skipday', { method: 'POST' });
-$('nextDayBtn').onclick = () => fetch('/api/nextday', { method: 'POST' });
 
 // —— 渲染盘口 ——
 function renderBook(snap) {
@@ -339,10 +336,16 @@ function renderHeader(snap) {
   $('hLimit').textContent = `涨跌停 ${snap.upperLimit.toFixed(2)} / ${snap.lowerLimit.toFixed(2)}`;
   $('clockTxt').textContent = `第${snap.currentDay}/${snap.totalDays}日 · tick ${snap.tickOfDay}/${snap.ticksPerDay}`;
   $('phaseTxt').textContent = snap.phase + (snap.isPaused ? ' · 已暂停' : '');
-  // 日终收盘横幅:phase=Closed 且暂停时显示
-  const closed = snap.phase === 'Closed' && snap.isPaused;
-  $('dayClosedBanner').style.display = closed ? 'block' : 'none';
+  // 日切瞬间短暂提示(跨日自动发生,T+1解锁;不强制暂停)
+  if (snap.currentDay !== _lastShownDay) {
+    _lastShownDay = snap.currentDay;
+    if (snap.currentDay > 1) {
+      $('dayClosedBanner').style.display = 'block';
+      setTimeout(() => { $('dayClosedBanner').style.display = 'none'; }, 3000);
+    }
+  }
 }
+let _lastShownDay = -1;
 
 // —— 成交列表 ——
 const trades = [];
@@ -407,12 +410,14 @@ document.getElementById('chartSeg').addEventListener('click', e => {
   pc.timeScale().fitContent();
 });
 
-let lastTimeshareLen = -1;   // 上次分时点数,用于增量更新
+let lastTimeshareLen = -1;
 let lastDay = -1;
 function updateCharts(snap) {
   if (chartMode === 'timeshare') {
     const ts = snap.timeshare || [];
-    // 新的一天或首次:全量重画;否则增量更新最后一个点(减少闪烁)
+    // 分时x轴固定为整天范围[0, TicksPerDay],曲线从左到右逐渐填满(进度感)
+    pc.timeScale().setVisibleLogicalRange({ from: 0, to: snap.ticksPerDay });
+    // 新的一天或首次:全量重画;否则增量追加新点(从左到右延伸)
     if (snap.currentDay !== lastDay || lastTimeshareLen < 0 || ts.length < lastTimeshareLen) {
       priceSeries.setData(ts.map(t => ({ time: t.tickOfDay, value: t.price })));
       let prev = 0;
@@ -420,7 +425,6 @@ function updateCharts(snap) {
       lastTimeshareLen = ts.length;
       lastDay = snap.currentDay;
     } else if (ts.length > lastTimeshareLen) {
-      // 增量:只更新新增的点
       for (let i = lastTimeshareLen; i < ts.length; i++) {
         priceSeries.update({ time: ts[i].tickOfDay, value: ts[i].price });
       }

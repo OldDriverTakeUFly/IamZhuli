@@ -78,24 +78,22 @@ public sealed class SimulationLoop
 
         OnTick?.Invoke(Clock.TotalTicksElapsed);
 
-        // 日切:tick 跑完后进入"已收盘"状态并自动暂停(不立即推进下一日)
-        // 玩家通过 StartNextDay() 显式开始新的一天(T+1解锁发生在玩家眼前)
+        // 日切:tick 跑完后自动推进到下一日(保持时间连续流动)
+        // T+1 解锁在后台自动发生;分时图从左到右填满即体现当日进度
         if (!stillInDay)
         {
-            IsDayClosed = true;
-            IsPaused = true;
+            IsDayClosed = true;   // 瞬时标记(供前端识别跨日,做分时清空重画)
+            AdvanceToNextDay();
         }
     }
 
-    /// <summary>开始下一交易日(由玩家在日终暂停后显式触发)。
-    /// 执行:AdvanceDay → T+1解锁 → 参与者OnNewDay → 开盘。</summary>
-    public void StartNextDay()
+    /// <summary>推进到下一交易日的内部逻辑(自动跨日用)。</summary>
+    private void AdvanceToNextDay()
     {
-        if (!IsDayClosed || IsFinished) return;
         Clock.AdvanceDay();
         if (!IsFinished)
         {
-            Session.OnNewTradingDay();   // T+1 解锁(在玩家眼前发生)
+            Session.OnNewTradingDay();   // T+1 解锁
             foreach (var p in _participants)
             {
                 try { p.OnNewDay(); }
@@ -103,23 +101,28 @@ public sealed class SimulationLoop
             }
             Clock.Open();
             IsDayClosed = false;
-            IsPaused = false;
             OnNewDay?.Invoke(Clock.CurrentDay);
         }
     }
 
-    /// <summary>一键跳到下一交易日:先把当日剩余tick跑完(触发收盘暂停),再开始下一日。
-    /// 用于玩家不想等当日剩余时间的情况。</summary>
+    /// <summary>开始下一交易日(二期盘后模式用;当前自动跨日,此方法保留)。</summary>
+    public void StartNextDay()
+    {
+        if (IsFinished) return;
+        AdvanceToNextDay();
+    }
+
+    /// <summary>一键跳到下一交易日:跑完当日剩余tick(含跨日那一步),进入下一日开盘。</summary>
     public void SkipToNextDay()
     {
         if (IsFinished) return;
-        // 若当日未收盘,先跑到收盘
-        if (!IsDayClosed)
+        int startDay = Clock.CurrentDay;
+        // 跑到 CurrentDay 增加(说明发生了跨日)
+        while (Clock.CurrentDay == startDay && !IsFinished)
         {
-            while (!IsDayClosed && !IsFinished && !IsPaused) Step();
+            IsPaused = false;
+            Step();
         }
-        // 开始下一日
-        StartNextDay();
     }
 
     private void EmitTradeAndPriceEvents(Price? before)
