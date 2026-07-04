@@ -42,6 +42,9 @@ app.MapGet("/api/ai", async (GameSingleton game, int? count) =>
 app.MapPost("/api/endlevel", async (GameSingleton game) =>
     Results.Ok(await game.EndLevelAsync()));
 
+app.MapGet("/api/score", async (GameSingleton game) =>
+    Results.Ok(await Task.Run(() => game.SettleScore())));
+
 app.MapPost("/api/retry", async (GameSingleton game) =>
 { await game.RetryAsync(); return Results.Ok(); });
 

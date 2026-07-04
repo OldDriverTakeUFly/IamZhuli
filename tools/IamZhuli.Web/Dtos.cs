@@ -28,6 +28,11 @@ public record MarketSnapshotDto(
 public record LevelResultDto(bool IsVictory, int Stars, string CoachComment, string FailureReason,
     List<ObjectiveProgressDto> Objectives);
 
+// ── 积分结算 ──
+public record PartyScore(string Name, decimal ReturnRate, decimal MaxDrawdown,
+    decimal Score, int Rank, string Comment);
+public record ScoreSettlement(List<PartyScore> Rankings);
+
 // ── 账户 ──
 public record AccountDto(
     decimal Cash,               // 总现金(元)

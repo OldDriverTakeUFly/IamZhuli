@@ -38,6 +38,7 @@ public sealed class GameSingleton
     private RetailProfilePool _retail = null!;
     private InstitutionB _institutionB = null!;
     private MarketScenario _scenario = null!;
+    private EquityCurveCollector _equityCollector = null!;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
@@ -113,11 +114,15 @@ public sealed class GameSingleton
             // 监管爆表 → 关卡失败
             if (_regulator.GetStatus().IsFailed && !IsLevelOver) EndLevel();
         };
+        // 权益曲线采集(供积分系统算回撤/波动率/三方排名)
+        _equityCollector = new EquityCurveCollector(_loop, _player,
+            () => _ai.Account, () => _institutionB.Account,
+            () => _loop.Session.Engine.LastPrice);
         _loop.Start();
         IsInitialized = true;
     }
 
-    /// <summary>结束关卡并结算。</summary>
+    /// <summary>结束关卡并结算(积分制)。</summary>
     public LevelResult EndLevel()
     {
         if (IsLevelOver) return LastResult!;
@@ -127,6 +132,25 @@ public sealed class GameSingleton
             _level.FloatShares, _maxHeatReached, _initialCash, failed);
         LastResult = result;
         return result;
+    }
+
+    /// <summary>积分制结算:收益率+风险调整+三方排名。</summary>
+    public ScoreSettlement SettleScore()
+    {
+        if (!IsLevelOver) EndLevel();
+        var calc = new ScoreCalculator();
+        var lastPrice = _loop.Session.Engine.LastPrice;
+        var playerScore = calc.Calculate(_player, _equityCollector.PlayerEquity,
+            _initialCash, lastPrice, _maxHeatReached);
+        var aiScore = calc.Calculate(_ai.Account, _equityCollector.AiEquity,
+            100_000_000m, lastPrice, 0);
+        var instBScore = calc.Calculate(_institutionB.Account, _equityCollector.InstBEquity,
+            1_000_000_000m, lastPrice, 0);
+        var ranked = calc.Rank(
+            ("玩家", playerScore), ("AI主力", aiScore), ("机构B", instBScore));
+        return new ScoreSettlement(ranked.Select(r => new PartyScore(
+            r.Name, r.Result.ReturnRate, r.Result.MaxDrawdown,
+            r.Result.RiskAdjustedScore, r.Result.Rank, r.Result.Comment)).ToList());
     }
 
     /// <summary>重试关卡(重置到初始)。</summary>
