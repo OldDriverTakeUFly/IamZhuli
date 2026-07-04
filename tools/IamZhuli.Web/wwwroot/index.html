@@ -94,7 +94,12 @@
     <div style="height:120px;position:relative;margin-top:4px;">
       <div id="volChart" style="position:absolute;inset:0;"></div>
     </div>
-    <div id="turnoverInfo" style="font-size:12px;color:#888;margin-top:2px;">换手 --% · 昨收 --</div>
+    <div id="turnoverInfo" style="display:flex;gap:16px;font-size:12px;margin-top:4px;padding:4px 8px;background:#1e222a;border-radius:4px;">
+      <span>量 <span id="volToday" style="color:#e8c44a;font-weight:bold;">--</span></span>
+      <span>额 <span id="amtToday" style="color:#e8c44a;font-weight:bold;">--</span></span>
+      <span>换手 <span id="turnoverPct" style="color:#e8c44a;font-weight:bold;">--</span></span>
+      <span style="margin-left:auto;color:#666;">昨收 <span id="prevCloseTxt">--</span></span>
+    </div>
   </div>
 
   <!-- 下单 + 控制 -->
@@ -458,17 +463,25 @@ function updateCharts(snap) {
     // 新日或长度回退:全量重画(从最左侧开始)
     if (snap.currentDay !== lastDay || lastTsLen < 0 || ts.length < lastTsLen) {
       priceSeries.setData(ts.map(t => ({ time: t.tickOfDay, value: t.price })));
-      let prev = 0;
-      volSeries.setData(ts.map(t => { let v = t.cumVol - prev; prev = t.cumVol; return { time: t.tickOfDay, value: v, color: '#4a7a8c' }; }));
+      let prevV = 0, prevP = snap.previousClose || 10;
+      volSeries.setData(ts.map(t => {
+        let v = t.cumVol - prevV; prevV = t.cumVol;
+        let color = t.price >= prevP ? '#ef5350' : '#26a69a';   // 涨红跌绿(主动方向)
+        prevP = t.price;
+        return { time: t.tickOfDay, value: v, color };
+      }));
       lastTsLen = ts.length;
       lastDay = snap.currentDay;
     } else if (ts.length > lastTsLen) {
-      // 增量追加新点
-      let prev = lastTsLen > 0 ? ts[lastTsLen-1].cumVol : 0;
+      // 增量追加新点(按价格方向着色)
+      let prevV = lastTsLen > 0 ? ts[lastTsLen-1].cumVol : 0;
+      let prevP = lastTsLen > 0 ? ts[lastTsLen-1].price : (snap.previousClose || 10);
       for (let i = lastTsLen; i < ts.length; i++) {
         priceSeries.update({ time: ts[i].tickOfDay, value: ts[i].price });
-        let v = ts[i].cumVol - prev; prev = ts[i].cumVol;
-        volSeries.update({ time: ts[i].tickOfDay, value: v, color: '#4a7a8c' });
+        let v = ts[i].cumVol - prevV; prevV = ts[i].cumVol;
+        let color = ts[i].price >= prevP ? '#ef5350' : '#26a69a';
+        prevP = ts[i].price;
+        volSeries.update({ time: ts[i].tickOfDay, value: v, color });
       }
       lastTsLen = ts.length;
     }
@@ -498,7 +511,13 @@ function updateCharts(snap) {
     pc.timeScale().fitContent();
     vc.timeScale().fitContent();
   }
-  if (snap.turnoverRate != null) $('turnoverInfo').textContent = `换手 ${snap.turnoverRate}% · 昨收 ${(snap.previousClose||0).toFixed(2)}`;
+  // 成交统计栏
+  const vol = snap.todayCandle?.volume || 0;
+  const amt = vol > 0 && snap.lastPrice ? (vol * snap.lastPrice * 100 / 10000).toFixed(0) + '万' : '--';
+  $('volToday').textContent = vol > 0 ? (vol >= 10000 ? (vol/10000).toFixed(1) + '万手' : vol + '手') : '--';
+  $('amtToday').textContent = amt;
+  $('turnoverPct').textContent = snap.turnoverRate != null ? snap.turnoverRate.toFixed(2) + '%' : '--';
+  $('prevCloseTxt').textContent = (snap.previousClose||0).toFixed(2);
 }
 
 const conn = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
