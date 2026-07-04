@@ -34,6 +34,7 @@ public sealed class GameSingleton
     private decimal _initialCash;
     private decimal? _prevPriceForVolatility;
     private RetailProfilePool _retail = null!;
+    private InstitutionB _institutionB = null!;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
@@ -70,8 +71,12 @@ public sealed class GameSingleton
         _player = _loop.Session.GetOrCreateAccount(Player, level.PlayerCash);
         if (level.PlayerInitialHolding > 0) _player.Position.Seed(new Quantity(level.PlayerInitialHolding), intrinsic);
 
-        // 持续做市商:每 tick 维护窄价差盘口深度,提供流动性(取代一次性挂盘口)
-        _loop.AddParticipant(new MarketMaker(_loop.Session, MarketMaker, intrinsic, level.MarketMakerHolding));
+        // 机构B(做市+风险控制+操盘三合一):取代无限做市商
+        // 正常时做市提供流动性,风险升高时收紧,盘口深度成动态稀缺资源
+        _institutionB = new InstitutionB(_loop.Session, new ParticipantId("机构B"), intrinsic,
+            cash: 1_000_000_000m, initialHolding: level.MarketMakerHolding,
+            baseDepthPerLevel: 400, levels: 6, seed: 88);
+        _loop.AddParticipant(_institutionB);
 
         // 散户画像池(动态进出,每画像独立账户)—— 取代旧的固定4群体
         _retail = new RetailProfilePool(_loop.Session, new ParticipantId("散户池"), intrinsic, seed: 42);
