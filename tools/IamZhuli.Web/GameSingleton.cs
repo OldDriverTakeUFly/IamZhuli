@@ -3,6 +3,7 @@ using IamZhuli.Engine;
 using IamZhuli.Simulation;
 using IamZhuli.Simulation.Accounts;
 using IamZhuli.Simulation.AI;
+using IamZhuli.Simulation.MarketData;
 using IamZhuli.Simulation.Participants;
 using IamZhuli.Simulation.Sessions;
 using IamZhuli.Simulation.Time;
@@ -34,7 +35,8 @@ public sealed class GameSingleton
         {
             PreviousClose = intrinsic,
             PriceLimitRatio = 0.10m,
-            TickSize = new Price(0.01m)
+            TickSize = new Price(0.01m),
+            FloatShares = new Quantity(200000)   // 流通盘20万手(换手率基准)
         };
         var engine = new MatchingEngine(rules);
         // 网页版用较小的 ticksPerDay(60)便于观察,POC 可调
@@ -52,10 +54,13 @@ public sealed class GameSingleton
             intrinsic, cash: 100_000_000m, initialHolding: 20000, initialCost: intrinsic,
             sensitivity: 0.6, profile: StrategyProfile.Balanced, seed: 99);
         _loop.AddParticipant(_ai);
+        // 市场数据采集器(分时/K线/成交量/换手/MACD)
+        _collector = new MarketDataCollector(_loop, intrinsic.Value);
         _loop.Start();
         IsInitialized = true;
     }
     private readonly AIMainForce _ai;
+    private readonly MarketDataCollector _collector;
 
     private static void SeedMarket(TradingSession s)
     {
@@ -115,7 +120,17 @@ public sealed class GameSingleton
             Phase: _loop.Clock.Phase.ToString(), IsPaused: _loop.IsPaused, IsFinished: _loop.IsFinished,
             LastPrice: view.LastPrice?.Value, BestBid: view.BestBid?.Value, BestAsk: view.BestAsk?.Value,
             UpperLimit: rules.UpperLimit.Value, LowerLimit: rules.LowerLimit.Value,
-            Asks: asks, Bids: bids, Account: acc);
+            PreviousClose: _collector.PreviousClose, TurnoverRate: Math.Round(_collector.TurnoverRate, 2),
+            Asks: asks, Bids: bids, Account: acc,
+            Timeshare: _collector.TodayTimeshare.Select(t => new TimesharePointDto(t.TickOfDay, t.Price, t.CumVolume)).ToList(),
+            TodayCandle: _collector.TodayOpen.HasValue ? new DailyCandleDto(
+                _loop.Clock.CurrentDay, Math.Round(_collector.TodayOpen.Value, 2),
+                Math.Round(_collector.TodayHigh, 2), Math.Round(_collector.TodayLow, 2),
+                Math.Round(_collector.LastPrice, 2), _collector.TodayVolume) : null,
+            DailyCandles: _collector.DailyCandles.TakeLast(60)
+                .Select(c => new DailyCandleDto(c.Day, c.Open, c.High, c.Low, c.Close, c.Volume)).ToList(),
+            Macd: _collector.MacdSeries.TakeLast(60)
+                .Select(m => new MacdDto(m.Dif, m.Dea, m.Histogram)).ToList());
     }
 
     /// <summary>提交下单。返回订单结果;失败返回带 Error 的 DTO。</summary>

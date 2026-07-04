@@ -12,7 +12,7 @@
   .up { color: #ef5350; }
   .down { color: #26a69a; }
   .flat { color: #e0e0e0; }
-  .main { display: grid; grid-template-columns: 1fr 1fr 320px; gap: 1px; background: #333; height: calc(100vh - 56px); }
+  .main { display: grid; grid-template-columns: 240px 1fr 320px 280px; gap: 1px; background: #333; height: calc(100vh - 56px); }
   .panel { background: #1a1d24; padding: 16px; overflow-y: auto; }
   .panel h3 { font-size: 13px; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
   /* 盘口 */
@@ -66,6 +66,21 @@
     <div id="asks"></div>
     <div class="lastprice flat" id="lastPrice">--</div>
     <div id="bids"></div>
+  </div>
+
+  <!-- 图表 -->
+  <div class="panel" style="display:flex;flex-direction:column;">
+    <div class="seg" id="chartSeg" style="margin-bottom:8px;">
+      <button class="active" data-chart="timeshare">分时</button>
+      <button data-chart="daily">日K线</button>
+    </div>
+    <div style="flex:1;position:relative;min-height:0;">
+      <div id="priceChart" style="position:absolute;inset:0;"></div>
+    </div>
+    <div style="height:120px;position:relative;margin-top:4px;">
+      <div id="volChart" style="position:absolute;inset:0;"></div>
+    </div>
+    <div id="turnoverInfo" style="font-size:12px;color:#888;margin-top:2px;">换手 --% · 昨收 --</div>
   </div>
 
   <!-- 下单 + 控制 -->
@@ -141,6 +156,7 @@
 </div>
 
 <script src="lib/signalr.min.js"></script>
+<script src="lib/lightweight-charts.standalone.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 let side = 'buy', type = 'limit';
@@ -270,8 +286,56 @@ async function refreshAI() {
 }
 setInterval(refreshAI, 2000);
 refreshAI();
+
+// —— 图表(lightweight-charts v5)——
+const LWT = LightweightCharts;
+let chartMode = 'timeshare';
+const baseChartOpts = { layout: { background:{color:'#1a1d24'}, textColor:'#aaa', fontSize:11 },
+  grid: { vertLines:{color:'#23272f'}, horzLines:{color:'#23272f'} },
+  rightPriceScale: { borderColor:'#333' }, timeScale: { borderColor:'#333' }, crosshair: { mode: 0 } };
+const pc = LWT.createChart(document.getElementById('priceChart'), { ...baseChartOpts, width: 600, height: 400 });
+const vc = LWT.createChart(document.getElementById('volChart'), { ...baseChartOpts, width: 600, height: 120 });
+let priceSeries = pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2 });
+let baselineSeries = pc.addSeries(LWT.LineSeries, { color: '#555', lineStyle: 2, lineWidth: 1 });
+let volSeries = vc.addSeries(LWT.HistogramSeries, { color: '#4a7a8c' });
+
+function resizeCharts() {
+  const pp = document.getElementById('priceChart').parentElement;
+  const vp = document.getElementById('volChart').parentElement;
+  pc.applyOptions({ width: pp.clientWidth, height: pp.clientHeight });
+  vc.applyOptions({ width: vp.clientWidth, height: vp.clientHeight });
+}
+window.addEventListener('resize', resizeCharts);
+setTimeout(resizeCharts, 100);
+
+document.getElementById('chartSeg').addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  chartMode = e.target.dataset.chart;
+  [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === e.target));
+  pc.removeSeries(priceSeries);
+  priceSeries = chartMode === 'timeshare'
+    ? pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2 })
+    : pc.addSeries(LWT.CandlestickSeries, { upColor:'#ef5350', downColor:'#26a69a', borderUpColor:'#ef5350', borderDownColor:'#26a69a', wickUpColor:'#ef5350', wickDownColor:'#26a69a' });
+  pc.timeScale().fitContent();
+});
+
+function updateCharts(snap) {
+  if (chartMode === 'timeshare') {
+    priceSeries.setData(snap.timeshare.map(t => ({ time: t.tickOfDay, value: t.price })));
+    if (snap.previousClose) baselineSeries.setData([{time:0,value:snap.previousClose},{time:snap.ticksPerDay,value:snap.previousClose}]);
+    let prev = 0;
+    volSeries.setData(snap.timeshare.map(t => { let v = t.cumVol - prev; prev = t.cumVol; return { time: t.tickOfDay, value: v, color: '#4a7a8c' }; }));
+  } else {
+    const daily = [...snap.dailyCandles];
+    if (snap.todayCandle) daily.push(snap.todayCandle);
+    priceSeries.setData(daily.map(c => ({ time: c.day, open: c.open, high: c.high, low: c.low, close: c.close })));
+    volSeries.setData(daily.map(c => ({ time: c.day, value: c.volume, color: c.close>=c.open?'#ef5350':'#26a69a' })));
+  }
+  if (snap.turnoverRate != null) $('turnoverInfo').textContent = `换手 ${snap.turnoverRate}% · 昨收 ${(snap.previousClose||0).toFixed(2)}`;
+}
+
 const conn = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
-conn.on('snapshot', snap => { renderBook(snap); renderAccount(snap); renderHeader(snap); });
+conn.on('snapshot', snap => { renderBook(snap); renderAccount(snap); renderHeader(snap); updateCharts(snap); });
 conn.on('trade', t => addTrade(t));
 conn.start().then(() => {
   $('connDot').className = 'conn-dot on';

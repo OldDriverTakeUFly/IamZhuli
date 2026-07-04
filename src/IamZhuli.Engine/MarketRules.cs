@@ -10,11 +10,14 @@ public sealed class MarketRules
     /// <summary>最小变动价位(默认 0.01 元)。</summary>
     public Price TickSize { get; init; } = new(0.01m);
 
-    /// <summary>前收盘价,涨跌停基准。</summary>
-    public Price PreviousClose { get; init; }
+    /// <summary>前收盘价,涨跌停基准。日切时由采集器更新为上一日收盘价。</summary>
+    public Price PreviousClose { get; set; }
 
     /// <summary>涨跌停比例(默认 10%)。</summary>
     public decimal PriceLimitRatio { get; init; } = 0.10m;
+
+    /// <summary>流通盘(手),换手率 = 成交量 / 流通盘。per-stock 常量。</summary>
+    public Quantity FloatShares { get; init; } = new(200000);
 
     public Price UpperLimit => new((PreviousClose.Value * (1 + PriceLimitRatio)).RoundToTick(TickSize));
     public Price LowerLimit => new((PreviousClose.Value * (1 - PriceLimitRatio)).RoundToTick(TickSize));

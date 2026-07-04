@@ -2,15 +2,23 @@ namespace IamZhuli.Web;
 
 // ── 盘口快照 ──
 public record PriceLevelDto(decimal Price, int Qty);
+public record TimesharePointDto(int TickOfDay, decimal Price, int CumVolume);
+public record DailyCandleDto(int Day, decimal Open, decimal High, decimal Low, decimal Close, int Volume);
+public record MacdDto(decimal Dif, decimal Dea, decimal Hist);
 public record MarketSnapshotDto(
     int CurrentDay, int TotalDays,
     int TickOfDay, int TicksPerDay,
     string Phase, bool IsPaused, bool IsFinished,
     decimal? LastPrice, decimal? BestBid, decimal? BestAsk,
     decimal UpperLimit, decimal LowerLimit,
+    decimal PreviousClose, decimal TurnoverRate,
     List<PriceLevelDto> Asks,   // 卖5→卖1(展示顺序)
     List<PriceLevelDto> Bids,   // 买1→买5
-    AccountDto Account);
+    AccountDto Account,
+    List<TimesharePointDto> Timeshare,        // 当日分时点
+    DailyCandleDto? TodayCandle,              // 当日实时K(未收盘)
+    List<DailyCandleDto> DailyCandles,        // 历史日K
+    List<MacdDto> Macd);                      // MACD序列(对齐日K)
 
 // ── 账户 ──
 public record AccountDto(
