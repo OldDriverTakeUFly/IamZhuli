@@ -1,6 +1,7 @@
 using IamZhuli.Core;
 using IamZhuli.Engine;
 using IamZhuli.Simulation.Accounts;
+using IamZhuli.Simulation.Participants;
 using IamZhuli.Simulation.Sessions;
 using IamZhuli.Simulation.Time;
 
@@ -23,6 +24,13 @@ public sealed class SimulationLoop
     public TradingSession Session { get; }
     public bool IsPaused { get; private set; } = false;
     public bool IsFinished => Clock.IsTradingFinished;
+
+    private readonly List<IParticipant> _participants = new();
+    private readonly Random _rng = new();
+
+    /// <summary>注册一个参与者(散户群体、AI 主力等)。每 tick 会被驱动 Act。</summary>
+    public void AddParticipant(IParticipant participant) => _participants.Add(participant);
+    public IReadOnlyList<IParticipant> Participants => _participants;
 
     /// <summary>每个 tick 结束后触发(参数=当前 tick 序号)。</summary>
     public event Action<long>? OnTick;
@@ -51,8 +59,12 @@ public sealed class SimulationLoop
     {
         if (IsFinished || IsPaused) return;
 
-        // 注入点:M3 散户、M4 AI 在此注入订单(本 M2 无,由玩家在 tick 间手动下单)
-        // InjectParticipants();
+        // —— 注入参与者订单(散户群体、AI 主力) ——
+        foreach (var p in _participants)
+        {
+            try { p.Act(Session, Clock, _rng); }
+            catch { /* 单参与者异常不影响整体推进 */ }
+        }
 
         Price? before = Session.Engine.LastPrice;
 
@@ -71,6 +83,11 @@ public sealed class SimulationLoop
             if (!IsFinished)
             {
                 Session.OnNewTradingDay();   // T+1 解锁
+                foreach (var p in _participants)
+                {
+                    try { p.OnNewDay(); }
+                    catch { }
+                }
                 Clock.Open();
                 OnNewDay?.Invoke(Clock.CurrentDay);
             }
@@ -85,6 +102,11 @@ public sealed class SimulationLoop
         if (!IsFinished)
         {
             Session.OnNewTradingDay();
+            foreach (var p in _participants)
+            {
+                try { p.OnNewDay(); }
+                catch { }
+            }
             Clock.Open();
             OnNewDay?.Invoke(Clock.CurrentDay);
         }

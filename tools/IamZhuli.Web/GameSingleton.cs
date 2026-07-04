@@ -2,6 +2,7 @@ using IamZhuli.Core;
 using IamZhuli.Engine;
 using IamZhuli.Simulation;
 using IamZhuli.Simulation.Accounts;
+using IamZhuli.Simulation.Participants;
 using IamZhuli.Simulation.Sessions;
 using IamZhuli.Simulation.Time;
 using Microsoft.AspNetCore.SignalR;
@@ -27,19 +28,24 @@ public sealed class GameSingleton
     public GameSingleton(IHubContext<GameHub> hub)
     {
         Hub = hub;
+        var intrinsic = new Price(10.00m);
         var rules = new MarketRules
         {
-            PreviousClose = new Price(10.00m),
+            PreviousClose = intrinsic,
             PriceLimitRatio = 0.10m,
             TickSize = new Price(0.01m)
         };
         var engine = new MatchingEngine(rules);
-        // 网页版用较小的 ticksPerDay(30)便于观察,POC 可调
+        // 网页版用较小的 ticksPerDay(60)便于观察,POC 可调
         _loop = new SimulationLoop(engine, new SimulationClock(ticksPerDay: 60, totalDays: 30));
         _player = _loop.Session.GetOrCreateAccount(Player, 100_000_000m);
         var mm = _loop.Session.GetOrCreateAccount(MarketMaker, 1_000_000_000m);
-        mm.Position.Seed(new Quantity(100000), new Price(10.00m));
+        mm.Position.Seed(new Quantity(100000), intrinsic);
         SeedMarket(_loop.Session);
+        // 散户市场:初始持仓5万手(让止损盘有货),现金充足
+        var retail = new RetailMarket(_loop.Session, new ParticipantId("散户"),
+            intrinsic, cash: 200_000_000m, initialHolding: 50000, seed: 42);
+        _loop.AddParticipant(retail);
         _loop.Start();
         IsInitialized = true;
     }
