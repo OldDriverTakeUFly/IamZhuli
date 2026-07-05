@@ -12,8 +12,8 @@
   .up { color: #ef5350; }
   .down { color: #26a69a; }
   .flat { color: #e0e0e0; }
-  .main { display: grid; grid-template-columns: 240px 1fr 320px 280px; gap: 1px; background: #333; height: calc(100vh - 56px); }
-  .panel { background: #1a1d24; padding: 16px; overflow-y: auto; }
+  .main { display: grid; grid-template-columns: 280px 1fr 340px 280px; grid-template-rows: 1fr; gap: 1px; background: #333; height: calc(100vh - 56px); }
+  .panel { background: #1a1d24; padding: 16px; overflow-y: auto; min-height: 0; }
   .panel h3 { font-size: 13px; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
   /* 盘口 */
   .level { display: grid; grid-template-columns: 40px 80px 1fr 70px; gap: 8px; padding: 3px 0; align-items: center; font-size: 13px; }
@@ -42,8 +42,23 @@
   .ctrl-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
   .ctrl-row .btn { width: auto; padding: 6px 10px; font-size: 12px; }
   .msg { margin-top: 6px; font-size: 12px; min-height: 16px; }
+  /* 我的挂单列表 */
+  .orders-head { display: flex; align-items: center; gap: 6px; margin-top: 14px; padding-bottom: 6px; border-bottom: 1px solid #333; }
+  .orders-head h3 { margin: 0; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; flex: 1; }
+  .orders-head .mini-btn { font-size: 11px; padding: 3px 8px; background: #3a3a3a; color: #ccc; border: 1px solid #555; border-radius: 3px; cursor: pointer; }
+  .orders-head .mini-btn:hover { background: #4a3a2a; }
+  .orders-list { font-family: monospace; font-size: 12px; max-height: 320px; overflow-y: auto; margin-top: 4px; }
+  .order-row { display: grid; grid-template-columns: 22px 1fr 50px 36px; gap: 4px; padding: 4px 6px; align-items: center; border-radius: 3px; cursor: pointer; }
+  .order-row:hover { background: #23272f; }
+  .order-row .o-side { font-weight: bold; }
+  .order-row .o-price { font-weight: bold; }
+  .order-row .o-cancel { font-size: 11px; color: #888; text-align: center; }
+  .order-row .o-cancel:hover { color: #ef5350; }
+  .order-row.buy .o-side, .order-row.buy .o-price { color: #ef5350; }
+  .order-row.sell .o-side, .order-row.sell .o-price { color: #26a69a; }
+  .orders-empty { color: #555; font-size: 12px; padding: 8px 4px; text-align: center; }
   /* 成交 */
-  .trade-list { font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+  .trade-list { font-family: monospace; font-size: 12px; max-height: 160px; overflow-y: auto; }
   .trade-item { display: grid; grid-template-columns: 1fr 1fr 40px; gap: 6px; padding: 2px 0; }
   .status-bar { background: #23272f; padding: 6px 20px; font-size: 12px; color: #888; display: flex; gap: 20px; border-top: 1px solid #333; }
   .conn-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
@@ -74,24 +89,42 @@
 </div>
 
 <div class="main">
-  <!-- 盘口 -->
+  <!-- 盘口 + 成交 + AI动向(信息观察区) -->
   <div class="panel">
     <h3>盘口五档</h3>
     <div id="asks"></div>
     <div class="lastprice flat" id="lastPrice">--</div>
     <div id="bids"></div>
+
+    <h3 style="margin-top:12px;">最近成交</h3>
+    <div class="trade-list" id="tradeList"></div>
+
+    <h3 style="margin-top:12px;">🤖 AI 主力动向 <span style="font-size:11px;color:#666;font-weight:normal">(盘口推测,持仓不可见)</span></h3>
+    <div id="aiPanel" style="background:#23272f;padding:8px;border-radius:6px;font-size:12px;min-height:40px;color:#888;">
+      等待AI动向...
+    </div>
   </div>
 
   <!-- 图表 -->
-  <div class="panel" style="display:flex;flex-direction:column;">
-    <div class="seg" id="chartSeg" style="margin-bottom:8px;">
+  <!-- 中间:图表区。高度由 JS resizeCharts 主动计算赋值,不依赖 flex 链(避免塌缩) -->
+  <div class="panel" id="chartPanel" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+    <div class="seg" id="chartSeg" style="margin-bottom:8px;flex:0 0 auto;">
       <button class="active" data-chart="timeshare">分时</button>
       <button data-chart="daily">日K线</button>
     </div>
-    <div style="flex:1;position:relative;min-height:0;">
-      <div id="priceChart" style="position:absolute;inset:0;"></div>
+    <!-- 日K + 筹码峰 并排(仅日K模式显示筹码侧栏) -->
+    <div id="priceArea" style="flex:1 1 0;display:flex;min-height:0;gap:1px;">
+      <div id="priceWrap" style="flex:1 1 auto;position:relative;min-width:0;">
+        <div id="priceChart" style="position:absolute;inset:0;"></div>
+      </div>
+      <!-- 筹码峰侧栏:价位纵轴与K线对齐,横向柱形=筹码量 -->
+      <div id="chipSidebar" style="flex:0 0 140px;display:none;flex-direction:column;background:#1a1d24;border-radius:0 4px 4px 0;overflow:hidden;">
+        <div style="font-size:10px;color:#888;padding:2px 4px;border-bottom:1px solid #333;text-align:center;">筹码分布</div>
+        <div id="chipPeak" style="flex:1;position:relative;min-height:0;"></div>
+        <div id="chipLabel" style="font-size:9px;color:#666;padding:2px 4px;border-top:1px solid #333;text-align:center;">移动光标查看</div>
+      </div>
     </div>
-    <div style="height:120px;position:relative;margin-top:4px;">
+    <div id="volWrap" style="flex:0 0 110px;position:relative;margin-top:4px;">
       <div id="volChart" style="position:absolute;inset:0;"></div>
     </div>
     <div id="turnoverInfo" style="display:flex;gap:16px;font-size:12px;margin-top:4px;padding:4px 8px;background:#1e222a;border-radius:4px;">
@@ -136,24 +169,38 @@
       <div class="msg" id="msg"></div>
     </div>
 
+    <!-- 我的挂单:集中查看与管理玩家所有在簿限价单 -->
+    <div class="orders-head">
+      <h3>我的挂单 <span id="orderCount" style="color:#666;font-weight:normal;">(0)</span></h3>
+      <button class="mini-btn" id="cancelBuyBtn">撤买</button>
+      <button class="mini-btn" id="cancelSellBtn">撤卖</button>
+      <button class="mini-btn" id="cancelAllBtn">全撤</button>
+    </div>
+    <div class="orders-list" id="ordersList">
+      <div class="orders-empty">暂无挂单</div>
+    </div>
+
     <h3 style="margin-top:16px;">时间控制</h3>
-    <div class="ctrl-row">
+    <!-- 盘前态:显示开始操盘按钮,隐藏暂停/继续 -->
+    <div id="preMarketCtrl" style="display:none;">
+      <div style="font-size:11px;color:#888;margin-bottom:6px;line-height:1.4;">
+        自由研究K线和筹码分布,准备好后开始操盘。
+      </div>
+      <button class="btn btn-buy" id="beginBtn" style="font-size:15px;padding:10px;">🚀 开始操盘</button>
+    </div>
+    <div id="tradingCtrl" class="ctrl-row">
       <button class="btn btn-ctrl" id="pauseBtn">⏸ 暂停</button>
       <button class="btn btn-ctrl" id="resumeBtn">▶ 继续</button>
       <button class="btn btn-ctrl warn" id="skipDayBtn">⏭ 跳到收盘</button>
     </div>
-    <div id="dayClosedBanner" style="display:none;margin-top:8px;padding:10px;background:#3a2a1a;border:1px solid #8c6a3a;border-radius:6px;text-align:center;">
-      <div style="color:#e8c44a;font-size:14px;font-weight:bold;">📅 今日收盘</div>
-      <div style="color:#888;font-size:11px;margin-top:2px;">T+1 持仓已解锁</div>
-      <button class="btn btn-ctrl" id="nextDayBtn" style="width:auto;margin-top:6px;padding:6px 16px;">▶ 开始下一交易日</button>
-    </div>
-
-    <h3 style="margin-top:16px;">最近成交</h3>
-    <div class="trade-list" id="tradeList"></div>
-
-    <h3 style="margin-top:16px;">🤖 AI 主力动向 <span style="font-size:11px;color:#666;font-weight:normal">(盘口推测,持仓不可见)</span></h3>
-    <div id="aiPanel" style="background:#23272f;padding:8px;border-radius:6px;font-size:12px;min-height:40px;color:#888;">
-      等待AI动向...
+    <div id="dayClosedBanner" style="display:none;margin-top:8px;padding:10px;background:#3a2a1a;border:1px solid #8c6a3a;border-radius:6px;">
+      <div style="text-align:center;">
+        <div style="color:#e8c44a;font-size:14px;font-weight:bold;">📅 今日收盘</div>
+        <div style="color:#888;font-size:11px;margin-top:2px;">T+1 持仓已解锁</div>
+      </div>
+      <!-- 当日筹码流向(收盘时异步加载) -->
+      <div id="dayChipPanel" style="margin-top:8px;"></div>
+      <button class="btn btn-ctrl" id="nextDayBtn" style="width:auto;margin-top:8px;padding:6px 16px;display:block;margin-left:auto;margin-right:auto;">▶ 开始下一交易日</button>
     </div>
   </div>
 
@@ -170,22 +217,49 @@
     <div class="acc-row"><span class="lbl">T+1锁定</span><span class="val" id="posT1">--</span></div>
     <div class="acc-row"><span class="lbl">成本价</span><span class="val" id="cost">--</span></div>
     <h3 style="margin-top:16px;">🎯 关卡目标</h3>
+    <div id="levelName" style="font-size:13px;color:#e8c44a;font-weight:bold;margin-bottom:2px;">--</div>
+    <div id="levelBriefing" style="font-size:11px;color:#888;margin-bottom:6px;line-height:1.4;">--</div>
     <div id="objectives" style="font-size:12px;"></div>
     <div class="ctrl-row" style="margin-top:8px;">
       <button class="btn btn-ctrl" id="endBtn" style="font-size:11px;">结束结算</button>
       <button class="btn btn-ctrl warn" id="retryBtn" style="font-size:11px;">重新开始</button>
     </div>
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid #333;">
+      <div style="font-size:11px;color:#666;margin-bottom:4px;">切换关卡</div>
+      <div class="ctrl-row">
+        <button class="btn btn-ctrl level-btn" data-level="tutorial" style="font-size:10px;padding:4px 8px;">教程</button>
+        <button class="btn btn-ctrl level-btn" data-level="accumulate" style="font-size:10px;padding:4px 8px;">吸筹</button>
+        <button class="btn btn-ctrl level-btn" data-level="pump_dump" style="font-size:10px;padding:4px 8px;">拉升出货</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 盘前提示条:IsPreMarket 时在顶部居中显示(不挡操作,玩家自由探索) -->
+<div id="preMarketBar" style="display:none;position:fixed;top:62px;left:50%;transform:translateX(-50%);z-index:80;background:#3a2a1a;border:1px solid #8c6a3a;border-radius:6px;padding:6px 16px;font-size:12px;color:#e8c44a;">
+  📋 盘前准备中 · 研究K线和筹码后,在右侧点击「开始操盘」
+</div>
+
+<!-- 关卡选择界面:未选关卡时全屏显示 -->
+<div id="levelSelectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:95;align-items:center;justify-content:center;">
+  <div style="background:#23272f;padding:32px 40px;border-radius:12px;max-width:520px;text-align:center;">
+    <div style="font-size:22px;font-weight:bold;color:#e8c44a;margin-bottom:6px;">📈 我是主力</div>
+    <div style="font-size:13px;color:#888;margin-bottom:20px;">选择你要挑战的操盘关卡</div>
+    <div id="levelCards" style="display:flex;flex-direction:column;gap:10px;text-align:left;"></div>
   </div>
 </div>
 
 <!-- 结算弹窗 -->
 <div id="resultModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;">
-  <div style="background:#23272f;padding:30px 40px;border-radius:12px;max-width:480px;text-align:center;">
+  <div style="background:#23272f;padding:30px 40px;border-radius:12px;max-width:560px;text-align:center;">
     <div id="resultTitle" style="font-size:24px;font-weight:bold;margin-bottom:8px;"></div>
     <div id="resultStars" style="font-size:28px;margin-bottom:12px;"></div>
     <div id="resultObjectives" style="text-align:left;margin:12px 0;font-size:13px;"></div>
+    <!-- 三方收益率排名(积分制) -->
+    <div id="resultScore" style="margin:12px 0;"></div>
     <div id="resultCoach" style="background:#1a1d24;padding:12px;border-radius:8px;font-size:13px;color:#e8c44a;margin:12px 0;text-align:left;"></div>
-    <button class="btn btn-ctrl" onclick="document.getElementById('resultModal').style.display='none';" style="width:auto;padding:8px 24px;">关闭</button>
+    <button class="btn btn-ctrl" id="modalCloseBtn" style="width:auto;padding:8px 24px;">关闭</button>
+    <button class="btn btn-ctrl" id="modalRetryBtn" style="width:auto;padding:8px 24px;margin-left:8px;">🔄 再来一局</button>
   </div>
 </div>
 
@@ -195,10 +269,20 @@
   <span id="phaseTxt">--</span>
   <span style="margin-left:auto">我是主力 POC · 后台每400ms自动tick · 玩家1亿资金</span>
 </div>
+<div id="dbgBar" style="background:#2a1010;color:#ef5350;font-size:11px;padding:2px 12px;min-height:18px;"></div>
 
 <script src="lib/signalr.min.js"></script>
 <script src="lib/lightweight-charts.standalone.js"></script>
 <script>
+// 全局错误捕获:把JS错误显示在页面底部,方便诊断"卡死"
+window.addEventListener('error', e => {
+  const dbg = document.getElementById('dbgBar');
+  if (dbg) dbg.textContent = '❌ ' + e.message + ' @ ' + (e.filename||'').split('/').pop() + ':' + e.lineno;
+});
+window.addEventListener('unhandledrejection', e => {
+  const dbg = document.getElementById('dbgBar');
+  if (dbg) dbg.textContent = '❌ Promise: ' + (e.reason && e.reason.message || e.reason);
+});
 const $ = id => document.getElementById(id);
 let side = 'buy', type = 'limit';
 
@@ -247,11 +331,49 @@ async function cancelOrder(orderId) {
   $('msg').innerHTML = `<span style="color:#888">已撤销 #${orderId}</span>`;
 }
 
+// —— 挂单列表:批量撤单 + 点击改价 ——
+$('cancelAllBtn').onclick = async () => {
+  const r = await fetch('/api/cancelall', { method: 'POST' });
+  const j = await r.json();
+  $('msg').innerHTML = `<span style="color:#888">全撤 ${j.cancelled} 笔</span>`;
+};
+$('cancelBuyBtn').onclick = async () => {
+  const r = await fetch('/api/cancelbyside?side=buy', { method: 'POST' });
+  const j = await r.json();
+  $('msg').innerHTML = `<span style="color:#888">撤买 ${j.cancelled} 笔</span>`;
+};
+$('cancelSellBtn').onclick = async () => {
+  const r = await fetch('/api/cancelbyside?side=sell', { method: 'POST' });
+  const j = await r.json();
+  $('msg').innerHTML = `<span style="color:#888">撤卖 ${j.cancelled} 笔</span>`;
+};
+// 挂单列表交互:点"撤"撤销该单;点行内其他位置把价格填入下单框(快速改价)
+$('ordersList').addEventListener('click', async e => {
+  const cancelId = e.target.dataset.cancel;
+  if (cancelId) { e.stopPropagation(); await cancelOrder(cancelId); return; }
+  const row = e.target.closest('.order-row');
+  if (!row) return;
+  // 点击价格区:填入下单框价格,并切换到对应方向+限价,便于改单(撤旧+重新挂)
+  const price = row.dataset.price;
+  const isBuy = row.classList.contains('buy');
+  $('price').value = parseFloat(price).toFixed(2);
+  // 同步全局 side/type 变量与按钮状态(与 seg 切换逻辑保持一致)
+  side = isBuy ? 'buy' : 'sell';
+  type = 'limit';
+  document.querySelectorAll('#sideSeg button').forEach(b => b.classList.toggle('active', b.dataset.side === side));
+  document.querySelectorAll('#typeSeg button').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  const btn = $('submitBtn');
+  btn.className = 'btn ' + (side === 'buy' ? 'btn-buy' : 'btn-sell');
+  btn.textContent = '确认' + (side === 'buy' ? '买入' : '卖出');
+  $('priceRow').style.display = 'flex';
+  $('price').focus();
+});
+
 // —— 时间控制 ——
 $('pauseBtn').onclick = () => fetch('/api/pause', { method: 'POST' });
 $('resumeBtn').onclick = () => fetch('/api/resume', { method: 'POST' });
 $('skipDayBtn').onclick = () => fetch('/api/skipday', { method: 'POST' });
-$('nextDayBtn').onclick = () => fetch('/api/nextday', { method: 'POST' });
+$('nextDayBtn').onclick = () => { _chipDay = 0; fetch('/api/nextday', { method: 'POST' }); };
 
 // —— 渲染盘口 ——
 function renderBook(snap) {
@@ -267,6 +389,28 @@ function renderBook(snap) {
   const lp = snap.lastPrice;
   $('lastPrice').textContent = lp != null ? lp.toFixed(2) : '--';
   $('lastPrice').className = 'lastprice ' + (lp == null ? 'flat' : (lp >= 10 ? 'up' : 'down'));
+}
+
+// —— 渲染我的挂单(每次快照刷新)——
+function renderOrders(snap) {
+  const list = snap.openOrders || [];
+  $('orderCount').textContent = `(${list.length})`;
+  if (list.length === 0) {
+    $('ordersList').innerHTML = '<div class="orders-empty">暂无挂单</div>';
+    return;
+  }
+  $('ordersList').innerHTML = list.map(o => {
+    const sideTxt = o.side === 'Buy' ? '买' : '卖';
+    const cls = o.side === 'Buy' ? 'buy' : 'sell';
+    // 已成交部分显示在数量后(如 "100/50"表示总量100已成50)
+    const qtyTxt = o.filledQty > 0 ? `${o.totalQty}<span style="color:#888">/${o.filledQty}</span>` : `${o.totalQty}`;
+    return `<div class="order-row ${cls}" data-orderid="${o.orderId}" data-price="${o.price}">
+      <span class="o-side">${sideTxt}</span>
+      <span class="o-price">${o.price.toFixed(2)}</span>
+      <span style="color:#ccc;text-align:right;">${qtyTxt}</span>
+      <span class="o-cancel" data-cancel="${o.orderId}">撤</span>
+    </div>`;
+  }).join('');
 }
 
 // —— 渲染账户 ——
@@ -322,9 +466,51 @@ async function showResult() {
       `<div style="color:${o.achieved?'#26a69a':'#ef5350'};">${o.achieved?'✓':'✗'} ${o.description}</div>`).join('');
     $('resultCoach').textContent = '🤖 AI教练: ' + r.coachComment;
     $('resultModal').style.display = 'flex';
+    // 异步加载三方排名(不阻塞弹窗显示)
+    renderScore();
   } catch (e) { resultShown = false; }
 }
+// 三方收益率/回撤/排名表格
+async function renderScore() {
+  try {
+    const s = await (await fetch('/api/score')).json();
+    const rankings = s.rankings || [];
+    if (rankings.length === 0) { $('resultScore').innerHTML = ''; return; }
+    const medal = ['🥇', '🥈', '🥉'];
+    const rows = rankings.map(p => {
+      const retCls = p.returnRate >= 0 ? 'up' : 'down';
+      const retPct = (p.returnRate * 100).toFixed(2);
+      const ddPct = (p.maxDrawdown * 100).toFixed(1);
+      const isPlayer = p.name === '玩家';
+      return `<tr style="${isPlayer?'background:#2a3040;':''}">
+        <td style="padding:4px 8px;">${medal[p.rank-1]||p.rank}</td>
+        <td style="padding:4px 8px;text-align:left;${isPlayer?'color:#e8c44a;font-weight:bold;':''}">${p.name}</td>
+        <td style="padding:4px 8px;" class="${retCls}">${retPct >= 0 ? '+' : ''}${retPct}%</td>
+        <td style="padding:4px 8px;color:#888;">${ddPct}%</td>
+        <td style="padding:4px 8px;color:#ccc;">${(p.score*100).toFixed(0)}</td>
+      </tr>`;
+    }).join('');
+    $('resultScore').innerHTML = `
+      <div style="font-size:12px;color:#888;margin-bottom:6px;">📊 三方收益排名(风险调整后得分)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:monospace;">
+        <thead><tr style="color:#666;font-size:11px;">
+          <th style="padding:4px 8px;">名次</th>
+          <th style="padding:4px 8px;text-align:left;">参与方</th>
+          <th style="padding:4px 8px;">收益率</th>
+          <th style="padding:4px 8px;">最大回撤</th>
+          <th style="padding:4px 8px;">得分</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } catch (e) { $('resultScore').innerHTML = ''; }
+}
 $('endBtn').onclick = () => { showResult(); };
+$('modalCloseBtn').onclick = () => { $('resultModal').style.display = 'none'; };
+$('modalRetryBtn').onclick = async () => {
+  resultShown = false;
+  $('resultModal').style.display = 'none';
+  await fetch('/api/retry', { method: 'POST' });
+};
 $('retryBtn').onclick = async () => {
   resultShown = false;
   $('resultModal').style.display = 'none';
@@ -346,13 +532,137 @@ function renderHeader(snap) {
   $('hLimit').textContent = `涨跌停 ${snap.upperLimit.toFixed(2)} / ${snap.lowerLimit.toFixed(2)}`;
   $('clockTxt').textContent = `第${snap.currentDay}/${snap.totalDays}日 · tick ${snap.tickOfDay}/${snap.ticksPerDay}`;
   $('phaseTxt').textContent = snap.phase + (snap.isPaused ? ' · 已暂停' : '');
-  // 日终收盘横幅:phase=Closed 且暂停时显示(等待玩家开始下一日)
+  // 日终收盘横幅:phase=Closed 且暂停时显示(等待玩家开始下一日);首次显示时加载当日筹码
   const closed = snap.phase === 'Closed' && snap.isPaused;
-  $('dayClosedBanner').style.display = closed ? 'block' : 'none';
+  $('dayClosedBanner').style.display = (closed && !snap.isPreMarket) ? 'block' : 'none';
+  if (closed && !snap.isPreMarket && _chipDay !== snap.currentDay) {
+    _chipDay = snap.currentDay;
+    loadDayChipPanel(snap.currentDay);
+  }
+  // 关卡选择界面:phase=Waiting(未选关卡)时显示
+  const waiting = snap.phase === 'Waiting';
+  $('levelSelectModal').style.display = waiting ? 'flex' : 'none';
+  if (waiting) renderLevelCards();
+  // 盘前态:显示顶部提示条 + 右侧开始按钮,隐藏交易控制
+  $('preMarketBar').style.display = snap.isPreMarket ? 'block' : 'none';
+  $('preMarketCtrl').style.display = snap.isPreMarket ? 'block' : 'none';
+  $('tradingCtrl').style.display = snap.isPreMarket ? 'none' : 'flex';
+  // 盘前态自动切到日K模式,让玩家研究历史K线和筹码(只切一次,避免循环)
+  if (snap.isPreMarket && chartMode !== 'daily' && !_preMarketSwitched) {
+    _preMarketSwitched = true;
+    document.querySelector('[data-chart="daily"]').click();
+  }
+  if (!snap.isPreMarket) _preMarketSwitched = false;
+}
+let _preMarketSwitched = false;
+let _chipDay = 0;
+async function loadDayChipPanel(day) {
+  try {
+    const data = await (await fetch('/api/chips?day=' + day)).json();
+    if (!data || data.length === 0) { $('dayChipPanel').innerHTML = ''; return; }
+    const d = data[0];
+    const maxQty = Math.max(...d.bands.map(b => b.quantity), 1);
+    const peakPct = (d.peakConcentration * 100).toFixed(0);
+    // 精简筹码峰:只显示筹码量前6大的价位桶(避免太长)
+    const topBands = [...d.bands].sort((a,b) => b.quantity - a.quantity).slice(0, 6)
+      .sort((a,b) => a.priceLow - b.priceLow);
+    const rows = topBands.map(b => {
+      const w = (b.quantity / maxQty * 100).toFixed(1);
+      const pct = (b.pct * 100).toFixed(1);
+      const isProfit = d.closePrice >= b.priceHigh;
+      const color = isProfit ? '#ef5350' : '#26a69a';
+      return `<div style="display:flex;align-items:center;gap:4px;font-family:monospace;font-size:10px;margin-bottom:1px;">
+        <span style="width:70px;text-align:right;color:#888;">${b.priceLow.toFixed(2)}~${b.priceHigh.toFixed(2)}</span>
+        <div style="flex:1;height:10px;background:#1a1d24;overflow:hidden;">
+          <div style="width:${w}%;height:100%;background:${color};opacity:0.85;"></div>
+        </div>
+        <span style="width:32px;text-align:right;color:#666;">${pct}%</span>
+      </div>`;
+    }).join('');
+    $('dayChipPanel').innerHTML = `
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">📊 筹码峰 · 峰集中度 ${peakPct}%</div>
+      ${rows}
+      <div style="font-size:9px;color:#555;margin-top:2px;text-align:center;">
+        红=获利盘 绿=套牢盘 · 收盘 ${d.closePrice.toFixed(2)} · 切到「筹码」标签看完整分布
+      </div>`;
+  } catch { $('dayChipPanel').innerHTML = ''; }
 }
 
-// —— 成交列表 ——
-const trades = [];
+// —— 筹码峰(日K右侧侧栏):Canvas绘制,价位纵轴与K线对齐 ——
+let _chipHistory = null;   // 缓存全部筹码历史
+let _chipSelDay = null;    // 当前显示的 day(null=最新)
+async function loadChipHistory() {
+  try { _chipHistory = await (await fetch('/api/chips')).json(); }
+  catch { _chipHistory = null; }
+}
+// 渲染筹码峰到侧栏(day=null 显示最新)
+function renderChipPeak(day) {
+  const peak = $('chipPeak');
+  const label = $('chipLabel');
+  if (!_chipHistory || _chipHistory.length === 0) {
+    peak.innerHTML = '<div style="color:#555;font-size:10px;text-align:center;padding:20px;">无数据</div>';
+    label.textContent = '尚无收盘数据';
+    return;
+  }
+  // 找对应日(day=null 取最新一条)
+  let d;
+  if (day != null) {
+    d = _chipHistory.find(x => x.day === day);
+  }
+  if (!d) d = _chipHistory[_chipHistory.length - 1];   // fallback 最新
+  const maxQty = Math.max(...d.bands.map(b => b.quantity), 1);
+  const close = d.closePrice;
+  // 用 Canvas 绘制山峰形态:纵轴=价位(与K线对齐),横轴=筹码量
+  const w = peak.clientWidth || 130;
+  const h = peak.clientHeight || 200;
+  if (w <= 0 || h <= 0) return;
+  // 把价位映射到 Y 坐标:用日K图的 priceToCoordinate 保证对齐
+  let yOf = null;
+  try { yOf = p => priceSeries.priceToCoordinate(p); } catch {}
+  // fallback:线性映射(min~max价位 → 0~h)
+  const prices = d.bands.flatMap(b => [b.priceLow, b.priceHigh]);
+  const pMin = Math.min(...prices, close);
+  const pMax = Math.max(...prices, close);
+  const pRange = Math.max(0.1, pMax - pMin);
+  const linearY = p => h - ((p - pMin) / pRange) * h;
+  // 绘制:每个价位桶一根横向条,颜色按获利/套牢
+  const bars = d.bands.map(b => {
+    const barLen = (b.quantity / maxQty) * (w - 4);
+    const pMid = (b.priceLow + b.priceHigh) / 2;
+    const y = yOf ? yOf(pMid) : linearY(pMid);
+    if (y == null || y < 0 || y > h) return null;
+    const isProfit = close >= b.priceHigh;
+    return { y, len: barLen, color: isProfit ? '#ef5350' : '#26a69a', qty: b.quantity, price: pMid };
+  }).filter(x => x !== null);
+  // 用 Canvas 画
+  let canvas = peak.querySelector('canvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    peak.appendChild(canvas);
+  }
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+  // 画收盘价横线
+  const closeY = yOf ? yOf(close) : linearY(close);
+  if (closeY != null && closeY >= 0 && closeY <= h) {
+    ctx.strokeStyle = '#e8c44a'; ctx.setLineDash([3,2]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, closeY); ctx.lineTo(w, closeY); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // 画筹码条
+  bars.forEach(b => {
+    ctx.fillStyle = b.color; ctx.globalAlpha = 0.75;
+    ctx.fillRect(2, b.y - 1, Math.max(1, b.len), 2);
+  });
+  ctx.globalAlpha = 1;
+  // 标签
+  const peakPct = (d.peakConcentration * 100).toFixed(0);
+  label.innerHTML = `第${d.day}日 · 峰${peakPct}% · 收盘${close.toFixed(2)}`;
+}
+
 function addTrade(t) {
   trades.unshift(t);
   if (trades.length > 30) trades.pop();
@@ -366,6 +676,54 @@ const stateLabel = {
   Observe: '👁 观察', Defend: '🛡 护盘', Wash: '🌊 洗盘',
   Distribute: '💰 出货', Follow: '🔥 跟风', Counter: '⚔ 反杀'
 };
+// 关卡信息加载 + 切换
+async function refreshLevel() {
+  try {
+    const lv = await (await fetch('/api/level')).json();
+    $('levelName').textContent = '🎯 ' + (lv.name || '');
+    $('levelBriefing').textContent = lv.briefing || '';
+    $('pmLevelName').textContent = lv.name || '';
+    $('pmBriefing').textContent = lv.briefing || '';
+    document.querySelectorAll('.level-btn').forEach(b =>
+      b.style.outline = b.dataset.level === lv.id ? '2px solid #e8c44a' : 'none');
+  } catch {}
+}
+// 盘前开始操盘按钮
+$('beginBtn').onclick = async () => {
+  await fetch('/api/begin', { method: 'POST' });
+};
+// 关卡选择卡片
+const levelDefs = [
+  { id: 'tutorial', name: '教程:首次拉升', icon: '📘',
+    briefing: '把鼎鼎集团从10元拉升到12元,完成你的第一次操盘。适合新手熟悉操作。' },
+  { id: 'accumulate', name: '隐蔽吸筹', icon: '🤫',
+    briefing: '不动声色地建仓至流通盘的15%,且全程监管关注值不超过50%。考验隐蔽性。' },
+  { id: 'pump_dump', name: '拉升出货', icon: '💰',
+    briefing: '把股价从10元拉到13元,并在高位出货至少30%仓位。经典主力操盘套路。' }
+];
+function renderLevelCards() {
+  $('levelCards').innerHTML = levelDefs.map(lv => `
+    <div class="level-card" data-level="${lv.id}" style="background:#1a1d24;padding:14px;border-radius:8;border:1px solid #333;cursor:pointer;">
+      <div style="font-size:15px;font-weight:bold;color:#e8c44a;">${lv.icon} ${lv.name}</div>
+      <div style="font-size:12px;color:#888;margin-top:4px;line-height:1.4;">${lv.briefing}</div>
+    </div>`).join('');
+  document.querySelectorAll('.level-card').forEach(card => {
+    card.onmouseover = () => card.style.borderColor = '#8c6a3a';
+    card.onmouseout = () => card.style.borderColor = '#333';
+    card.onclick = async () => {
+      await fetch('/api/loadlevel?id=' + card.dataset.level, { method: 'POST' });
+    };
+  });
+}
+document.querySelectorAll('.level-btn').forEach(btn => {
+  btn.onclick = async () => {
+    resultShown = false;
+    $('resultModal').style.display = 'none';
+    await fetch('/api/loadlevel?id=' + btn.dataset.level, { method: 'POST' });
+    refreshLevel();
+  };
+});
+refreshLevel();
 async function refreshAI() {
   try {
     const r = await fetch('/api/ai?count=3');
@@ -391,21 +749,52 @@ const baseChartOpts = { layout: { background:{color:'#1a1d24'}, textColor:'#aaa'
   rightPriceScale: { borderColor:'#333' },
   timeScale: { borderColor:'#333', handleScroll: false, handleScale: false },
   crosshair: { mode: 0 } };
-const pc = LWT.createChart(document.getElementById('priceChart'), { ...baseChartOpts, width: 600, height: 400 });
-const vc = LWT.createChart(document.getElementById('volChart'), { ...baseChartOpts, width: 600, height: 120 });
+const pc = LWT.createChart(document.getElementById('priceChart'), { ...baseChartOpts,
+  width: 600, height: 300,
+  layout: { background:{color:'#1a1d24'}, textColor:'#aaa', fontSize:11, attributionLogo: false } });
+const vc = LWT.createChart(document.getElementById('volChart'), { ...baseChartOpts,
+  width: 600, height: 100,
+  layout: { background:{color:'#1a1d24'}, textColor:'#aaa', fontSize:11, attributionLogo: false } });
 let priceSeries = pc.addSeries(LWT.LineSeries, { color: '#e8c44a', lineWidth: 2, priceLineVisible: false });
 let baselineSeries = pc.addSeries(LWT.LineSeries, { color: '#555', lineStyle: 2, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
 let volSeries = vc.addSeries(LWT.HistogramSeries, { color: '#4a7a8c', priceFormat: { type: 'volume' } });
 
+// crosshair 联动:鼠标在日K上移动 → 切换筹码峰到对应日(必须在 pc 创建之后)
+pc.subscribeCrosshairMove(param => {
+  if (chartMode !== 'daily') return;
+  if (!param.time) { renderChipPeak(_chipSelDay); return; }
+  const day = typeof param.time === 'number' ? param.time : param.time.value;
+  _chipSelDay = day;
+  renderChipPeak(day);
+});
+
+// 主动测量容器并设置图表尺寸(不依赖 autoSize/ResizeObserver,避免嵌套 flex 塌缩)
 function resizeCharts() {
-  // 读父容器(chart的wrapper)的实际尺寸,让图表填满
-  const pp = document.getElementById('priceChart').parentElement;
-  const vp = document.getElementById('volChart').parentElement;
-  const pw = pp.clientWidth, ph = pp.clientHeight;
-  const vw = vp.clientWidth, vh = vp.clientHeight;
-  if (pw > 0 && ph > 0) pc.applyOptions({ width: pw, height: ph });
-  if (vw > 0 && vh > 0) vc.applyOptions({ width: vw, height: vh });
-  // 分时模式重新固定x轴范围(resize后范围会丢失)
+  const panel = document.getElementById('chartPanel');
+  const pw = document.getElementById('priceWrap');
+  const vw = document.getElementById('volWrap');
+  const pa = document.getElementById('priceArea');
+  if (!panel || !pw || !vw || !pa) return;
+  const panelH = panel.clientHeight;
+  const panelW = panel.clientWidth;
+  if (panelH <= 0 || panelW <= 0) return;
+  const segH = document.getElementById('chartSeg').offsetHeight + 8;
+  const volH = 110;
+  const turnH = document.getElementById('turnoverInfo').offsetHeight + 8;
+  let priceH = panelH - segH - volH - turnH - 32;
+  if (priceH < 100) priceH = 100;
+  // 价格区(priceArea)高度 = priceH,内部日K和筹码侧栏共享
+  pa.style.height = priceH + 'px';
+  vw.style.height = (volH - 4) + 'px';
+  // 日K宽度 = priceArea 宽度 - 筹码侧栏(日K模式显示侧栏时占140+gap)
+  const showChip = chartMode === 'daily';
+  const chipW = showChip ? 141 : 0;   // 140 + gap 1
+  const chartW = pa.clientWidth - chipW;
+  pc.applyOptions({ width: Math.max(100, chartW), height: priceH });
+  vc.applyOptions({ width: Math.max(100, panelW - 32), height: volH - 4 });
+  // 筹码侧栏显示/隐藏
+  $('chipSidebar').style.display = showChip ? 'flex' : 'none';
+  // 固定 x 轴范围
   if (chartMode === 'timeshare') {
     const tpd = (window._lastSnap && window._lastSnap.ticksPerDay) || 600;
     pc.timeScale().setVisibleLogicalRange({ from: 0, to: tpd });
@@ -413,21 +802,24 @@ function resizeCharts() {
   } else {
     pc.timeScale().fitContent();
     vc.timeScale().fitContent();
+    renderChipPeak();   // 日K模式同步筹码峰
   }
 }
 window.addEventListener('resize', () => requestAnimationFrame(resizeCharts));
-// 多次延迟确保grid布局完成后尺寸正确
+// 多次延迟确保 grid 布局完成后尺寸正确
 setTimeout(resizeCharts, 50);
 setTimeout(resizeCharts, 200);
 setTimeout(resizeCharts, 500);
+setTimeout(resizeCharts, 1000);
 
-// 切换图表模式:重建series + 重置缓存
+// 切换图表模式:重建series + 重置缓存(日K模式自动显示筹码侧栏)
 document.getElementById('chartSeg').addEventListener('click', e => {
   if (e.target.tagName !== 'BUTTON') return;
   chartMode = e.target.dataset.chart;
   [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === e.target));
   rebuildSeries();
   resetChartCache();
+  resizeCharts();
 });
 
 function rebuildSeries() {
@@ -510,6 +902,14 @@ function updateCharts(snap) {
     }
     pc.timeScale().fitContent();
     vc.timeScale().fitContent();
+    // 日K模式:筹码峰同步(跨日时重新加载历史)
+    const chipDays = _chipHistory ? _chipHistory.length : 0;
+    const expectedDays = (snap.dailyCandles || []).length + (snap.todayCandle ? 0 : 0);   // 已收盘的日数
+    if (!_chipHistory || chipDays < snap.currentDay) {
+      loadChipHistory().then(() => renderChipPeak(_chipSelDay));
+    } else if (chartMode === 'daily') {
+      renderChipPeak(_chipSelDay);
+    }
   }
   // 成交统计栏
   const vol = snap.todayCandle?.volume || 0;
@@ -521,7 +921,13 @@ function updateCharts(snap) {
 }
 
 const conn = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
-conn.on('snapshot', snap => { renderBook(snap); renderAccount(snap); renderHeader(snap); updateCharts(snap); renderRegulator(snap); renderObjectives(snap); });
+conn.on('snapshot', snap => {
+  // 每个 render 独立 try-catch,防止某个函数异常拖垮整个页面
+  const fns = [renderBook, renderAccount, renderHeader, updateCharts, renderRegulator, renderObjectives, renderOrders];
+  for (const fn of fns) {
+    try { fn(snap); } catch(e) { console.error(fn.name, e); }
+  }
+});
 conn.on('trade', t => addTrade(t));
 conn.start().then(() => {
   $('connDot').className = 'conn-dot on';

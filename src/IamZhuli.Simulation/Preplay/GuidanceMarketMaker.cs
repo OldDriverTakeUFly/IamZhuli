@@ -40,7 +40,6 @@ public sealed class GuidanceMarketMaker : IParticipant
         decimal noise = (decimal)(rng.NextDouble() - 0.5) * 0.04m;
         var price = new Price(Math.Round(target + noise, 2));
         session.Engine.SetLastPrice(price);
-        _collector?.SetPriceForPreplay(price);   // 同步给采集器
 
         decimal spread = 0.02m;
         int depth = 2000;
@@ -48,6 +47,10 @@ public sealed class GuidanceMarketMaker : IParticipant
         TryPlace(session, Side.Sell, Math.Round(target + spread, 2), depth);
         TryPlace(session, Side.Buy, Math.Round(target - spread * 2, 2), depth);
         TryPlace(session, Side.Sell, Math.Round(target + spread * 2, 2), depth);
+
+        // 同步给采集器:价格 + 模拟成交量(预演快速跑,用估算量填充,让K线有真实的量)
+        int simVolume = 2000 + rng.Next(0, 4000);   // 每 tick ~2000~6000 手(模拟真实交易量)
+        _collector?.SetPriceForPreplay(price, simVolume);
     }
 
     private void TryPlace(TradingSession s, Side side, decimal price, int qty)

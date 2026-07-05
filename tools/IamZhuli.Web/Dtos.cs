@@ -2,6 +2,9 @@ namespace IamZhuli.Web;
 
 // ── 盘口快照 ──
 public record PriceLevelDto(decimal Price, int Qty);
+/// <summary>玩家当前在簿的挂单(限价单未成交/部分成交),供"我的挂单"列表用。</summary>
+public record OpenOrderDto(long OrderId, string Side, decimal Price, int TotalQty,
+                           int FilledQty, int RemainingQty);
 public record TimesharePointDto(int TickOfDay, decimal Price, int CumVolume);
 public record DailyCandleDto(int Day, decimal Open, decimal High, decimal Low, decimal Close, int Volume);
 public record MacdDto(decimal Dif, decimal Dea, decimal Hist);
@@ -9,7 +12,7 @@ public record ObjectiveProgressDto(string Description, bool Achieved, decimal Pr
 public record MarketSnapshotDto(
     int CurrentDay, int TotalDays,
     int TickOfDay, int TicksPerDay,
-    string Phase, bool IsPaused, bool IsFinished,
+    string Phase, bool IsPaused, bool IsFinished, bool IsPreMarket,
     decimal? LastPrice, decimal? BestBid, decimal? BestAsk,
     decimal UpperLimit, decimal LowerLimit,
     decimal PreviousClose, decimal TurnoverRate,
@@ -22,11 +25,17 @@ public record MarketSnapshotDto(
     List<MacdDto> Macd,
     decimal RegulatorHeat, string PenaltyLevel, string LatestRegulatorEvent,
     List<ObjectiveProgressDto> Objectives, bool IsLevelOver,
-    decimal Sentiment, int RetailActiveCount);
+    decimal Sentiment, int RetailActiveCount,
+    List<OpenOrderDto> OpenOrders);
 
 // ── 关卡结算 ──
 public record LevelResultDto(bool IsVictory, int Stars, string CoachComment, string FailureReason,
     List<ObjectiveProgressDto> Objectives);
+
+// ── 筹码分布(筹码峰:按价位分桶,不区分持有方)──
+public record PriceBandDto(decimal PriceLow, decimal PriceHigh, int Quantity, decimal Pct);
+public record DayChipDto(int Day, decimal ClosePrice, int TotalQuantity,
+    decimal PeakConcentration, List<PriceBandDto> Bands);
 
 // ── 积分结算 ──
 public record PartyScore(string Name, decimal ReturnRate, decimal MaxDrawdown,

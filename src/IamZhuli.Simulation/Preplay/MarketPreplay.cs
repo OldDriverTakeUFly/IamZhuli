@@ -10,12 +10,14 @@ using IamZhuli.Simulation.Time;
 
 namespace IamZhuli.Simulation.Preplay;
 
-/// <summary>预演产出:历史K线 + 昨收 + 初始情绪(参与者状态通过共享Session直接保留)。</summary>
+/// <summary>预演产出:历史K线 + 昨收 + 初始情绪 + 逐日筹码历史。</summary>
 public sealed class PreplayResult
 {
     public required List<DailyCandle> HistoryCandles { get; init; }
     public decimal PreviousClose { get; init; }
     public decimal InitialSentiment { get; init; }
+    /// <summary>预演期间的逐日筹码分布(供游戏加载,让玩家看到历史筹码变化)。</summary>
+    public List<DayChipDistribution> ChipHistory { get; init; } = new();
 }
 
 /// <summary>
@@ -35,8 +37,9 @@ public sealed class MarketPreplay
         int ticksPerDay = 10;
         var tempLoop = new SimulationLoop(session.Engine, new SimulationClock(ticksPerDay, scenario.Days));
 
-        // 2. 数据采集器(预演期间采集历史K线)
+        // 2. 数据采集器(预演期间采集历史K线) + 筹码采集器(逐日筹码分布)
         var collector = new MarketDataCollector(tempLoop, scenario.StartPrice.Value);
+        var chipCollector = new ChipSnapshotCollector(tempLoop, session);
 
         // 3. 引导做市商(锚定K线价格,同步给采集器)
         var guidance = new GuidanceMarketMaker(session, new ParticipantId("引导做市"), scenario, collector);
@@ -47,8 +50,12 @@ public sealed class MarketPreplay
             scenario.EndPrice, seed ?? 42);
         tempLoop.AddParticipant(retail);
         var instB = new InstitutionB(session, new ParticipantId("机构B"), scenario.EndPrice,
-            1_000_000_000m, initialHolding: 20000, baseDepthPerLevel: 80, seed: 88);
+            1_000_000_000m, initialHolding: 20000, baseDepthPerLevel: 80, levels: 20, seed: 88);
         tempLoop.AddParticipant(instB);
+        // 被动资金流:预演阶段也要有底盘买盘,否则预演产出失真
+        var passive = new PassiveFlow(session, new ParticipantId("被动资金"),
+            session.Engine.Rules.FloatShares.Value, seed: 77);
+        tempLoop.AddParticipant(passive);
 
         // 5. 跑预演(自动跨日,不暂停)
         tempLoop.Start();
@@ -65,7 +72,8 @@ public sealed class MarketPreplay
         {
             HistoryCandles = collector.DailyCandles.ToList(),
             PreviousClose = collector.PreviousClose,
-            InitialSentiment = retail.Sentiment.Value
+            InitialSentiment = retail.Sentiment.Value,
+            ChipHistory = chipCollector.History.ToList()
         };
     }
 }

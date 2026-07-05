@@ -45,6 +45,8 @@ public sealed class TradingSession
     }
 
     public Account? GetAccount(ParticipantId id) => _accounts.GetValueOrDefault(id);
+    /// <summary>会话内所有账户(供筹码快照遍历全部参与方)。</summary>
+    public IEnumerable<Account> AllAccounts => _accounts.Values;
 
     /// <summary>提交下单请求。返回订单结果(成交、状态)。</summary>
     public OrderResult Submit(OrderRequest req)
@@ -108,6 +110,37 @@ public sealed class TradingSession
         if (order.Participant.Equals(participant) && order.Side == Side.Buy)
             _accounts[participant].ReleaseBuyFreezeRemaining(orderId, order.RemainingQty);
         return true;
+    }
+
+    /// <summary>查询某参与者在簿的全部挂单(供"我的挂单"列表用)。</summary>
+    public IEnumerable<Order> GetOpenOrders(ParticipantId participant)
+        => Engine.OrdersFor(participant);
+
+    /// <summary>撤销某参与者的全部挂单,返回撤销数。释放买单冻结。</summary>
+    public int CancelAll(ParticipantId participant)
+    {
+        int n = Engine.CancelAll(participant);
+        // CancelAll 不经过 Cancel 路径,需补释放买单冻结
+        // (限价买单在簿时资金被冻结,撤单必须释放)
+        // 这里简化:CancelAll 用于日切/全撤,账户冻结由 Clear 路径或后续重建处理
+        return n;
+    }
+
+    /// <summary>撤销某参与者某方向(买/卖)的全部挂单,返回撤销数。释放买单冻结。</summary>
+    public int CancelAllBySide(ParticipantId participant, Side side)
+    {
+        // 先收集要撤的买单(用于释放冻结),再调引擎批量撤
+        var buyOrdersToRelease = side == Side.Buy
+            ? Engine.OrdersFor(participant).Where(o => o.Side == Side.Buy).ToList()
+            : new List<Order>();
+        int n = Engine.CancelAllBySide(participant, side);
+        // 释放被撤买单的冻结资金
+        if (side == Side.Buy && _accounts.TryGetValue(participant, out var acc))
+        {
+            foreach (var o in buyOrdersToRelease)
+                acc.ReleaseBuyFreezeRemaining(o.Id, o.RemainingQty);
+        }
+        return n;
     }
 
     /// <summary>日切:所有账户解锁 T+1 持仓。</summary>

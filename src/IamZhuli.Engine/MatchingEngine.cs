@@ -202,6 +202,24 @@ public sealed class MatchingEngine
         }
         return n;
     }
+
+    /// <summary>枚举指定参与者在簿的全部挂单(含详情)。委托给 OrderBook。</summary>
+    public IEnumerable<Order> OrdersFor(ParticipantId participant) => _book.OrdersFor(participant);
+
+    /// <summary>撤销指定参与者某方向的全部挂单(撤买/撤卖)。</summary>
+    public int CancelAllBySide(ParticipantId participant, Side side)
+    {
+        var toCancel = _book.OrdersFor(participant)
+            .Where(o => o.Side == side)
+            .Select(o => o.Id)
+            .ToList();
+        int n = 0;
+        foreach (var id in toCancel)
+        {
+            if (Cancel(id, out _)) n++;
+        }
+        return n;
+    }
 }
 
 /// <summary>订单簿只读视图(供展示层取盘口五档)。</summary>

@@ -62,6 +62,7 @@ public sealed class RetailProfilePool : IParticipant
             LowerLimit = engine.Rules.LowerLimit.Value,
             RecentReturn = _priceHistory.Return ?? 0m,
             Volatility = _priceHistory.Volatility,
+            RecentAveragePrice = _priceHistory.Average,
             VolumeSpike = _volTracker.Spike,
             Sentiment = _sentiment,
             IntrinsicValue = _intrinsic.Value,
@@ -112,31 +113,43 @@ public sealed class RetailProfilePool : IParticipant
         double greed = (double)ctx.Sentiment.Greed;
         double fear = (double)ctx.Sentiment.Fear;
 
-        // 急涨 → 抽跟风客、羊群(门槛降低,更积极)
-        if (ret > 0.005m && Rand() < greed * 0.5)
+        // 涨势增强跟风客刷新(涨得越猛,新跟风客进场概率越高,带新资金)
+        if (ret > 0.003m)
         {
-            Spawn(ret > 0.015m ? ProfileType.AggressiveMomentum : ProfileType.MildMomentum, ctx);
-            if (Rand() < greed * 0.25) Spawn(ProfileType.Herd, ctx);
+            double trendMult = Math.Min(3.0, 1.0 + (double)ret * 50);   // 涨幅越大倍数越高
+            if (Rand() < greed * 0.4 * trendMult)
+                Spawn(ret > 0.015m ? ProfileType.AggressiveMomentum : ProfileType.MildMomentum, ctx);
+            if (Rand() < greed * 0.2 * trendMult) Spawn(ProfileType.Herd, ctx);
+            if (Rand() < 0.15 * trendMult) Spawn(ProfileType.Speculator, ctx);   // 投机客也追涨
         }
-        // 急跌 → 抄底猎手;同时"激活"潜在止损者(初始被套持仓)
-        if (ret < -0.005m)
+        // 跌势增强抄底者刷新(跌得越猛,抄底/反弹客进场概率越高)
+        if (ret < -0.003m)
         {
-            if (Rand() < (double)ctx.Sentiment.Value * 0.3) Spawn(ProfileType.BargainHunter, ctx);
-            if (Rand() < fear * 0.25) Spawn(ProfileType.StopLoss, ctx);   // 被套者恐慌激活
+            double trendMult = Math.Min(3.0, 1.0 + (double)Math.Abs(ret) * 50);
+            if (Rand() < (double)ctx.Sentiment.Value * 0.25 * trendMult) Spawn(ProfileType.BargainHunter, ctx);
+            if (Rand() < 0.12 * trendMult) Spawn(ProfileType.TechnicalBouncer, ctx);
+            if (Rand() < fear * 0.2) Spawn(ProfileType.StopLoss, ctx);
+        }
+        // 乖离率超跌(慢跌也触发)→ 超跌反弹客
+        if (ctx.RecentAveragePrice is { } avg && avg > 0 && ctx.LastPrice is { } lp)
+        {
+            decimal bias = (lp.Value - avg) / avg;
+            if (bias < -0.015m && Rand() < 0.15) Spawn(ProfileType.TechnicalBouncer, ctx);
         }
         // 严重低估 → 价投
         if (ctx.LastPrice is { } p && ctx.IntrinsicValue > 0
-            && p.Value < ctx.IntrinsicValue * 0.92m && Rand() < 0.15)
+            && p.Value < ctx.IntrinsicValue * 0.92m && Rand() < 0.12)
             Spawn(ProfileType.ValueInvestor, ctx);
         // 波动放大 → 投机客
-        if (vol > 0.01m && Rand() < 0.2)
+        if (vol > 0.01m && Rand() < 0.15)
             Spawn(ProfileType.Speculator, ctx);
 
-        // —— 基础随机进场:即使无明显趋势,也有日常散户进场(避免冷启动死锁)——
-        if (_active.Count < 8 && Rand() < 0.5)
+        // —— 常量级随机进场:无论趋势如何,每天有新散户进场(模拟新开户/资金转入)——
+        if (Rand() < 0.08)
         {
             var types = new[] { ProfileType.MildMomentum, ProfileType.ValueInvestor,
-                                 ProfileType.Speculator, ProfileType.Herd, ProfileType.BargainHunter };
+                                 ProfileType.Speculator, ProfileType.Herd, ProfileType.BargainHunter,
+                                 ProfileType.TechnicalBouncer };
             Spawn(types[RandInt(0, types.Length)], ctx);
         }
     }
@@ -193,6 +206,7 @@ public sealed class RetailProfilePool : IParticipant
             ProfileType.ValueInvestor => 500_000m + (decimal)Rand() * 2_000_000m,
             ProfileType.AggressiveMomentum => 200_000m + (decimal)Rand() * 1_000_000m,
             ProfileType.Speculator => 100_000m + (decimal)Rand() * 500_000m,
+            ProfileType.TechnicalBouncer => 150_000m + (decimal)Rand() * 600_000m,
             _ => 100_000m + (decimal)Rand() * 800_000m
         };
         var acc = _session.GetOrCreateAccount(id, cash);
@@ -215,6 +229,7 @@ public sealed class RetailProfilePool : IParticipant
             ProfileType.AggressiveMomentum => RandInt(5, 15) * 10,
             ProfileType.Speculator => RandInt(1, 5) * 10,
             ProfileType.ValueInvestor => RandInt(5, 12) * 10,
+            ProfileType.TechnicalBouncer => RandInt(3, 8) * 10,
             _ => RandInt(3, 10) * 10
         };
         decimal risk = (decimal)Rand() * 0.6m + 0.2m;
@@ -228,6 +243,7 @@ public sealed class RetailProfilePool : IParticipant
             ProfileType.BargainHunter => new BargainHunterProfile(acc, risk, size, jitter, _rng),
             ProfileType.Speculator => new SpeculatorProfile(acc, risk, size, jitter, _rng),
             ProfileType.Herd => new HerdProfile(acc, risk, size, jitter, _rng),
+            ProfileType.TechnicalBouncer => new TechnicalBouncerProfile(acc, risk, size, jitter, _rng),
             _ => new NewsDrivenProfile(acc, risk, size, jitter, _rng)
         };
         profile.Activate(_tickCounter);
@@ -264,6 +280,16 @@ internal sealed class PriceHistory(int window)
             decimal mean = arr.Average();
             decimal sumSq = arr.Sum(p => (p - mean) * (p - mean));
             return (decimal)Math.Sqrt((double)(sumSq / arr.Length)) / Math.Max(mean, 0.01m);
+        }
+    }
+
+    /// <summary>近期均价(MA),用于算乖离率 BIAS。窗口不足时返回 null。</summary>
+    public decimal? Average
+    {
+        get
+        {
+            if (_prices.Count < _window / 2) return null;
+            return _prices.Average();
         }
     }
 

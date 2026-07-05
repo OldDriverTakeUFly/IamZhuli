@@ -80,6 +80,55 @@ public sealed class InstitutionB : IParticipant
                 MakeMarket(session, depthFactor: MarketMakerRiskController.DepthFactor(assessment.Level));
                 break;
         }
+
+        // 高估获利了结:无论风险等级,价格远超公允值时按概率减仓(形成拉升卖压)
+        TakeProfitIfOvervalued(session);
+        // 亏损止损:持仓浮亏超限时纪律性减仓(机构风控铁律,比散户更果断)
+        CutLossIfUnderwater(session);
+    }
+
+    /// <summary>持仓浮亏止损:机构对亏损容忍度低,亏损超阈值时果断减仓。
+    /// 机构的止损阈值比散户更统一(纪律性强),不会像散户那样死扛。</summary>
+    private void CutLossIfUnderwater(TradingSession session)
+    {
+        int available = _account.Position.Available.Value;
+        if (available < 50) return;
+        decimal cost = _account.Position.AverageCost.Value;
+        if (cost <= 0) return;
+        var view = session.Engine.View;
+        decimal price = view.LastPrice?.Value ?? _fairValue.Value;
+        decimal loss = (cost - price) / cost;
+        if (loss <= 0.05m) return;   // 亏<5%不止损(机构容忍小幅回撤)
+        // 亏5%=15%概率,亏10%=35%概率,亏15%=55%概率
+        double prob = Math.Min(0.6, (double)loss * 4.0 - 0.05);
+        if (_rng.NextDouble() >= prob) return;
+        // 止损量:亏损越大砍越多
+        int ratio = loss > 0.12m ? 2 : 4;   // 亏>12%砍一半,否则砍1/4
+        int qty = Math.Max(50, available / ratio);
+        qty = (qty / 10) * 10;
+        try { session.Submit(new OrderRequest(Id, Side.Sell, OrderType.Market, Price.Zero, new Quantity(qty))); }
+        catch { }
+    }
+
+    /// <summary>价格远超公允值时获利了结:越被高估,减仓概率越高、量越大。
+    /// 这是拉升时的结构性卖压——机构不会在高位还傻拿筹码。</summary>
+    private void TakeProfitIfOvervalued(TradingSession session)
+    {
+        var view = session.Engine.View;
+        decimal price = view.LastPrice?.Value ?? _fairValue.Value;
+        decimal overvaluedRatio = price / _fairValue.Value - 1m;   // 高估幅度(>0=高估)
+        if (overvaluedRatio <= 0.05m) return;   // 高估<5%不减仓
+        int available = _account.Position.Available.Value;
+        if (available < 50) return;
+        // 高估5%=10%概率,高估20%=40%概率
+        double prob = Math.Min(0.4, (double)overvaluedRatio * 2.0);
+        if (_rng.NextDouble() >= prob) return;
+        // 减仓量随高估幅度增大:高估5%卖1/8,高估20%卖1/3
+        int ratio = overvaluedRatio > 0.15m ? 3 : 8;
+        int qty = Math.Max(50, available / ratio);
+        qty = (qty / 10) * 10;   // 凑整
+        try { session.Submit(new OrderRequest(Id, Side.Sell, OrderType.Market, Price.Zero, new Quantity(qty))); }
+        catch { }
     }
 
     /// <summary>做市:在现价附近双边挂单,深度/价差随风险调整。</summary>

@@ -16,6 +16,8 @@ public sealed class AggressiveMomentumProfile : RetailProfile
         : base(ProfileType.AggressiveMomentum, acc, risk, size, jitter, rng)
     {
         _chaseThreshold = 0.008m + jitter * 0.017m;   // 0.8%~2.5%
+        _profitTakingSensitivity = 1.0m;   // 跟风客激进止盈:赚了就跑
+        _stopLossThreshold = 0.05m;   // 亏5%止损:短线客止损较快
     }
 
     protected override void Decide(TradingSession s, RetailMarketContext ctx)
@@ -59,6 +61,8 @@ public sealed class MildMomentumProfile : RetailProfile
         : base(ProfileType.MildMomentum, acc, risk, size, jitter, rng)
     {
         _threshold = 0.003m + jitter * 0.005m;   // 0.3%~0.8%
+        _profitTakingSensitivity = 0.8m;   // 温和跟风客也较积极止盈
+        _stopLossThreshold = 0.04m;   // 亏4%止损:温和跟风客止损更灵敏(胆小)
     }
 
     protected override void Decide(TradingSession s, RetailMarketContext ctx)
@@ -83,26 +87,39 @@ public sealed class MildMomentumProfile : RetailProfile
     }
 }
 
-/// <summary>稳健价投:严重低估进场,价值回归离场。慢、稳、逆向。</summary>
+/// <summary>稳健价投:左侧金字塔分批建仓,价值回归离场。慢、稳、逆向。
+/// 越跌越买(金字塔):浅低估小仓位试探,严重低估加大仓位。这是慢跌途中持续接货的主力。</summary>
 public sealed class ValueInvestorProfile : RetailProfile
 {
-    private readonly decimal _discount;   // 低估阈值(偏离内在价值多少)
+    private readonly decimal _discount;   // 起始低估阈值(开始关注)
+    private int _batches;                  // 已加仓批数(限制总仓位)
     public ValueInvestorProfile(Account acc, decimal risk, int size, decimal jitter, Random rng)
         : base(ProfileType.ValueInvestor, acc, risk, size, jitter, rng)
     {
-        _discount = 0.06m + jitter * 0.06m;   // 低估 6%~12%
+        _discount = 0.03m + jitter * 0.04m;   // 浅低估起跑:-3%~-7% 开始关注(比原 6% 更早进场)
+        _stopLossThreshold = 0m;   // 价投不止损:长线扛单,坚信价值回归
+        _profitTakingSensitivity = 0.3m;   // 止盈也温和:赚多了才慢慢减
     }
 
     protected override void Decide(TradingSession s, RetailMarketContext ctx)
     {
         if (ctx.LastPrice is null || ctx.IntrinsicValue <= 0) return;
         decimal deviation = (ctx.LastPrice.Value.Value - ctx.IntrinsicValue) / ctx.IntrinsicValue;
-        // 严重低估 → 逢低买
-        if (deviation < -_discount && Rand() < 0.15 * (double)RiskPreference)
+        // —— 金字塔分批:低估区间内越跌越买 ——
+        // 浅低估(-_discount):小仓位、低概率试探
+        // 严重低估(-2×_discount):加大仓位、提高概率
+        if (deviation < -_discount && _batches < 6)   // 最多6批,控总仓位
         {
-            int qty = RandInt(3, 8) * 10;
-            decimal bid = Val(ctx.BestBid ?? ctx.LastPrice, ctx.IntrinsicValue);
-            BuyLimit(s, bid + 0.01m, qty);
+            bool deep = deviation < -_discount * 2m;
+            double prob = (deep ? 0.30 : 0.12) * (double)RiskPreference;
+            if (Rand() < prob)
+            {
+                int baseQty = RandInt(3, 8) * 10;
+                int qty = deep ? baseQty * 2 : baseQty;   // 深跌双倍加仓(金字塔)
+                decimal bid = Val(ctx.BestBid ?? ctx.LastPrice, ctx.IntrinsicValue);
+                BuyLimit(s, bid + 0.01m, qty);
+                _batches++;
+            }
         }
     }
 
@@ -110,8 +127,12 @@ public sealed class ValueInvestorProfile : RetailProfile
     {
         if (base.ShouldExit(ctx, tick)) return true;
         if (Account.Position.Total.Value == 0) return false;
-        // 价值回归(回到内在价值附近)→ 止盈离场
-        if (ctx.LastPrice is { } p && p.Value >= ctx.IntrinsicValue * 0.99m) return true;
+        // 价值回归(回到内在价值附近)→ 止盈离场,重置加仓计数(允许下次重新建仓)
+        if (ctx.LastPrice is { } p && p.Value >= ctx.IntrinsicValue * 0.99m)
+        {
+            _batches = 0;
+            return true;
+        }
         return false;
     }
 }
@@ -123,7 +144,8 @@ public sealed class StopLossProfile : RetailProfile
     public StopLossProfile(Account acc, decimal risk, int size, decimal jitter, Random rng)
         : base(ProfileType.StopLoss, acc, risk, size, jitter, rng)
     {
-        _stopRatio = 0.05m + jitter * 0.05m;   // 跌破成本 5%~10% 止损
+        _stopRatio = 0.05m + jitter * 0.05m;   // 跌破成本 5%~10% 止损(ShouldExit全清离场)
+        _stopLossThreshold = _stopRatio * 0.7m;   // 基类减仓阈值更低:接近止损线先减一部分
     }
 
     protected override void Decide(TradingSession s, RetailMarketContext ctx)

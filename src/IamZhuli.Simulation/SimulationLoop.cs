@@ -40,6 +40,9 @@ public sealed class SimulationLoop
     public event Action<PriceChangeEvent>? OnPriceChange;
     /// <summary>进入新交易日触发(参数=第几日)。</summary>
     public event Action<int>? OnNewDay;
+    /// <summary>当日收盘完成时触发(参数=刚结束的日序号)。
+    /// 在 T+1 解锁前触发,此时筹码是当日最终态(当日买入仍体现为 T1 锁定)。</summary>
+    public event Action<int>? OnDayFinalized;
 
     private Price? _lastEmittedPrice;
 
@@ -84,6 +87,8 @@ public sealed class SimulationLoop
         {
             IsDayClosed = true;
             IsPaused = true;   // 暂停,等玩家显式 StartNextDay
+            // 触发日终事件(T+1 解锁前):供筹码快照等采集当日最终态
+            OnDayFinalized?.Invoke(Clock.CurrentDay);
         }
     }
 

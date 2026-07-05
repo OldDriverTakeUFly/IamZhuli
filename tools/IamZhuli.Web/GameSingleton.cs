@@ -37,19 +37,23 @@ public sealed class GameSingleton
     private decimal? _prevPriceForVolatility;
     private RetailProfilePool _retail = null!;
     private InstitutionB _institutionB = null!;
+    private PassiveFlow _passive = null!;
     private MarketScenario _scenario = null!;
     private EquityCurveCollector _equityCollector = null!;
+    private ChipSnapshotCollector _chipCollector = null!;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
     public bool IsInitialized { get; private set; }
     public LevelResult? LastResult { get; private set; }
     public bool IsLevelOver { get; private set; }
+    /// <summary>盘前准备态:LoadLevel 后进入,玩家研究K线/筹码后点"开始操盘"才正式开盘。</summary>
+    public bool IsPreMarket { get; private set; } = true;
 
     public GameSingleton(IHubContext<GameHub> hub)
     {
         Hub = hub;
-        LoadLevel(LevelDefinition.PumpAndDump());   // 默认关卡
+        // 不默认加载关卡:等玩家选择关卡后才开始预演
     }
 
     /// <summary>加载关卡:重建整个大脑。</summary>
@@ -83,12 +87,16 @@ public sealed class GameSingleton
         // 机构B(做市+风险控制+操盘三合一)
         _institutionB = new InstitutionB(_loop.Session, new ParticipantId("机构B"), intrinsic,
             cash: 1_000_000_000m, initialHolding: level.MarketMakerHolding,
-            baseDepthPerLevel: 80, levels: 8, seed: 88);
+            baseDepthPerLevel: 80, levels: 20, seed: 88);   // 20档:五档之外藏深层挂单,模拟主力暗挂
         _loop.AddParticipant(_institutionB);
 
         // 散户画像池(情绪用预演产出的初始值)
         _retail = new RetailProfilePool(_loop.Session, new ParticipantId("散户池"), intrinsic, seed: 42);
         _loop.AddParticipant(_retail);
+
+        // 被动资金流(指数ETF/定投/养老金底盘):无视涨跌,每tick小额买入,保证阴跌不死锁
+        _passive = new PassiveFlow(_loop.Session, new ParticipantId("被动资金"), level.FloatShares, seed: 77);
+        _loop.AddParticipant(_passive);
 
         _ai = new AIMainForce(_loop.Session, new ParticipantId("AI主力"),
             intrinsic, cash: 100_000_000m, initialHolding: level.AiHolding, initialCost: intrinsic,
@@ -118,8 +126,30 @@ public sealed class GameSingleton
         _equityCollector = new EquityCurveCollector(_loop, _player,
             () => _ai.Account, () => _institutionB.Account,
             () => _loop.Session.Engine.LastPrice);
+        // 筹码快照采集(日终触发,记录各方持仓/成本/净流)
+        _chipCollector = new ChipSnapshotCollector(_loop, _loop.Session);
+        // 导入预演期间的逐日筹码历史(day重编为负数,与历史K线对齐)
+        _chipCollector.ImportHistory(preplayResult.ChipHistory);
+        // 挂载待处理的成交事件订阅(关卡选择前 WireEvents 已被调用)
+        if (_pendingPushTrade != null)
+        {
+            var push = _pendingPushTrade;
+            _loop.Session.OnTrade += (p, q, s) =>
+            {
+                try { _ = push(new TradeDto(p.Value, q.Value, s.ToString())); } catch { }
+            };
+            _pendingPushTrade = null;
+        }
         _loop.Start();
+        IsPreMarket = true;   // 进入盘前准备态,等玩家研究完点"开始操盘"
         IsInitialized = true;
+    }
+
+    /// <summary>玩家结束盘前研究,正式开始交易(退出盘前态)。</summary>
+    public void BeginTrading()
+    {
+        IsPreMarket = false;
+        _loop.Resume();
     }
 
     /// <summary>结束关卡并结算(积分制)。</summary>
@@ -153,6 +183,28 @@ public sealed class GameSingleton
             r.Result.RiskAdjustedScore, r.Result.Rank, r.Result.Comment)).ToList());
     }
 
+    /// <summary>获取筹码分布历史(每日收盘的价位分布)。day=null 返回全部,否则返回指定日。</summary>
+    public List<DayChipDto> GetChipHistory(int? day = null)
+    {
+        var history = _chipCollector.History;
+        if (day.HasValue)
+        {
+            int idx = day.Value - 1;
+            if (idx < 0 || idx >= history.Count) return new();
+            return new() { ToDto(history[idx], idx) };
+        }
+        return history.Select((h, i) => ToDto(h, i)).ToList();
+    }
+
+    private DayChipDto ToDto(DayChipDistribution snap, int idx)
+    {
+        var bands = snap.Bands.Select(b => new PriceBandDto(
+            b.PriceLow, b.PriceHigh, b.Quantity,
+            snap.TotalQuantity > 0 ? Math.Round((decimal)b.Quantity / snap.TotalQuantity, 4) : 0m)).ToList();
+        return new DayChipDto(snap.Day, snap.ClosePrice, snap.TotalQuantity,
+            Math.Round(_chipCollector.PeakConcentration(idx), 3), bands);
+    }
+
     /// <summary>重试关卡(重置到初始)。</summary>
     public void Retry()
     {
@@ -164,10 +216,14 @@ public sealed class GameSingleton
     /// 一次持锁完成 Step + 构建快照,避免事件回调里重新加锁导致死锁。</summary>
     public async Task<MarketSnapshotDto?> StepAsync()
     {
+        // 未选关卡:返回空快照(前端显示选关卡界面)
+        if (!IsInitialized) return BuildSnapshotUnsafe();
         if (_loop.IsFinished || IsLevelOver) return null;
         await _gate.WaitAsync();
         try
         {
+            // 盘前态:不推进 tick,但仍推快照(让玩家看K线/盘口)
+            if (IsPreMarket) return BuildSnapshotUnsafe();
             _loop.Step();
             // 关卡时间结束 → 自动结算
             if (_loop.IsFinished && !IsLevelOver) EndLevel();
@@ -186,6 +242,16 @@ public sealed class GameSingleton
 
     private MarketSnapshotDto BuildSnapshotUnsafe()
     {
+        // 未选关卡:返回空快照,前端据此显示关卡选择界面
+        if (!IsInitialized)
+        {
+            return new MarketSnapshotDto(
+                0, 0, 0, 0, "Waiting", false, false, false,
+                null, null, null, 0m, 0m, 0m, 0m,
+                new(), new(), new AccountDto(0,0,0,0,0,0,0,0),
+                new(), null, new(), new(),
+                0m, "", "", new(), false, 0m, 0, new());
+        }
         var view = _loop.Session.Engine.View;
         var mark = view.LastPrice ?? new Price(10.00m);
         var asks = view.TopAsks(5).Select(t => new PriceLevelDto(t.Price.Value, t.TotalQty.Value)).Reverse().ToList();
@@ -203,7 +269,7 @@ public sealed class GameSingleton
         return new MarketSnapshotDto(
             CurrentDay: _loop.Clock.CurrentDay, TotalDays: _loop.Clock.TotalDays,
             TickOfDay: _loop.Clock.CurrentTickOfDay, TicksPerDay: _loop.Clock.TicksPerDay,
-            Phase: _loop.Clock.Phase.ToString(), IsPaused: _loop.IsPaused, IsFinished: _loop.IsFinished,
+            Phase: _loop.Clock.Phase.ToString(), IsPaused: _loop.IsPaused, IsFinished: _loop.IsFinished, IsPreMarket: IsPreMarket,
             LastPrice: view.LastPrice?.Value, BestBid: view.BestBid?.Value, BestAsk: view.BestAsk?.Value,
             UpperLimit: rules.UpperLimit.Value, LowerLimit: rules.LowerLimit.Value,
             PreviousClose: _collector.PreviousClose, TurnoverRate: Math.Round(_collector.TurnoverRate, 2),
@@ -224,7 +290,10 @@ public sealed class GameSingleton
                 .Select(o => new ObjectiveProgressDto(o.Description, o.Achieved, Math.Round(o.Progress, 2), o.Detail)).ToList(),
             IsLevelOver: IsLevelOver,
             Sentiment: Math.Round(_retail.Sentiment.Value * 100m, 0),     // 0~100 情绪温度计
-            RetailActiveCount: _retail.ActiveCount);
+            RetailActiveCount: _retail.ActiveCount,
+            OpenOrders: _loop.Session.GetOpenOrders(Player)
+                .Select(o => new OpenOrderDto(o.Id.Value, o.Side.ToString(), o.Price.Value,
+                    o.TotalQty.Value, o.FilledQty.Value, o.RemainingQty.Value)).ToList());
     }
 
     /// <summary>提交下单。返回订单结果;失败返回带 Error 的 DTO。</summary>
@@ -253,6 +322,32 @@ public sealed class GameSingleton
     {
         await _gate.WaitAsync();
         try { return _loop.Session.Cancel(Player, new OrderId(orderId)); }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>撤销玩家全部挂单。</summary>
+    public async Task<int> CancelAllAsync()
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            // 按方向分别撤,确保买单冻结被正确释放
+            int n = _loop.Session.CancelAllBySide(Player, Side.Buy);
+            n += _loop.Session.CancelAllBySide(Player, Side.Sell);
+            return n;
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>撤销玩家某方向(买/卖)的全部挂单。</summary>
+    public async Task<int> CancelBySideAsync(string side)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            var s = side.Equals("buy", StringComparison.OrdinalIgnoreCase) ? Side.Buy : Side.Sell;
+            return _loop.Session.CancelAllBySide(Player, s);
+        }
         finally { _gate.Release(); }
     }
 
@@ -304,6 +399,23 @@ public sealed class GameSingleton
         finally { _gate.Release(); }
     }
 
+    /// <summary>按 ID 切换关卡并重新加载。支持 tutorial/accumulate/pump_dump。</summary>
+    public async Task LoadLevelAsync(string id)
+    {
+        var level = id.ToLowerInvariant() switch
+        {
+            "tutorial" => LevelDefinition.Tutorial(),
+            "accumulate" => LevelDefinition.Accumulate(),
+            _ => LevelDefinition.PumpAndDump()
+        };
+        await _gate.WaitAsync();
+        try { LoadLevel(level); }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>当前关卡信息(供前端展示关卡名/简报)。</summary>
+    public object CurrentLevel => new { id = _level.Id, name = _level.Name, briefing = _level.Briefing };
+
     /// <summary>获取 AI 主力最近的内心独白(调试/复盘用;盘中 AI 持仓仍不可见)。</summary>
     public async Task<List<AIDto>> GetAIThoughtsAsync(int count = 20)
     {
@@ -320,12 +432,20 @@ public sealed class GameSingleton
     }
 
     /// <summary>订阅成交事件 → SignalR 推送(由 GameHostService 启动时调用一次)。
-    /// 快照推送改为在 StepAsync 返回后由 GameHostService 直接推送,避免回调里加锁死锁。</summary>
+    /// 关卡未加载时先保存委托,LoadLevel 完成后再挂载(避免 _loop 为 null)。</summary>
+    private Func<TradeDto, Task>? _pendingPushTrade;
     public void WireEvents(Func<TradeDto, Task> pushTrade)
     {
-        _loop.Session.OnTrade += (p, q, s) =>
+        if (_loop != null)
         {
-            try { _ = pushTrade(new TradeDto(p.Value, q.Value, s.ToString())); } catch { }
-        };
+            _loop.Session.OnTrade += (p, q, s) =>
+            {
+                try { _ = pushTrade(new TradeDto(p.Value, q.Value, s.ToString())); } catch { }
+            };
+        }
+        else
+        {
+            _pendingPushTrade = pushTrade;   // 关卡加载后再挂
+        }
     }
 }

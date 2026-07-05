@@ -12,6 +12,7 @@ public sealed class BargainHunterProfile : RetailProfile
         : base(ProfileType.BargainHunter, acc, risk, size, jitter, rng)
     {
         _dipThreshold = 0.04m + jitter * 0.04m;   // 跌 4%~8%
+        _stopLossThreshold = 0.06m;   // 亏6%止损:抄底客有一定容忍(敢接飞刀)
     }
 
     protected override void Decide(TradingSession s, RetailMarketContext ctx)
@@ -42,7 +43,11 @@ public sealed class BargainHunterProfile : RetailProfile
 public sealed class SpeculatorProfile : RetailProfile
 {
     public SpeculatorProfile(Account acc, decimal risk, int size, decimal jitter, Random rng)
-        : base(ProfileType.Speculator, acc, risk, size, jitter, rng) { }
+        : base(ProfileType.Speculator, acc, risk, size, jitter, rng)
+    {
+        _profitTakingSensitivity = 1.2m;   // 投机客最快止盈:快进快出
+        _stopLossThreshold = 0.03m;   // 亏3%止损:短线客止损最灵敏(纪律性强)
+    }
 
     protected override void Decide(TradingSession s, RetailMarketContext ctx)
     {
@@ -71,7 +76,11 @@ public sealed class SpeculatorProfile : RetailProfile
 public sealed class HerdProfile : RetailProfile
 {
     public HerdProfile(Account acc, decimal risk, int size, decimal jitter, Random rng)
-        : base(ProfileType.Herd, acc, risk, size, jitter, rng) { }
+        : base(ProfileType.Herd, acc, risk, size, jitter, rng)
+    {
+        _profitTakingSensitivity = 0.6m;   // 羊群型温和止盈:别人卖才跟着卖
+        _stopLossThreshold = 0.10m;   // 亏10%止损:羊群型迟钝(别人跑才跟着跑,反应慢)
+    }
 
     protected override void Decide(TradingSession s, RetailMarketContext ctx)
     {
@@ -112,6 +121,51 @@ public sealed class NewsDrivenProfile : RetailProfile
         if (base.ShouldExit(ctx, tick)) return true;
         // 无消息刺激一段时间后离场
         return tick - EntryTick > ctx.FloatsharesToTicks();
+    }
+}
+
+/// <summary>超跌反弹客:看乖离率(BIAS=现价vs近期均价),超跌博技术反抽,快进快出。
+/// 与抄底猎手的区别:抄底要急跌破位(-4%~-8%);反弹客看的是"现价偏离均价过多"——
+/// 即使慢跌,只要乖离率够负就博一个 1%~3% 的统计回归反抽。这是阴跌途中的"试错性买盘"。</summary>
+public sealed class TechnicalBouncerProfile : RetailProfile
+{
+    private readonly decimal _biasThreshold;   // 乖离率触发线(负值,越负越深)
+    private bool _positionTaken;                // 本轮是否已建仓(防重复加仓)
+    public TechnicalBouncerProfile(Account acc, decimal risk, int size, decimal jitter, Random rng)
+        : base(ProfileType.TechnicalBouncer, acc, risk, size, jitter, rng)
+    {
+        _biasThreshold = -(0.015m + jitter * 0.02m);   // BIAS < -(1.5%~3.5%) 触发
+        _stopLossThreshold = 0.03m;   // 亏3%止损:反弹客快进快出,止损灵敏
+    }
+
+    protected override void Decide(TradingSession s, RetailMarketContext ctx)
+    {
+        if (ctx.LastPrice is null || ctx.RecentAveragePrice is not { } avg || avg <= 0) return;
+        if (_positionTaken) return;   // 已建仓等止盈/止损,不重复加
+
+        decimal bias = (ctx.LastPrice.Value.Value - avg) / avg;   // 乖离率
+        // 超跌(乖离率够负)+ 概率触发 → 小仓位博反抽
+        if (bias < _biasThreshold && Rand() < 0.35 * (double)RiskPreference)
+        {
+            int qty = RandInt(3, 8) * 10;
+            decimal bid = Val(ctx.BestBid ?? ctx.LastPrice, ctx.IntrinsicValue);
+            BuyLimit(s, bid + 0.01m, qty);   // 挂买一上方,急切接货博反弹
+            _positionTaken = true;
+        }
+    }
+
+    protected override bool ShouldExit(RetailMarketContext ctx, long tick)
+    {
+        if (base.ShouldExit(ctx, tick)) return true;
+        if (Account.Position.Total.Value == 0) { _positionTaken = false; return false; }
+        if (ctx.LastPrice is null) return false;
+        decimal cost = Account.Position.AverageCost.Value;
+        if (cost <= 0) return false;
+        // 博反抽:微利 1%~2% 即止盈;被套 3% 快刀止损
+        decimal pnl = (ctx.LastPrice.Value.Value - cost) / cost;
+        if (pnl > 0.01m + _triggerJitter * 0.01m) return true;   // 止盈
+        if (pnl < -0.03m) return true;                            // 止损
+        return false;
     }
 }
 

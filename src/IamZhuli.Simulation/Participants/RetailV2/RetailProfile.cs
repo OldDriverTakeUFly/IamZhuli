@@ -17,6 +17,8 @@ public sealed class RetailMarketContext
     public decimal RecentReturn { get; set; }
     /// <summary>近期波动率(标准差/均值)。</summary>
     public decimal Volatility { get; set; }
+    /// <summary>近期均价(MA,算乖离率用),窗口不足时为 null。</summary>
+    public decimal? RecentAveragePrice { get; set; }
     /// <summary>近期成交量放大倍数(当前/均值,>1=放量)。</summary>
     public decimal VolumeSpike { get; set; }
     /// <summary>全局情绪指数。</summary>
@@ -37,7 +39,8 @@ public enum ProfileType
     BargainHunter,        // 抄底猎手
     Speculator,           // 短线投机客
     Herd,                 // 羊群效应型
-    NewsDriven            // 消息驱动型(二期)
+    NewsDriven,           // 消息驱动型(二期)
+    TechnicalBouncer      // 超跌反弹客(看乖离率,博技术反抽)
 }
 
 /// <summary>
@@ -76,8 +79,65 @@ public abstract class RetailProfile
         if (!IsActive) return;
         // 先检查离场条件(止损/止盈/情绪消退)
         if (ShouldExit(ctx, currentTick)) { Exit(session); return; }
+        // 通用浮盈止盈:有浮盈的持仓按概率部分卖出(兑现利润,形成拉升卖压)
+        TryProfitTaking(session, ctx);
+        // 通用止损:浮亏超阈值时按概率减仓(恐慌情绪加速)
+        TryStopLoss(session, ctx);
         // 再决策下单
         Decide(session, ctx);
+    }
+
+    /// <summary>通用浮盈止盈:浮盈越大,卖出概率越高。
+    /// _profitTakingSensitivity 由子类设置(跟风客/投机客更激进,价投/羊群温和)。</summary>
+    protected decimal _profitTakingSensitivity = 0.5m;   // 默认中等,子类可覆盖
+    private void TryProfitTaking(TradingSession session, RetailMarketContext ctx)
+    {
+        if (ctx.LastPrice is null) return;
+        int available = Account.Position.Available.Value;
+        if (available <= 0) return;
+        decimal cost = Account.Position.AverageCost.Value;
+        if (cost <= 0) return;
+        decimal profit = (ctx.LastPrice.Value.Value - cost) / cost;
+        if (profit <= 0.02m) return;   // 浮盈<2%不止盈
+        // 浮盈越高,止盈概率越大:2%=5%,10%=25%,20%=45%
+        // 概率 = _profitTakingSensitivity × profit × 2.0
+        double prob = Math.Min(0.5, (double)(_profitTakingSensitivity * profit * 2.0m));
+        if (Rand() >= prob) return;
+        // 卖出持仓的一部分(1/3~1/2),不是全清(真实散户分批止盈)
+        int sellQty = available * RandInt(1, 2) / 3;
+        if (sellQty > 0) SellMarket(session, sellQty);
+    }
+
+    /// <summary>止损阈值(亏损比例,超过则触发止损)。0=不止损(长线价投)。
+    /// 子类设置:短线客灵敏(0.03~0.05),长线迟钝(0.10~0.15),价投=0。</summary>
+    protected decimal _stopLossThreshold = 0.08m;   // 默认8%,子类可覆盖
+
+    /// <summary>通用止损:浮亏超阈值时按概率减仓。恐慌情绪下阈值降低、概率升高。
+    /// 和止盈对称——越亏越想跑,恐慌时加速。短线客阈值低,长线阈值高。</summary>
+    private void TryStopLoss(TradingSession session, RetailMarketContext ctx)
+    {
+        if (_stopLossThreshold <= 0) return;   // 价投不止损
+        if (ctx.LastPrice is null) return;
+        int available = Account.Position.Available.Value;
+        if (available <= 0) return;
+        decimal cost = Account.Position.AverageCost.Value;
+        if (cost <= 0) return;
+        decimal loss = (cost - ctx.LastPrice.Value.Value) / cost;
+        if (loss <= 0) return;   // 没亏损
+
+        // 恐慌情绪降低止损阈值(恐惧时更敏感):恐慌态阈值×0.7
+        decimal threshold = ctx.Sentiment.IsPanic ? _stopLossThreshold * 0.7m : _stopLossThreshold;
+        if (loss < threshold) return;
+
+        // 亏损越大,止损概率越高:刚到阈值=20%,亏2倍=50%
+        double prob = Math.Min(0.6, 0.2 + (double)((loss - threshold) / threshold) * 0.3);
+        // 恐慌时概率翻倍
+        if (ctx.Sentiment.IsPanic) prob = Math.Min(0.8, prob * 1.5);
+        if (Rand() >= prob) return;
+
+        // 止损卖出:亏损大时清仓,刚到阈值时卖一半
+        int sellQty = loss > threshold * 1.5m ? available : available / 2;
+        if (sellQty > 0) SellMarket(session, sellQty);
     }
 
     /// <summary>子类实现:本 tick 是否下单、下什么单。</summary>

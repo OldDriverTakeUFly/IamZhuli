@@ -56,13 +56,18 @@ public sealed class MarketDataCollector
         loop.OnNewDay += OnNewDay;
     }
 
-    /// <summary>预加载历史K线(关卡背景)。玩家进场即看到过去的走势。</summary>
+    /// <summary>预加载历史K线(关卡背景)。玩家进场即看到过去的走势。
+    /// 历史 day 重编为负数(-N~-1),避免与游戏日(1,2,3...)在 K线时间轴上冲突。</summary>
     public void PreloadHistory(IEnumerable<DailyCandle> historyCandles)
     {
         DailyCandles.Clear();
-        foreach (var c in historyCandles)
+        var list = historyCandles.ToList();
+        int n = list.Count;
+        for (int i = 0; i < n; i++)
         {
-            DailyCandles.Add(c);
+            // 历史K线编号: -n, -(n-1), ..., -1(最早→最近)
+            var c = list[i];
+            DailyCandles.Add(c with { Day = i - n });
             PreviousClose = c.Close;
         }
         // 更新涨跌停基准为历史最后收盘
@@ -70,14 +75,15 @@ public sealed class MarketDataCollector
             _loop.Session.Engine.Rules.PreviousClose = new Price(DailyCandles[^1].Close);
     }
 
-    /// <summary>预演用:直接设置当前价(不经过成交,引导做市商锚定价格时用)。</summary>
-    public void SetPriceForPreplay(Price price)
+    /// <summary>预演用:直接设置当前价 + 模拟成交量(引导做市商锚定价格时用)。</summary>
+    public void SetPriceForPreplay(Price price, int simulatedVolume = 0)
     {
         decimal p = price.Value;
         _todayOpen ??= p;
         if (p > _todayHigh) _todayHigh = p;
         if (p < _todayLow) _todayLow = p;
         _lastPrice = p;
+        _todayVolume += simulatedVolume;   // 累加模拟量,让K线有真实成交量
     }
 
     /// <summary>每笔成交:更新开盘/最高/最低/累计量。</summary>

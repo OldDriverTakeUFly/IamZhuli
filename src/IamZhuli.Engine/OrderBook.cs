@@ -111,6 +111,18 @@ public sealed class OrderBook
             .Where(o => o.Participant.Equals(participant) && !o.IsDone)
             .Select(o => o.Id)
             .ToList();
+
+    /// <summary>枚举指定参与者当前在簿的全部挂单(含详情,供"我的挂单"列表用)。
+    /// 排序:买盘在前(按价格降序,最优买价在前),卖盘在后(按价格升序,最优卖价在前)。</summary>
+    public IEnumerable<Order> OrdersFor(ParticipantId participant)
+    {
+        var orders = _ordersById.Values
+            .Where(o => o.Participant.Equals(participant) && !o.IsDone).ToList();
+        // 买盘按价格降序,卖盘按价格升序,买盘在前
+        var buys = orders.Where(o => o.Side == Side.Buy).OrderByDescending(o => o.Price.Value);
+        var sells = orders.Where(o => o.Side == Side.Sell).OrderBy(o => o.Price.Value);
+        return buys.Concat(sells).ToList();
+    }
 }
 
 /// <summary>价格降序比较器(用于买盘)。</summary>
