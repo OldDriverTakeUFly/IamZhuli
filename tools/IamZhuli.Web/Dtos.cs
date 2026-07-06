@@ -26,7 +26,12 @@ public record MarketSnapshotDto(
     decimal RegulatorHeat, string PenaltyLevel, string LatestRegulatorEvent,
     List<ObjectiveProgressDto> Objectives, bool IsLevelOver,
     decimal Sentiment, int RetailActiveCount,
-    List<OpenOrderDto> OpenOrders);
+    List<OpenOrderDto> OpenOrders,
+    decimal Confidence, decimal HerdMood, decimal NewsBias,
+    List<NewsItemDto> ActiveNews);
+
+// ── 消息 ──
+public record NewsItemDto(string Type, string Headline, int RemainingTicks);
 
 // ── 关卡结算 ──
 public record LevelResultDto(bool IsVictory, int Stars, string CoachComment, string FailureReason,

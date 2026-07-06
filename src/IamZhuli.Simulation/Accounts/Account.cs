@@ -83,6 +83,9 @@ public sealed class Account
     /// <summary>T+1 日切:解锁持仓。</summary>
     public void OnNewTradingDay() => Position.UnlockT1();
 
+    /// <summary>非交易资金扣减(消息系统/水军等费用)。</summary>
+    public void DebitCash(decimal amount) => Cash -= amount;
+
     /// <summary>总权益 = 现金 + 持仓市值。</summary>
     public decimal TotalEquity(Price markPrice)
         => Cash + (Position.Total.IsZero ? 0m : markPrice.Value * Position.Total.Value * 100);

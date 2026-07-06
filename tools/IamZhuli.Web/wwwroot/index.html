@@ -80,8 +80,12 @@
     <span id="penaltyTxt" style="color:#666;margin-left:4px;"></span>
   </span>
   <span style="margin-left:16px;font-size:12px;">
-    <span style="color:#888;">散户情绪</span>
-    <span id="sentimentTxt" style="color:#888;margin:0 4px;">50</span>
+    <span style="color:#888;">情绪</span>
+    <span id="sentimentTxt" style="color:#888;margin:0 2px;">50</span>
+    <span style="color:#555;font-size:10px;">信心</span>
+    <span id="confidenceTxt" style="color:#888;margin:0 2px;">50</span>
+    <span style="color:#555;font-size:10px;">消息</span>
+    <span id="newsBiasTxt" style="color:#888;margin:0 4px;">±0</span>
     <span style="color:#888;">在场</span>
     <span id="retailCountTxt" style="color:#888;margin-left:4px;">0</span>
   </span>
@@ -200,6 +204,17 @@
       </div>
       <!-- 当日筹码流向(收盘时异步加载) -->
       <div id="dayChipPanel" style="margin-top:8px;"></div>
+      <!-- 盘后操作:发布消息影响次日开盘情绪 -->
+      <div style="margin-top:8px;padding:6px;background:#2a2030;border:1px solid #5a3a6a;border-radius:4px;">
+        <div style="font-size:11px;color:#b88adf;margin-bottom:4px;">📰 盘后操作 · 影响明日开盘情绪</div>
+        <div class="ctrl-row" style="gap:4px;">
+          <button class="mini-btn news-btn" data-news="positive" style="font-size:10px;color:#26a69a;">利好</button>
+          <button class="mini-btn news-btn" data-news="negative" style="font-size:10px;color:#ef5350;">利空</button>
+          <button class="mini-btn news-btn" data-news="rumor" style="font-size:10px;color:#e8c44a;">传闻(5k)</button>
+          <button class="mini-btn news-btn" data-news="pump" style="font-size:10px;color:#e8c44a;">水军(2w)</button>
+        </div>
+        <div id="newsStatus" style="font-size:10px;color:#666;margin-top:3px;"></div>
+      </div>
       <button class="btn btn-ctrl" id="nextDayBtn" style="width:auto;margin-top:8px;padding:6px 16px;display:block;margin-left:auto;margin-right:auto;">▶ 开始下一交易日</button>
     </div>
   </div>
@@ -424,6 +439,14 @@ $('pauseBtn').onclick = () => fetch('/api/pause', { method: 'POST' });
 $('resumeBtn').onclick = () => fetch('/api/resume', { method: 'POST' });
 $('skipDayBtn').onclick = () => fetch('/api/skipday', { method: 'POST' });
 $('nextDayBtn').onclick = () => { _chipDay = 0; fetch('/api/nextday', { method: 'POST' }); };
+// 盘后消息发布
+document.querySelectorAll('.news-btn').forEach(btn => {
+  btn.onclick = async () => {
+    const r = await (await fetch('/api/news?type=' + btn.dataset.news, { method: 'POST' })).json();
+    $('newsStatus').textContent = r.ok ? '✓ 已发布(' + btn.textContent + ')' : '✗ ' + r.error;
+    $('newsStatus').style.color = r.ok ? '#26a69a' : '#ef5350';
+  };
+});
 
 // —— 渲染盘口 ——
 function renderBook(snap) {
@@ -489,7 +512,14 @@ function renderRegulator(snap) {
   // 散户情绪温度计(0恐慌~100贪婪)
   const s = snap.sentiment ?? 50;
   $('sentimentTxt').textContent = s.toFixed(0);
-  $('sentimentTxt').style.color = s >= 70 ? '#ef5350' : (s <= 30 ? '#26a69a' : '#e8c44a');
+  $('sentimentTxt').style.color = s >= 70 ? '#ef5350' : (s <= 30 ? '#26a69a' : '#e8c44a';
+  // 多维情绪:信心 + 消息偏差
+  const conf = snap.confidence ?? 50;
+  $('confidenceTxt').textContent = conf.toFixed(0);
+  $('confidenceTxt').style.color = conf >= 65 ? '#ef5350' : (conf <= 35 ? '#26a69a' : '#888');
+  const bias = snap.newsBias ?? 0;
+  $('newsBiasTxt').textContent = (bias >= 0 ? '+' : '') + bias.toFixed(2);
+  $('newsBiasTxt').style.color = bias > 0.1 ? '#ef5350' : (bias < -0.1 ? '#26a69a' : '#888');
   $('retailCountTxt').textContent = snap.retailActiveCount ?? 0;
   if (snap.isLevelOver) showResult();
 }
@@ -574,12 +604,25 @@ $('modalReplayBtn').onclick = async () => {
   $('resultModal').style.display = 'none';
   $('replayModal').style.display = 'flex';
   if (!_replayData) {
-    $('replayTrades').innerHTML = '<span style="color:#666">加载中...</span>';
+    $('replayTrades').innerHTML = '<span style="color:#888">⏳ 正在加载复盘数据(约10-20MB,请稍候)...</span>';
     try {
-      _replayData = await (await fetch('/api/replay')).json();
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 30000);   // 30秒超时
+      const resp = await fetch('/api/replay', { signal: ctrl.signal });
+      clearTimeout(timeout);
+      if (!resp.ok) throw new Error(`服务端返回 ${resp.status}(需重启服务加载新代码)`);
+      const text = await resp.text();
+      if (!text) throw new Error('返回数据为空(关卡可能还没结束)');
+      _replayData = JSON.parse(text);
+      if (!_replayData.snapshots || _replayData.snapshots.length === 0)
+        throw new Error('无快照数据(关卡需正常结束后才有复盘数据)');
       initReplay();
     } catch(e) {
-      $('replayTrades').innerHTML = '<span style="color:#ef5350">加载失败: '+e.message+'</span>';
+      $('replayTrades').innerHTML = `<div style="color:#ef5350;padding:8px;">❌ 加载失败: ${e.message}<br><br>
+        可能原因:<br>
+        1. 服务未重启(跑旧代码,无/api/replay)<br>
+        2. 关卡未正常结束(需到结算弹窗)<br>
+        3. 数据量过大超时</div>`;
     }
   }
 };

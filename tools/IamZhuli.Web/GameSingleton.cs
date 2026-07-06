@@ -42,6 +42,7 @@ public sealed class GameSingleton
     private EquityCurveCollector _equityCollector = null!;
     private ChipSnapshotCollector _chipCollector = null!;
     private ReplayCollector _replayCollector = null!;
+    private NewsSystem _newsSystem = null!;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
@@ -94,6 +95,8 @@ public sealed class GameSingleton
         // 散户画像池(情绪用预演产出的初始值)
         _retail = new RetailProfilePool(_loop.Session, new ParticipantId("散户池"), intrinsic, seed: 42);
         _loop.AddParticipant(_retail);
+        // 消息系统(盘后消息冲击,驱动多维情绪)
+        _newsSystem = new NewsSystem(_retail.Sentiment);
 
         // 被动资金流(指数ETF/定投/养老金底盘):无视涨跌,每tick小额买入,保证阴跌不死锁
         _passive = new PassiveFlow(_loop.Session, new ParticipantId("被动资金"), level.FloatShares, seed: 77);
@@ -120,6 +123,7 @@ public sealed class GameSingleton
             _prevPriceForVolatility = cur?.Value;
             _regulator.OnTick(ratio);
             _maxHeatReached = Math.Max(_maxHeatReached, _regulator.Heat);
+            _newsSystem.Tick();   // 消息系统每 tick 应用持续影响 + 过期清理
             // 监管爆表 → 关卡失败
             if (_regulator.GetStatus().IsFailed && !IsLevelOver) EndLevel();
         };
@@ -284,7 +288,7 @@ public sealed class GameSingleton
                 null, null, null, 0m, 0m, 0m, 0m,
                 new(), new(), new AccountDto(0,0,0,0,0,0,0,0),
                 new(), null, new(), new(),
-                0m, "", "", new(), false, 0m, 0, new());
+                0m, "", "", new(), false, 0m, 0, new(), 0m, 0m, 0m, new());
         }
         var view = _loop.Session.Engine.View;
         var mark = view.LastPrice ?? new Price(10.00m);
@@ -327,7 +331,12 @@ public sealed class GameSingleton
             RetailActiveCount: _retail.ActiveCount,
             OpenOrders: _loop.Session.GetOpenOrders(Player)
                 .Select(o => new OpenOrderDto(o.Id.Value, o.Side.ToString(), o.Price.Value,
-                    o.TotalQty.Value, o.FilledQty.Value, o.RemainingQty.Value)).ToList());
+                    o.TotalQty.Value, o.FilledQty.Value, o.RemainingQty.Value)).ToList(),
+            Confidence: Math.Round(_retail.Sentiment.Confidence * 100m, 0),
+            HerdMood: Math.Round(_retail.Sentiment.HerdMood * 100m, 0),
+            NewsBias: Math.Round(_retail.Sentiment.NewsBias, 2),
+            ActiveNews: _newsSystem.ActiveNews.Select(n => new NewsItemDto(
+                n.Type.ToString(), n.Headline, n.DurationTicks)).ToList());
     }
 
     /// <summary>提交下单。返回订单结果;失败返回带 Error 的 DTO。</summary>
@@ -410,8 +419,51 @@ public sealed class GameSingleton
     public async Task StartNextDayAsync()
     {
         await _gate.WaitAsync();
-        try { _loop.StartNextDay(); }
+        try
+        {
+            // 盘后→开盘前:消息系统日切(隔夜消息保留但衰减)+ 情绪日切衰减
+            _newsSystem.OnNewDay();
+            _retail.Sentiment.DailyDecay();
+            _loop.StartNextDay();
+        }
         finally { _gate.Release(); }
+    }
+
+    /// <summary>玩家盘后发布消息(影响次日开盘情绪)。扣除成本,注入 NewsSystem。</summary>
+    public bool PublishNews(string newsType, out string error)
+    {
+        error = "";
+        if (!IsLevelOver && _loop.IsDayClosed)   // 只在日终暂停态可发消息
+        {
+            var type = newsType.ToLowerInvariant() switch
+            {
+                "positive" => NewsType.Positive,
+                "negative" => NewsType.Negative,
+                "rumor" => NewsType.Rumor,
+                "pump" => NewsType.Pump,
+                _ => NewsType.Positive
+            };
+            var cost = NewsSystem.GetCost(type);
+            if (_player.AvailableCash < cost)
+            {
+                error = $"资金不足,需要{cost/10000:F1}万";
+                return false;
+            }
+            var (impact, duration) = NewsSystem.GetDefaults(type);
+            string headline = type switch
+            {
+                NewsType.Positive => "利好消息:机构研报看好,目标价上调",
+                NewsType.Negative => "利空消息:业绩不及预期,下调评级",
+                NewsType.Rumor => "市场传闻:有大资金进场/退场迹象",
+                NewsType.Pump => "水军造势:股吧/论坛出现大量看多帖子",
+                _ => "消息"
+            };
+            if (cost > 0) _player.DebitCash(cost);   // 扣成本
+            _newsSystem.Publish(type, headline, impact, duration);
+            return true;
+        }
+        error = "只能在收盘后发布消息";
+        return false;
     }
 
     public async Task<LevelResultDto> EndLevelAsync()

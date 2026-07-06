@@ -23,11 +23,15 @@ public sealed class AggressiveMomentumProfile : RetailProfile
     protected override void Decide(TradingSession s, RetailMarketContext ctx)
     {
         if (ctx.LastPrice is null) return;
+        // Confidence 影响:信心高时追涨门槛降低(利好消息后更激进)
+        decimal adjustedThreshold = _chaseThreshold * (1m - (ctx.Sentiment.Confidence - 0.5m) * 0.4m);
         // 上涨超阈值 + 情绪偏贪婪 → 概率追涨
-        if (ctx.RecentReturn > _chaseThreshold && ctx.Sentiment.Greed > 0.55m)
+        if (ctx.RecentReturn > adjustedThreshold && ctx.Sentiment.Greed > 0.55m)
         {
-            double intensity = Math.Min(1.0, (double)(ctx.RecentReturn / _chaseThreshold) - 0.3)
+            double intensity = Math.Min(1.0, (double)(ctx.RecentReturn / adjustedThreshold) - 0.3)
                              * (double)ctx.Sentiment.Greed * (double)RiskPreference;
+            // Confidence 高时追涨概率也提升
+            intensity *= 0.7 + (double)ctx.Sentiment.Confidence * 0.6;
             if (Rand() < intensity * 0.55)
             {
                 int qty = RandInt(5, 15) * 10;
@@ -105,17 +109,18 @@ public sealed class ValueInvestorProfile : RetailProfile
     {
         if (ctx.LastPrice is null || ctx.IntrinsicValue <= 0) return;
         decimal deviation = (ctx.LastPrice.Value.Value - ctx.IntrinsicValue) / ctx.IntrinsicValue;
+        // 严重利空(NewsBias < -0.3)时价投也观望:不是不买,而是更谨慎(概率减半)
+        bool heavyNegative = ctx.Sentiment.NewsBias < -0.3m;
         // —— 金字塔分批:低估区间内越跌越买 ——
-        // 浅低估(-_discount):小仓位、低概率试探
-        // 严重低估(-2×_discount):加大仓位、提高概率
-        if (deviation < -_discount && _batches < 6)   // 最多6批,控总仓位
+        if (deviation < -_discount && _batches < 6)
         {
             bool deep = deviation < -_discount * 2m;
             double prob = (deep ? 0.30 : 0.12) * (double)RiskPreference;
+            if (heavyNegative) prob *= 0.5;   // 利空观望:买入概率减半
             if (Rand() < prob)
             {
                 int baseQty = RandInt(3, 8) * 10;
-                int qty = deep ? baseQty * 2 : baseQty;   // 深跌双倍加仓(金字塔)
+                int qty = deep ? baseQty * 2 : baseQty;
                 decimal bid = Val(ctx.BestBid ?? ctx.LastPrice, ctx.IntrinsicValue);
                 BuyLimit(s, bid + 0.01m, qty);
                 _batches++;
@@ -162,6 +167,8 @@ public sealed class StopLossProfile : RetailProfile
         if (cost <= 0) return false;
         decimal loss = (cost - ctx.LastPrice.Value.Value) / cost;
         // 跌破止损线 或 接近止损线且情绪恐慌 → 触发离场(基类 Exit 会市价清仓)
-        return loss > _stopRatio || (loss > _stopRatio * 0.7m && ctx.Sentiment.IsPanic);
+        // NewsBias 为负(利空消息)时止损更敏感:阈值降低
+        decimal adjustedStop = ctx.Sentiment.NewsBias < -0.2m ? _stopRatio * 0.8m : _stopRatio;
+        return loss > adjustedStop || (loss > adjustedStop * 0.7m && ctx.Sentiment.IsPanic);
     }
 }
