@@ -19,6 +19,7 @@ public sealed class InstitutionB : IParticipant
     private readonly Price _fairValue;
     private readonly MarketMakerRiskController _risk;
     private readonly IntentRecognizer _recognizer;
+    private readonly SessionMarketDataSnapshot _snapshot;
     private readonly Random _rng;
 
     /// <summary>做市参数(正常状态下的挂单)。</summary>
@@ -40,6 +41,7 @@ public sealed class InstitutionB : IParticipant
         if (initialHolding > 0) _account.Position.Seed(new Quantity(initialHolding), fairValue);
         _risk = new MarketMakerRiskController(fairValue, maxPositionValue: cash * 1.5m);
         _recognizer = new IntentRecognizer();
+        _snapshot = new SessionMarketDataSnapshot(session);
         session.OnTrade += (p, q, s) => { _risk.OnTrade(q); _recognizer.RecordTrade(q.Value); };
         _baseDepthPerLevel = baseDepthPerLevel;
         _levels = levels;
@@ -49,7 +51,7 @@ public sealed class InstitutionB : IParticipant
     public void Act(TradingSession session, SimulationClock clock, Random rng)
     {
         _risk.OnTick(session.Engine.LastPrice);
-        _recognizer.Observe(session);
+        _recognizer.Observe(_snapshot);
 
         var assessment = _risk.Assess(_account);
         CurrentRiskLevel = assessment.Level;

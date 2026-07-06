@@ -70,6 +70,24 @@ app.MapPost("/api/news", (GameSingleton game, string type) =>
     return Results.Ok(new { ok, error });
 });
 
+app.MapPost("/api/waterarmy/upgrade", (GameSingleton game) =>
+{
+    var ok = game.UpgradeWaterArmy(out var error);
+    return Results.Ok(new { ok, error });
+});
+
+app.MapPost("/api/waterarmy/toggle", (GameSingleton game) =>
+{
+    var ok = game.ToggleWaterArmy(out var error);
+    return Results.Ok(new { ok, error });
+});
+
+app.MapPost("/api/signal", (GameSingleton game, string type) =>
+{
+    var ok = game.PublishSignal(type, out var error);
+    return Results.Ok(new { ok, error });
+});
+
 app.MapPost("/api/retry", async (GameSingleton game) =>
 { await game.RetryAsync(); return Results.Ok(); });
 

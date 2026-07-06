@@ -78,6 +78,8 @@
     </span>
     <span id="heatTxt" style="color:#888;">0%</span>
     <span id="penaltyTxt" style="color:#666;margin-left:4px;"></span>
+    <span style="color:#555;font-size:10px;margin-left:6px;">信息</span>
+    <span id="infoHeatTxt" style="color:#888;">0%</span>
   </span>
   <span style="margin-left:16px;font-size:12px;">
     <span style="color:#888;">情绪</span>
@@ -208,14 +210,26 @@
       </div>
       <!-- 当日筹码流向(收盘时异步加载) -->
       <div id="dayChipPanel" style="margin-top:8px;"></div>
-      <!-- 盘后操作:发布消息影响次日开盘情绪 -->
+      <!-- 盘后操作:消息+信号误导+水军网络 -->
       <div style="margin-top:8px;padding:6px;background:#2a2030;border:1px solid #5a3a6a;border-radius:4px;">
-        <div style="font-size:11px;color:#b88adf;margin-bottom:4px;">📰 盘后操作 · 影响明日开盘情绪</div>
+        <div style="font-size:11px;color:#b88adf;margin-bottom:4px;">📰 盘后操作 · 信息战</div>
+        <div style="font-size:9px;color:#666;margin-bottom:2px;">消息发布</div>
         <div class="ctrl-row" style="gap:4px;">
           <button class="mini-btn news-btn" data-news="positive" style="font-size:10px;color:#26a69a;">利好</button>
           <button class="mini-btn news-btn" data-news="negative" style="font-size:10px;color:#ef5350;">利空</button>
           <button class="mini-btn news-btn" data-news="rumor" style="font-size:10px;color:#e8c44a;">传闻(5k)</button>
-          <button class="mini-btn news-btn" data-news="pump" style="font-size:10px;color:#e8c44a;">水军(2w)</button>
+        </div>
+        <div style="font-size:9px;color:#666;margin-top:4px;margin-bottom:2px;">🕵 信号误导</div>
+        <div class="ctrl-row" style="gap:4px;">
+          <button class="mini-btn signal-btn" data-signal="fakebigsell" style="font-size:10px;color:#ef5350;">假大宗卖(10w)</button>
+          <button class="mini-btn signal-btn" data-signal="fakebigbuy" style="font-size:10px;color:#26a69a;">假大宗买(10w)</button>
+          <button class="mini-btn signal-btn" data-signal="dragonlist" style="font-size:10px;color:#e8c44a;">龙虎榜(5w)</button>
+        </div>
+        <div style="font-size:9px;color:#666;margin-top:4px;margin-bottom:2px;">👹 水军网络</div>
+        <div class="ctrl-row" style="gap:4px;align-items:center;">
+          <span id="waterArmyInfo" style="font-size:10px;color:#888;">未建立</span>
+          <button class="mini-btn" id="waterArmyUpgradeBtn" style="font-size:10px;">升级</button>
+          <button class="mini-btn" id="waterArmyToggleBtn" style="font-size:10px;">启动</button>
         </div>
         <div id="newsStatus" style="font-size:10px;color:#666;margin-top:3px;"></div>
       </div>
@@ -451,6 +465,25 @@ document.querySelectorAll('.news-btn').forEach(btn => {
     $('newsStatus').style.color = r.ok ? '#26a69a' : '#ef5350';
   };
 });
+// 信号误导
+document.querySelectorAll('.signal-btn').forEach(btn => {
+  btn.onclick = async () => {
+    const r = await (await fetch('/api/signal?type=' + btn.dataset.signal, { method: 'POST' })).json();
+    $('newsStatus').textContent = r.ok ? '✓ 信号已发布(' + btn.textContent + ')' : '✗ ' + r.error;
+    $('newsStatus').style.color = r.ok ? '#b88adf' : '#ef5350';
+  };
+});
+// 水军网络
+$('waterArmyUpgradeBtn').onclick = async () => {
+  const r = await (await fetch('/api/waterarmy/upgrade', { method: 'POST' })).json();
+  $('newsStatus').textContent = r.ok ? '✓ 水军网络升级成功' : '✗ ' + r.error;
+  $('newsStatus').style.color = r.ok ? '#26a69a' : '#ef5350';
+};
+$('waterArmyToggleBtn').onclick = async () => {
+  const r = await (await fetch('/api/waterarmy/toggle', { method: 'POST' })).json();
+  $('newsStatus').textContent = r.ok ? '✓ 水军状态已切换' : '✗ ' + r.error;
+  $('newsStatus').style.color = r.ok ? '#26a69a' : '#ef5350';
+};
 
 // —— 渲染盘口 ——
 function renderBook(snap) {
@@ -513,6 +546,10 @@ function renderRegulator(snap) {
   $('heatTxt').style.color = h >= 80 ? '#ef5350' : (h >= 50 ? '#e8c44a' : '#888');
   $('penaltyTxt').textContent = penaltyLabel[snap.penaltyLevel] || '';
   $('penaltyTxt').style.color = h >= 80 ? '#ef5350' : (h >= 50 ? '#e8c44a' : '#666');
+  // 信息操纵关注值
+  const ih = snap.infoHeat || 0;
+  $('infoHeatTxt').textContent = ih.toFixed(0) + '%';
+  $('infoHeatTxt').style.color = ih >= 80 ? '#ef5350' : (ih >= 50 ? '#e8c44a' : '#888');
   // 散户情绪温度计(0恐慌~100贪婪)
   const s = snap.sentiment ?? 50;
   $('sentimentTxt').textContent = s.toFixed(0);
@@ -525,6 +562,16 @@ function renderRegulator(snap) {
   $('newsBiasTxt').textContent = (bias >= 0 ? '+' : '') + bias.toFixed(2);
   $('newsBiasTxt').style.color = bias > 0.1 ? '#ef5350' : (bias < -0.1 ? '#26a69a' : '#888');
   $('retailCountTxt').textContent = snap.retailActiveCount ?? 0;
+  // 水军网络状态
+  const wa = snap.waterArmyLevel || 0;
+  const waActive = snap.waterArmyActive;
+  const waCost = snap.waterArmyDailyCost || 0;
+  $('waterArmyInfo').textContent = wa === 0 ? '未建立' :
+    `Lv${wa} ${waActive ? '运营中' : '未启动'} · ${waCost/10000}万/天 · 已运营${snap.waterArmyDays||0}天`;
+  $('waterArmyToggleBtn').textContent = waActive ? '停止' : '启动';
+  $('waterArmyToggleBtn').disabled = wa === 0;
+  $('waterArmyUpgradeBtn').textContent = wa >= 5 ? '满级' : `升级(${(wa+1)*5}万)`;
+  $('waterArmyUpgradeBtn').disabled = wa >= 5;
   if (snap.isLevelOver) showResult();
 }
 function renderObjectives(snap) {

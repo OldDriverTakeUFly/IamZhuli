@@ -26,6 +26,7 @@ public sealed class Regulator
 {
     private readonly ParticipantId _player;
     private decimal _heat;
+    private decimal _infoHeat;   // 信息操纵关注值(独立于交易操纵)
     private readonly List<string> _recentEvents = new();
     /// <summary>结构化事件日志(带 tick 时间戳,供复盘)。无上限。</summary>
     private readonly List<RegulatorEvent> _eventLog = new();
@@ -35,7 +36,11 @@ public sealed class Regulator
     public RegulatorConfig Config { get; set; } = new();
 
     public decimal Heat => Math.Min(100m, _heat);
-    public PenaltyLevel CurrentPenalty => Heat switch
+    /// <summary>信息操纵关注值(水军/传闻/信号误导累积)。</summary>
+    public decimal InfoHeat => Math.Min(100m, _infoHeat);
+    /// <summary>综合监管风险 = max(交易操纵, 信息操纵)。任一爆表都导致失败。</summary>
+    public decimal TotalHeat => Math.Max(Heat, InfoHeat);
+    public PenaltyLevel CurrentPenalty => TotalHeat switch
     {
         >= 100 => PenaltyLevel.ForcedLiquidation,
         >= 80 => PenaltyLevel.Investigation,
@@ -100,8 +105,53 @@ public sealed class Regulator
             AddHeat(Config.VolatilityHeat, $"异常波动: {r:P1}");
 
         // 关注值衰减(每 DecayIntervalTicks 衰减 DecayAmount)
-        if (_tickCounter % Config.DecayIntervalTicks == 0 && _heat > 0)
-            _heat = Math.Max(0, _heat - Config.DecayAmount);
+        if (_tickCounter % Config.DecayIntervalTicks == 0)
+        {
+            if (_heat > 0) _heat = Math.Max(0, _heat - Config.DecayAmount);
+            // 信息操纵衰减更慢(0.5/次),因为舆论影响持续时间长
+            if (_infoHeat > 0) _infoHeat = Math.Max(0, _infoHeat - 0.5m);
+        }
+    }
+
+    /// <summary>玩家发布消息时:水军/传闻触发信息操纵关注值上升。
+    /// newsTypeName: "Pump"/"Rumor"/"Positive"/"Negative"。</summary>
+    public void OnNewsPublished(string newsTypeName)
+    {
+        switch (newsTypeName)
+        {
+            case "Pump":
+                AddInfoHeat(3m, "水军造势");
+                break;
+            case "Rumor":
+                AddInfoHeat(5m, "散布传闻");
+                break;
+            // Positive/Negative 是公开新闻,不触发信息操纵
+        }
+    }
+
+    /// <summary>玩家发布信号误导时:信息操纵关注值大幅上升。
+    /// signalTypeName: "FakeBigSell"/"FakeBigBuy"/"DragonList"。</summary>
+    public void OnSignalPublished(string signalTypeName)
+    {
+        switch (signalTypeName)
+        {
+            case "FakeBigSell":
+            case "FakeBigBuy":
+                AddInfoHeat(8m, $"虚假大宗信号({signalTypeName})");
+                break;
+            case "DragonList":
+                AddInfoHeat(4m, "龙虎榜异常");
+                break;
+        }
+    }
+
+    private void AddInfoHeat(decimal amount, string reason)
+    {
+        _infoHeat = Math.Min(100m, _infoHeat + amount);
+        var penalty = CurrentPenalty;
+        _recentEvents.Insert(0, $"[信息关注{_infoHeat:F0}% {penalty}] {reason}");
+        if (_recentEvents.Count > 20) _recentEvents.RemoveAt(_recentEvents.Count - 1);
+        _eventLog.Add(new RegulatorEvent((int)_tickCounter, _infoHeat, $"信息:{penalty}", reason));
     }
 
     private void AddHeat(decimal amount, string reason)

@@ -1,5 +1,6 @@
 using IamZhuli.Core;
 using IamZhuli.Engine;
+using IamZhuli.Factors;
 using IamZhuli.Simulation.AI;
 using IamZhuli.Simulation.Sessions;
 
@@ -89,8 +90,11 @@ public class AITests
         for (int t = 0; t < 20; t++)
         {
             decimal p = 10m + t * 0.025m;
-            rec.Tracker.RecordTick(new Price(p), new Price(p - 0.01m), new Price(p + 0.01m),
-                                    bidDepth: 1000, askDepth: 200);
+            var snap = MarketDataSnapshot.Of(
+                new Price(p),
+                new[] { new QuoteLevel(new Price(p - 0.01m), new Quantity(1000)) },
+                new[] { new QuoteLevel(new Price(p + 0.01m), new Quantity(200)) });
+            rec.Tracker.RecordTick(snap);
         }
         var a = rec.Assess();
         Assert.True(a.Momentum > 0.02m, $"应检测到上涨动量,实际{a.Momentum}");
@@ -98,10 +102,14 @@ public class AITests
     }
 
     [Fact]
-    public void RecentMarketTracker_ComputesMomentum()
+    public void MarketSignalTracker_ComputesMomentum()
     {
-        var t = new RecentMarketTracker(10);
-        for (int i = 0; i < 10; i++) t.RecordTick(new Price(10m + i * 0.1m), null, null, 0, 0);
+        var t = new MarketSignalTracker(10);
+        for (int i = 0; i < 10; i++)
+        {
+            decimal p = 10m + i * 0.1m;
+            t.RecordTick(MarketDataSnapshot.Of(new Price(p), Array.Empty<QuoteLevel>(), Array.Empty<QuoteLevel>()));
+        }
         var m = t.Momentum;
         Assert.True(m > 0.05m, $"10个tick涨了1元,动量应>5%,实际{m}");
     }

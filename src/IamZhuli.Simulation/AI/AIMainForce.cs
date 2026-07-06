@@ -17,6 +17,7 @@ public sealed class AIMainForce : IParticipant
     public ParticipantId Id { get; }
     private readonly Account _account;
     private readonly IntentRecognizer _recognizer;
+    private readonly SessionMarketDataSnapshot _snapshot;
     private readonly AIStateMachine _brain;
     private readonly Price _intrinsic;
     private readonly int _strength;
@@ -37,6 +38,7 @@ public sealed class AIMainForce : IParticipant
         _account = session.GetOrCreateAccount(id, cash);
         if (initialHolding > 0) _account.Position.Seed(new Quantity(initialHolding), initialCost);
         _recognizer = new IntentRecognizer();
+        _snapshot = new SessionMarketDataSnapshot(session);
         // 订阅成交事件,把真实成交量喂给识别器(让放量识别准确)
         session.OnTrade += (p, q, s) => _recognizer.RecordTrade(q.Value);
         _brain = new AIStateMachine { Sensitivity = sensitivity, Profile = profile };
@@ -47,7 +49,7 @@ public sealed class AIMainForce : IParticipant
     public void Act(TradingSession session, SimulationClock clock, Random rng)
     {
         // 1. 观察
-        _recognizer.Observe(session);
+        _recognizer.Observe(_snapshot);
 
         // 2. 识别意图
         var intent = _recognizer.Assess();

@@ -43,6 +43,8 @@ public sealed class GameSingleton
     private ChipSnapshotCollector _chipCollector = null!;
     private ReplayCollector _replayCollector = null!;
     private NewsSystem _newsSystem = null!;
+    private WaterArmyNetwork _waterArmy = null!;
+    private BlockTradeSignal _blockSignal = null!;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
@@ -97,6 +99,9 @@ public sealed class GameSingleton
         _loop.AddParticipant(_retail);
         // 消息系统(盘后消息冲击,驱动多维情绪)
         _newsSystem = new NewsSystem(_retail.Sentiment);
+        // 水军网络(持续舆论造势)+ 信号误导(大宗/龙虎榜造假)
+        _waterArmy = new WaterArmyNetwork();
+        _blockSignal = new BlockTradeSignal(_retail.Sentiment, _regulator);
 
         // 被动资金流(指数ETF/定投/养老金底盘):无视涨跌,每tick小额买入,保证阴跌不死锁
         _passive = new PassiveFlow(_loop.Session, new ParticipantId("被动资金"), level.FloatShares, seed: 77);
@@ -288,7 +293,7 @@ public sealed class GameSingleton
                 null, null, null, 0m, 0m, 0m, 0m,
                 new(), new(), new AccountDto(0,0,0,0,0,0,0,0),
                 new(), null, new(), new(),
-                0m, "", "", new(), false, 0m, 0, new(), 0m, 0m, 0m, new());
+                0m, "", "", new(), false, 0m, 0, new(), 0m, 0m, 0m, new(), 0, false, 0, 0m, 0m);
         }
         var view = _loop.Session.Engine.View;
         var mark = view.LastPrice ?? new Price(10.00m);
@@ -336,7 +341,12 @@ public sealed class GameSingleton
             HerdMood: Math.Round(_retail.Sentiment.HerdMood * 100m, 0),
             NewsBias: Math.Round(_retail.Sentiment.NewsBias, 2),
             ActiveNews: _newsSystem.ActiveNews.Select(n => new NewsItemDto(
-                n.Type.ToString(), n.Headline, n.DurationTicks)).ToList());
+                n.Type.ToString(), n.Headline, n.DurationTicks)).ToList(),
+            WaterArmyLevel: _waterArmy.Level,
+            WaterArmyActive: _waterArmy.IsActive,
+            WaterArmyDays: _waterArmy.ActiveDays,
+            WaterArmyDailyCost: _waterArmy.DailyCost,
+            InfoHeat: Math.Round(_regulator.InfoHeat, 1));
     }
 
     /// <summary>提交下单。返回订单结果;失败返回带 Error 的 DTO。</summary>
@@ -421,9 +431,10 @@ public sealed class GameSingleton
         await _gate.WaitAsync();
         try
         {
-            // 盘后→开盘前:消息系统日切(隔夜消息保留但衰减)+ 情绪日切衰减
+            // 盘后→开盘前:消息系统日切 + 情绪衰减 + 水军网络日切
             _newsSystem.OnNewDay();
             _retail.Sentiment.DailyDecay();
+            _waterArmy.OnNewDay(_player, _newsSystem);   // 扣维持费+自动注入Pump
             _loop.StartNextDay();
         }
         finally { _gate.Release(); }
@@ -433,7 +444,7 @@ public sealed class GameSingleton
     public bool PublishNews(string newsType, out string error)
     {
         error = "";
-        if (!IsLevelOver && _loop.IsDayClosed)   // 只在日终暂停态可发消息
+        if (!IsLevelOver && (_loop.IsDayClosed || IsPreMarket))   // 日终收盘后 或 盘前态可发消息
         {
             var type = newsType.ToLowerInvariant() switch
             {
@@ -460,9 +471,49 @@ public sealed class GameSingleton
             };
             if (cost > 0) _player.DebitCash(cost);   // 扣成本
             _newsSystem.Publish(type, headline, impact, duration);
+            // 消息监管联动:水军/传闻触发信息操纵关注值
+            _regulator.OnNewsPublished(type.ToString());
             return true;
         }
-        error = "只能在收盘后发布消息";
+        error = "只能在收盘后或盘前发布消息";
+        return false;
+    }
+
+    /// <summary>升级水军网络(一次性投入)。</summary>
+    public bool UpgradeWaterArmy(out string error)
+    {
+        error = "";
+        if (!_waterArmy.TryUpgrade(out var cost)) { error = "水军网络已满级"; return false; }
+        if (_player.AvailableCash < cost) { error = $"资金不足,需要{cost/10000:F0}万"; return false; }
+        _player.DebitCash(cost);
+        return true;
+    }
+
+    /// <summary>启动/停止水军运营。</summary>
+    public bool ToggleWaterArmy(out string error)
+    {
+        error = "";
+        if (_waterArmy.IsActive) { _waterArmy.Stop(); return true; }
+        if (!_waterArmy.HasNetwork) { error = "请先升级水军网络"; return false; }
+        return _waterArmy.Start();
+    }
+
+    /// <summary>发布信号误导(假大宗/龙虎榜)。</summary>
+    public bool PublishSignal(string signalType, out string error)
+    {
+        error = "";
+        if (!IsLevelOver && !_loop.IsFinished)
+        {
+            var type = signalType.ToLowerInvariant() switch
+            {
+                "fakebigsell" => SignalType.FakeBigSell,
+                "fakebigbuy" => SignalType.FakeBigBuy,
+                "dragonlist" => SignalType.DragonList,
+                _ => SignalType.DragonList
+            };
+            return _blockSignal.Publish(type, _player, _loop.Clock.CurrentDay, out error);
+        }
+        error = "关卡已结束";
         return false;
     }
 

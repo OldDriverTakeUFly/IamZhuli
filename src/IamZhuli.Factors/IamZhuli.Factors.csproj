@@ -1,9 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\IamZhuli.Engine\IamZhuli.Engine.csproj" />
     <ProjectReference Include="..\IamZhuli.Core\IamZhuli.Core.csproj" />
-    <ProjectReference Include="..\IamZhuli.Factors\IamZhuli.Factors.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
