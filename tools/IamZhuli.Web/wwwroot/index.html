@@ -260,6 +260,56 @@
     <div id="resultCoach" style="background:#1a1d24;padding:12px;border-radius:8px;font-size:13px;color:#e8c44a;margin:12px 0;text-align:left;"></div>
     <button class="btn btn-ctrl" id="modalCloseBtn" style="width:auto;padding:8px 24px;">关闭</button>
     <button class="btn btn-ctrl" id="modalRetryBtn" style="width:auto;padding:8px 24px;margin-left:8px;">🔄 再来一局</button>
+    <button class="btn btn-buy" id="modalReplayBtn" style="width:auto;padding:8px 24px;margin-left:8px;">📊 进入复盘</button>
+  </div>
+</div>
+
+<!-- 复盘界面 -->
+<div id="replayModal" style="display:none;position:fixed;inset:0;background:#11141a;z-index:110;flex-direction:column;">
+  <!-- 顶栏 -->
+  <div style="padding:8px 16px;background:#1a1d24;border-bottom:1px solid #333;display:flex;align-items:center;gap:16px;">
+    <span style="color:#e8c44a;font-weight:bold;font-size:16px;">📊 复盘模式</span>
+    <span id="replayTime" style="color:#888;font-size:13px;">--</span>
+    <span id="replayPrice" style="color:#e8c44a;font-size:16px;font-weight:bold;">--</span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button class="mini-btn" id="replayPlayBtn">▶ 播放</button>
+      <span style="font-size:11px;color:#666;">速度:</span>
+      <button class="mini-btn replay-speed" data-speed="1">1x</button>
+      <button class="mini-btn replay-speed" data-speed="3">3x</button>
+      <button class="mini-btn replay-speed" data-speed="10">10x</button>
+      <button class="mini-btn" id="replayExitBtn" style="background:#8c3a3a;">✕ 退出</button>
+    </span>
+  </div>
+  <!-- 时间轴 -->
+  <div style="padding:8px 16px;background:#1a1d24;border-bottom:1px solid #333;">
+    <input type="range" id="replaySlider" min="0" max="100" value="0" style="width:100%;accent-color:#e8c44a;">
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#666;margin-top:2px;">
+      <span>开盘</span><span id="replayDayMarks">--</span><span>收盘</span>
+    </div>
+  </div>
+  <!-- 主内容区:三栏 -->
+  <div style="flex:1;display:flex;min-height:0;overflow:hidden;">
+    <!-- 左:盘口快照 -->
+    <div style="flex:0 0 220px;padding:8px;overflow-y:auto;border-right:1px solid #333;">
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">盘口(该时刻)</div>
+      <div id="replayAsks"></div>
+      <div id="replayLastPrice" style="text-align:center;padding:4px;font-size:18px;font-weight:bold;color:#e8c44a;">--</div>
+      <div id="replayBids"></div>
+    </div>
+    <!-- 中:各方持仓变化 -->
+    <div style="flex:1;padding:8px;overflow-y:auto;">
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">各方持仓(该时刻)</div>
+      <div id="replayParticipants"></div>
+      <div style="font-size:11px;color:#888;margin-top:12px;margin-bottom:4px;">📈 权益曲线</div>
+      <canvas id="replayEquityChart" style="width:100%;height:120px;"></canvas>
+    </div>
+    <!-- 右:成交明细(身份揭示)+ AI独白 -->
+    <div style="flex:0 0 300px;padding:8px;overflow-y:auto;border-left:1px solid #333;">
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">成交明细(身份已揭示)</div>
+      <div id="replayTrades" style="font-family:monospace;font-size:11px;max-height:40%;overflow-y:auto;margin-bottom:8px;"></div>
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">AI/机构独白</div>
+      <div id="replayEvents" style="font-size:11px;max-height:35%;overflow-y:auto;"></div>
+    </div>
   </div>
 </div>
 
@@ -511,6 +561,174 @@ $('modalRetryBtn').onclick = async () => {
   $('resultModal').style.display = 'none';
   await fetch('/api/retry', { method: 'POST' });
 };
+
+// ═══════ 复盘系统 ═══════
+let _replayData = null;       // 复盘数据(snapshots+trades+events+chips)
+let _replayTick = 0;          // 当前查看的 tick
+let _replayPlaying = false;   // 播放中
+let _replaySpeed = 1;         // 播放速度
+let _replayTimer = null;      // 播放定时器
+const replayColors = { '玩家': '#e8c44a', 'AI主力': '#ef5350', '机构B': '#8c6ae8', '散户': '#4a9a8c', '被动资金': '#666' };
+
+$('modalReplayBtn').onclick = async () => {
+  $('resultModal').style.display = 'none';
+  $('replayModal').style.display = 'flex';
+  if (!_replayData) {
+    $('replayTrades').innerHTML = '<span style="color:#666">加载中...</span>';
+    try {
+      _replayData = await (await fetch('/api/replay')).json();
+      initReplay();
+    } catch(e) {
+      $('replayTrades').innerHTML = '<span style="color:#ef5350">加载失败: '+e.message+'</span>';
+    }
+  }
+};
+$('replayExitBtn').onclick = () => {
+  stopReplayPlay();
+  $('replayModal').style.display = 'none';
+};
+$('replayPlayBtn').onclick = () => {
+  if (_replayPlaying) stopReplayPlay(); else startReplayPlay();
+};
+document.querySelectorAll('.replay-speed').forEach(b => b.onclick = () => {
+  _replaySpeed = parseInt(b.dataset.speed);
+  document.querySelectorAll('.replay-speed').forEach(x => x.style.outline = x === b ? '2px solid #e8c44a' : 'none');
+  if (_replayPlaying) { stopReplayPlay(); startReplayPlay(); }   // 重启定时器应用新速度
+});
+
+function initReplay() {
+  const d = _replayData;
+  if (!d || !d.snapshots || d.snapshots.length === 0) {
+    $('replayParticipants').innerHTML = '<span style="color:#666">无快照数据</span>';
+    return;
+  }
+  // 时间轴
+  const slider = $('replaySlider');
+  slider.max = d.totalTicks - 1;
+  slider.value = 0;
+  // 日刻度
+  const ticksPerDay = Math.floor(d.totalTicks / d.totalDays);
+  $('replayDayMarks').textContent = Array.from({length: d.totalDays}, (_, i) => `D${i+1}`).join(' ');
+  slider.oninput = () => { _replayTick = parseInt(slider.value); renderReplay(); };
+  _replayTick = 0;
+  renderReplay();
+}
+
+// 二分查找最近的快照
+function findReplaySnapshot(tick) {
+  const snaps = _replayData.snapshots;
+  let lo = 0, hi = snaps.length - 1, result = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (snaps[mid].tickIndex <= tick) { result = mid; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  return snaps[result];
+}
+
+function renderReplay() {
+  if (!_replayData) return;
+  const d = _replayData;
+  const snap = findReplaySnapshot(_replayTick);
+  const day = Math.floor(_replayTick / (d.totalTicks / d.totalDays)) + 1;
+  const tickOfDay = _replayTick % Math.floor(d.totalTicks / d.totalDays);
+  // 时间轴同步
+  $('replaySlider').value = _replayTick;
+  $('replayTime').textContent = `第${day}日 · tick ${tickOfDay} (全局${_replayTick})`;
+  $('replayPrice').textContent = snap.price.toFixed(2);
+  $('replayLastPrice').textContent = snap.price.toFixed(2);
+  // 盘口
+  $('replayAsks').innerHTML = [...snap.topAsks].reverse().map((l,i) =>
+    `<div class="level"><span class="tag">卖${snap.topAsks.length-i}</span><span class="up">${l.price.toFixed(2)}</span><span style="color:#aaa;text-align:right;">${l.qty}</span></div>`
+  ).join('');
+  $('replayBids').innerHTML = snap.topBids.map((l,i) =>
+    `<div class="level"><span class="tag">买${i+1}</span><span class="down">${l.price.toFixed(2)}</span><span style="color:#aaa;text-align:right;">${l.qty}</span></div>`
+  ).join('');
+  // 各方持仓
+  $('replayParticipants').innerHTML = snap.participants.map(p => {
+    const color = replayColors[p.name] || '#ccc';
+    return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #222;font-size:12px;">
+      <span style="color:${color};font-weight:bold;">${p.name}</span>
+      <span style="color:#aaa;">${p.holding}手 @${p.avgCost.toFixed(2)}</span>
+      <span style="color:#888;">权益${(p.equity/10000).toFixed(0)}万</span>
+    </div>`;
+  }).join('');
+  // 成交明细(该时刻附近±50tick)
+  const nearbyTrades = d.trades.filter(t => Math.abs(t.tickIndex - _replayTick) <= 50).slice(-20).reverse();
+  $('replayTrades').innerHTML = nearbyTrades.length > 0 ? nearbyTrades.map(t => {
+    const isBuy = t.takerSide === 'Buy';
+    const takerColor = replayColors[t.takerId] || '#888';
+    const makerColor = replayColors[t.makerId] || '#888';
+    return `<div style="padding:1px 0;">
+      <span class="${isBuy?'up':'down'}">${isBuy?'买':'卖'}</span>
+      <span style="color:#ccc;">${t.price.toFixed(2)}</span>
+      <span style="color:#888;">${t.qty}</span>
+      <span style="color:${takerColor};">←${t.takerId}</span>
+    </div>`;
+  }).join('') : '<span style="color:#555">该时段无成交</span>';
+  // AI/机构独白(该时刻附近±100tick)
+  const nearbyEvents = d.events.filter(e => Math.abs(e.tick - _replayTick) <= 100).slice(-15).reverse();
+  $('replayEvents').innerHTML = nearbyEvents.length > 0 ? nearbyEvents.map(e => {
+    const color = replayColors[e.source] || '#888';
+    return `<div style="padding:2px 0;border-bottom:1px solid #222;">
+      <span style="color:${color};font-weight:bold;">[${e.source}]</span>
+      <span style="color:#aaa;">${e.state}</span>
+      <div style="color:#666;font-size:10px;">${e.detail}</div>
+    </div>`;
+  }).join('') : '<span style="color:#555">该时段无独白</span>';
+  // 权益曲线(简易 canvas)
+  drawReplayEquity();
+}
+
+function drawReplayEquity() {
+  const canvas = $('replayEquityChart');
+  if (!canvas || !_replayData) return;
+  const w = canvas.clientWidth, h = 120;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  const snaps = _replayData.snapshots;
+  if (snaps.length < 2) return;
+  // 找各方权益范围
+  const allEquity = snaps.flatMap(s => s.participants.map(p => p.equity));
+  const minE = Math.min(...allEquity), maxE = Math.max(...allEquity);
+  const range = Math.max(1, maxE - minE);
+  // 画每方权益线
+  const names = [...new Set(snaps[0].participants.map(p => p.name))];
+  for (const name of names) {
+    ctx.strokeStyle = replayColors[name] || '#888';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    snaps.forEach((s, i) => {
+      const p = s.participants.find(x => x.name === name);
+      if (!p) return;
+      const x = (i / (snaps.length - 1)) * w;
+      const y = h - ((p.equity - minE) / range) * h;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+  // 当前 tick 竖线
+  const tickX = (_replayTick / _replayData.totalTicks) * w;
+  ctx.strokeStyle = '#e8c44a'; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.moveTo(tickX, 0); ctx.lineTo(tickX, h); ctx.stroke(); ctx.setLineDash([]);
+}
+
+function startReplayPlay() {
+  _replayPlaying = true;
+  $('replayPlayBtn').textContent = '⏸ 暂停';
+  const interval = Math.max(50, 400 / _replaySpeed);   // 1x=400ms,3x=133ms,10x=40ms
+  _replayTimer = setInterval(() => {
+    _replayTick += 1;
+    if (_replayTick >= _replayData.totalTicks) { stopReplayPlay(); return; }
+    renderReplay();
+  }, interval);
+}
+function stopReplayPlay() {
+  _replayPlaying = false;
+  $('replayPlayBtn').textContent = '▶ 播放';
+  if (_replayTimer) { clearInterval(_replayTimer); _replayTimer = null; }
+}
 $('retryBtn').onclick = async () => {
   resultShown = false;
   $('resultModal').style.display = 'none';

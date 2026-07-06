@@ -61,6 +61,9 @@ app.MapGet("/api/score", async (GameSingleton game) =>
 app.MapGet("/api/chips", (GameSingleton game, int? day) =>
     Results.Ok(game.GetChipHistory(day)));
 
+app.MapGet("/api/replay", (GameSingleton game) =>
+    Results.Ok(game.GetReplayData()));
+
 app.MapPost("/api/retry", async (GameSingleton game) =>
 { await game.RetryAsync(); return Results.Ok(); });
 

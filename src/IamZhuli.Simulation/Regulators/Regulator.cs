@@ -27,6 +27,9 @@ public sealed class Regulator
     private readonly ParticipantId _player;
     private decimal _heat;
     private readonly List<string> _recentEvents = new();
+    /// <summary>结构化事件日志(带 tick 时间戳,供复盘)。无上限。</summary>
+    private readonly List<RegulatorEvent> _eventLog = new();
+    public IReadOnlyList<RegulatorEvent> EventLog => _eventLog;
 
     /// <summary>配置:各项操纵的关注值增幅系数(可按难度调)。</summary>
     public RegulatorConfig Config { get; set; } = new();
@@ -107,6 +110,8 @@ public sealed class Regulator
         var penalty = CurrentPenalty;
         _recentEvents.Insert(0, $"[关注值{_heat:F0}% {penalty}] {reason}");
         if (_recentEvents.Count > 20) _recentEvents.RemoveAt(_recentEvents.Count - 1);
+        // 结构化日志(带 tick,供复盘)
+        _eventLog.Add(new RegulatorEvent((int)_tickCounter, _heat, penalty.ToString(), reason));
     }
 
     public RegulatorStatus GetStatus() => new()
@@ -155,3 +160,6 @@ public sealed class RegulatorConfig
     public decimal WarningFine { get; set; } = 500_000m;     // 警告罚款(元)
     public decimal InvestigationFine { get; set; } = 5_000_000m; // 立案罚款
 }
+
+/// <summary>监管事件(带 tick 时间戳,供复盘)。</summary>
+public sealed record RegulatorEvent(int Tick, decimal Heat, string Penalty, string Reason);

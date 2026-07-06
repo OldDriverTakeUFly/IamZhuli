@@ -37,6 +37,22 @@ public record PriceBandDto(decimal PriceLow, decimal PriceHigh, int Quantity, de
 public record DayChipDto(int Day, decimal ClosePrice, int TotalQuantity,
     decimal PeakConcentration, List<PriceBandDto> Bands);
 
+// ── 复盘(关键帧快照+交易日志+事件)──
+public record ParticipantStateDto(string Name, int Holding, decimal AvgCost, decimal Equity);
+public record ReplaySnapshotDto(int TickIndex, int Day, int TickOfDay,
+    decimal Price, decimal RegulatorHeat,
+    List<PriceLevelDto> TopBids, List<PriceLevelDto> TopAsks,
+    List<ParticipantStateDto> Participants);
+public record ReplayTradeDto(int TickIndex, decimal Price, int Qty,
+    string TakerSide, string TakerId, string MakerId);
+public record ReplayEventDto(int Tick, string Source, string State, string Detail);
+public record ReplayDataDto(int TotalTicks, int TotalDays,
+    List<ReplaySnapshotDto> Snapshots,
+    List<ReplayTradeDto> Trades,
+    List<ReplayEventDto> Events,
+    List<DayChipDto> Chips,
+    List<DailyCandleDto> DailyCandles);
+
 // ── 积分结算 ──
 public record PartyScore(string Name, decimal ReturnRate, decimal MaxDrawdown,
     decimal Score, int Rank, string Comment);

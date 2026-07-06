@@ -41,6 +41,7 @@ public sealed class GameSingleton
     private MarketScenario _scenario = null!;
     private EquityCurveCollector _equityCollector = null!;
     private ChipSnapshotCollector _chipCollector = null!;
+    private ReplayCollector _replayCollector = null!;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
@@ -130,6 +131,10 @@ public sealed class GameSingleton
         _chipCollector = new ChipSnapshotCollector(_loop, _loop.Session);
         // 导入预演期间的逐日筹码历史(day重编为负数,与历史K线对齐)
         _chipCollector.ImportHistory(preplayResult.ChipHistory);
+        // 复盘数据采集(关键帧快照+交易日志,结算后供回放)
+        _replayCollector = new ReplayCollector(_loop, _loop.Session,
+            () => new[] { ("玩家", _player), ("AI主力", _ai.Account), ("机构B", _institutionB.Account) },
+            () => _regulator.Heat);
         // 挂载待处理的成交事件订阅(关卡选择前 WireEvents 已被调用)
         if (_pendingPushTrade != null)
         {
@@ -203,6 +208,35 @@ public sealed class GameSingleton
             snap.TotalQuantity > 0 ? Math.Round((decimal)b.Quantity / snap.TotalQuantity, 4) : 0m)).ToList();
         return new DayChipDto(snap.Day, snap.ClosePrice, snap.TotalQuantity,
             Math.Round(_chipCollector.PeakConcentration(idx), 3), bands);
+    }
+
+    /// <summary>获取复盘数据(关键帧快照+交易日志+事件+筹码+K线)。结算后调用。</summary>
+    public ReplayDataDto GetReplayData()
+    {
+        var snapshots = _replayCollector.Snapshots.Select(s => new ReplaySnapshotDto(
+            s.TickIndex, s.Day, s.TickOfDay, s.Price, Math.Round(s.RegulatorHeat, 1),
+            s.TopBids.Select(b => new PriceLevelDto(b.Price, b.Qty)).ToList(),
+            s.TopAsks.Select(a => new PriceLevelDto(a.Price, a.Qty)).ToList(),
+            s.Participants.Select(p => new ParticipantStateDto(p.Name, p.Holding, Math.Round(p.AvgCost, 2), Math.Round(p.Equity))).ToList()
+        )).ToList();
+        var trades = _replayCollector.Trades.Select(t => new ReplayTradeDto(
+            t.TickIndex, t.Price, t.Qty, t.TakerSide.ToString(), t.TakerId, t.MakerId)).ToList();
+        // 事件:AI内心独白 + 机构B独白 + 监管事件
+        var events = new List<ReplayEventDto>();
+        foreach (var t in _ai.Thoughts)
+            events.Add(new ReplayEventDto((int)t.TotalTick, "AI主力", t.State.ToString(), $"{t.DetectedIntent}({t.Confidence:P0}) {t.Reason}"));
+        foreach (var t in _institutionB.Thoughts)
+            events.Add(new ReplayEventDto((int)t.Tick, "机构B", t.Level.ToString(), $"{t.Action}: {t.Detail}"));
+        foreach (var e in _regulator.EventLog)
+            events.Add(new ReplayEventDto(e.Tick, "监管", e.Penalty, $"关注{e.Heat:F0}% {e.Reason}"));
+        events = events.OrderBy(e => e.Tick).ToList();
+        // 筹码 + K线
+        var chips = _chipCollector.History.Select((h, i) => ToDto(h, i)).ToList();
+        var candles = _collector.DailyCandles
+            .Select(c => new DailyCandleDto(c.Day, c.Open, c.High, c.Low, c.Close, c.Volume)).ToList();
+        return new ReplayDataDto(
+            _loop.Clock.TotalDays * _loop.Clock.TicksPerDay, _loop.Clock.TotalDays,
+            snapshots, trades, events, chips, candles);
     }
 
     /// <summary>重试关卡(重置到初始)。</summary>

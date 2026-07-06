@@ -54,13 +54,12 @@ public sealed class InstitutionB : IParticipant
         var assessment = _risk.Assess(_account);
         CurrentRiskLevel = assessment.Level;
 
-        // 记录内心独白(风险变化或定期)
+        // 记录内心独白(风险变化或定期)。无上限,供复盘完整查看。
         if (clock.CurrentTickOfDay % 15 == 0 || assessment.Level >= RiskLevel.High)
         {
             Thoughts.Add((clock.TotalTicksElapsed, assessment.Level,
                 assessment.Level >= RiskLevel.Critical ? "转为操盘" : "做市",
                 assessment.Detail));
-            if (Thoughts.Count > 30) Thoughts.RemoveAt(0);
         }
 
         // 根据风险等级执行
