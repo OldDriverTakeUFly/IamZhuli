@@ -137,6 +137,10 @@
       <span>换手 <span id="turnoverPct" style="color:#e8c44a;font-weight:bold;">--</span></span>
       <span style="margin-left:auto;color:#666;">昨收 <span id="prevCloseTxt">--</span></span>
     </div>
+    <!-- 时间刻度条(分时模式显示,模拟 9:30-15:30) -->
+    <div id="timeScaleBar" style="display:flex;justify-content:space-between;font-size:9px;color:#555;padding:0 4px;margin-top:1px;">
+      <span>9:30</span><span>10:30</span><span>11:30/13:00</span><span>14:00</span><span>15:30</span>
+    </div>
   </div>
 
   <!-- 下单 + 控制 -->
@@ -512,7 +516,7 @@ function renderRegulator(snap) {
   // 散户情绪温度计(0恐慌~100贪婪)
   const s = snap.sentiment ?? 50;
   $('sentimentTxt').textContent = s.toFixed(0);
-  $('sentimentTxt').style.color = s >= 70 ? '#ef5350' : (s <= 30 ? '#26a69a' : '#e8c44a';
+  $('sentimentTxt').style.color = s >= 70 ? '#ef5350' : (s <= 30 ? '#26a69a' : '#e8c44a');
   // 多维情绪:信心 + 消息偏差
   const conf = snap.confidence ?? 50;
   $('confidenceTxt').textContent = conf.toFixed(0);
@@ -1005,10 +1009,11 @@ refreshAI();
 const LWT = LightweightCharts;
 let chartMode = 'timeshare';
 // 禁止用户拖动/缩放(分时固定从左到右,不需要交互)
+// rightOffset:0 消除右侧留白,让分时线充满整个区域
 const baseChartOpts = { layout: { background:{color:'#1a1d24'}, textColor:'#aaa', fontSize:11 },
   grid: { vertLines:{color:'#23272f'}, horzLines:{color:'#23272f'} },
   rightPriceScale: { borderColor:'#333' },
-  timeScale: { borderColor:'#333', handleScroll: false, handleScale: false },
+  timeScale: { borderColor:'#333', handleScroll: false, handleScale: false, rightOffset: 0 },
   crosshair: { mode: 0 } };
 const pc = LWT.createChart(document.getElementById('priceChart'), { ...baseChartOpts,
   width: 600, height: 300,
@@ -1055,11 +1060,17 @@ function resizeCharts() {
   vc.applyOptions({ width: Math.max(100, panelW - 32), height: volH - 4 });
   // 筹码侧栏显示/隐藏
   $('chipSidebar').style.display = showChip ? 'flex' : 'none';
-  // 固定 x 轴范围
+  // 时间刻度条只在分时模式显示
+  $('timeScaleBar').style.display = chartMode === 'timeshare' ? 'flex' : 'none';
+  // 固定 x 轴范围:分时从0到ticksPerDay,充满整个宽度(rightOffset:0消除右侧留白)
   if (chartMode === 'timeshare') {
-    const tpd = (window._lastSnap && window._lastSnap.ticksPerDay) || 600;
-    pc.timeScale().setVisibleLogicalRange({ from: 0, to: tpd });
-    vc.timeScale().setVisibleLogicalRange({ from: 0, to: tpd });
+    const tpd = (window._lastSnap && window._lastSnap.ticksPerDay) || 150;
+    // barSpacing 让每个 tick 精确占据 宽度/tpd 个像素,确保充满
+    const barSpacing = Math.max(1, (chartW - 50) / tpd);   // -50 留给右侧价格轴
+    pc.applyOptions({ timeScale: { rightOffset: 0, barSpacing: barSpacing, fixLeftEdge: true } });
+    vc.applyOptions({ timeScale: { rightOffset: 0, barSpacing: barSpacing, fixLeftEdge: true } });
+    pc.timeScale().setVisibleLogicalRange({ from: 0, to: tpd - 1 });
+    vc.timeScale().setVisibleLogicalRange({ from: 0, to: tpd - 1 });
   } else {
     pc.timeScale().fitContent();
     vc.timeScale().fitContent();
@@ -1096,7 +1107,7 @@ let lastTsLen = -1, lastDay = -1, lastDailyLen = -1;
 function resetChartCache() { lastTsLen = -1; lastDay = -1; lastDailyLen = -1; }
 
 // —— 分时降采样:每N个tick取一个点,让曲线更平滑 ——
-const TS_DOWNSAMPLE = 5;
+const TS_DOWNSAMPLE = 2;
 
 function updateCharts(snap) {
   window._lastSnap = snap;   // 缓存供resizeCharts用
@@ -1138,10 +1149,10 @@ function updateCharts(snap) {
       }
       lastTsLen = ts.length;
     }
-    // 固定x轴范围[0, totalTicks](不可拖动)
-    pc.timeScale().setVisibleLogicalRange({ from: 0, to: totalTicks });
-    vc.timeScale().setVisibleLogicalRange({ from: 0, to: totalTicks });
-    if (snap.previousClose) baselineSeries.setData([{time:0,value:snap.previousClose},{time:totalTicks,value:snap.previousClose}]);
+    // 固定x轴范围[0, totalTicks-1],充满整个区域
+    pc.timeScale().setVisibleLogicalRange({ from: 0, to: totalTicks - 1 });
+    vc.timeScale().setVisibleLogicalRange({ from: 0, to: totalTicks - 1 });
+    if (snap.previousClose) baselineSeries.setData([{time:0,value:snap.previousClose},{time:totalTicks-1,value:snap.previousClose}]);
   } else {
     // 日K模式:历史K线 + 当日(用update增量更新当日,避免全量闪烁)
     const hist = snap.dailyCandles || [];

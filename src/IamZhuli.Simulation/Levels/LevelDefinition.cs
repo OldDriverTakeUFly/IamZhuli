@@ -43,7 +43,7 @@ public sealed class LevelDefinition
     public decimal InitialPrice { get; init; } = 10m;
     public int FloatShares { get; init; } = 200000;        // 流通盘(手)
     public int TotalDays { get; init; } = 30;
-    public int TicksPerDay { get; init; } = 600;   // 600 tick × 400ms = 4分钟/天
+    public int TicksPerDay { get; init; } = 150;   // 150 tick × 400ms = 1分钟/天
 
     // 玩家初始
     public decimal PlayerCash { get; init; } = 100_000_000m;
