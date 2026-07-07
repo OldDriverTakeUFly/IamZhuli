@@ -133,3 +133,33 @@ def cumulative_layer_nav(layered: pd.DataFrame) -> pd.DataFrame:
     假设每日收益为简单收益率:(1+r1)(1+r2)... 累乘。
     """
     return (1 + layered).cumprod()
+
+
+def ic_summary_by_year(panel: pd.DataFrame, factor_col: str, fwd_col: str,
+                       min_stocks: int = 20) -> pd.DataFrame:
+    """按年分组的 IC 汇总:多年回测的核心输出。
+
+    panel 需含 trade_date(YYYYMMDD)列;本函数从中提取 year 并分组,
+    对每年分别算 rank_ic_series → ic_summary。
+
+    Returns:
+        DataFrame: index=year, columns=[ic_mean, ir, t, p, significant, win_rate, n_days]
+        n_days = 该年有多少个交易日的有效 IC(衡量样本量)。
+    """
+    df = panel.dropna(subset=[factor_col, fwd_col]).copy()
+    if df.empty:
+        return pd.DataFrame()
+    # trade_date 是 "YYYYMMDD" 字符串,取前4位做 year
+    df["_year"] = df["trade_date"].astype(str).str[:4].astype(int)
+
+    rows = []
+    for year, grp in df.groupby("_year"):
+        ic = rank_ic_series(grp, factor_col, fwd_col, min_stocks=min_stocks)
+        s = ic_summary(ic)
+        s["year"] = year
+        rows.append(s)
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).set_index("year")[
+        ["mean", "ir", "t", "p", "significant", "win_rate", "n"]
+    ].rename(columns={"mean": "ic_mean", "n": "n_days"})

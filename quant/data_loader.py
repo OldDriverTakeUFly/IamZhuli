@@ -162,6 +162,54 @@ def fetch_hs300_constituents(trade_date: str = "20240101") -> list[str]:
         return fallback
 
 
+def fetch_hs300_constituents_by_year(year: int) -> list[str]:
+    """取指定年份的沪深300成分股(用该年1月的月度快照)。
+
+    沪深300每年6/12月调仓;1月快照反映上年12月调仓后的成分,
+    代表该年全年的成分股构成(近似,忽略年中6月那次调仓)。
+    """
+    # 用该年1月整月取月度快照(index_weight 是月度数据)
+    month_start = f"{year}0101"
+    month_end = f"{year}0128"
+    cache_name = f"hs300_{year}01"
+    cached = _read_cache(cache_name)
+    if cached is not None:
+        return cached["con_code"].tolist()
+
+    try:
+        import tushare as ts
+        pro = ts.pro_api()
+        print(f"[api] 拉取 {year} 年沪深300成分股(1月快照) ...")
+        df = pro.index_weight(index_code="399300.SZ",
+                              start_date=month_start, end_date=month_end)
+        if df is None or df.empty:
+            print(f"[warn] {year} 年成分股拉取为空")
+            return []
+        df = df.drop_duplicates("con_code")
+        codes = df["con_code"].tolist()
+        _write_cache(cache_name, df[["con_code"]])
+        print(f"[api] {year} 年: {len(codes)} 只成分股,已缓存。")
+        return codes
+    except Exception as e:
+        print(f"[warn] {year} 年成分股拉取失败: {e}")
+        return []
+
+
+def fetch_hs300_constituents_multiyear(years: list[int]) -> list[str]:
+    """取多年成分股的并集(去重)。
+
+    用于多年回测:某股票可能在2019在列、2020被调出,但它的历史数据仍要拉。
+    并集保证不遗漏任何一年在列的股票。
+    """
+    union: set[str] = set()
+    for y in years:
+        codes = fetch_hs300_constituents_by_year(y)
+        union.update(codes)
+    result = sorted(union)
+    print(f"[multiyear] {years[0]}-{years[-1]} 成分股并集: {len(result)} 只")
+    return result
+
+
 def fetch_batch(codes: list[str], start_date: str, end_date: str,
                 kind: str = "daily", sleep: float = _API_SLEEP) -> dict[str, pd.DataFrame]:
     """批量拉取多只股票的 daily 或 moneyflow。
