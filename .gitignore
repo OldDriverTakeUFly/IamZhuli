@@ -88,6 +88,9 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
-quant/cache/        # tushare 数据本地缓存(省 API 额度,不入库)
-quant/output/       # 因子计算结果 csv(可重生,不入库)
-quant/.env          # 双重保险,即使顶层规则失效也不泄漏 token
+# tushare 数据本地缓存(省 API 额度,不入库)
+quant/cache/
+# 因子计算结果(可重生,不入库)
+quant/output/
+# 双重保险,即使顶层规则失效也不泄漏 token
+quant/.env

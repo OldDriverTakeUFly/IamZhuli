@@ -114,3 +114,94 @@ def fetch_moneyflow(ts_code: str, start_date: str, end_date: str,
         else:
             print(f"[warn] 资金流向拉取失败,OBI 因子将跳过。错误: {e}")
         return None
+
+
+# ──────────────────────────────────────────────────────────────
+# 批量拉取(沪深300 因子评估用)
+# ──────────────────────────────────────────────────────────────
+
+import time
+
+# 限流间隔:2000积分约200次/分钟,留余量取 ~170次/分钟
+_API_SLEEP = 0.35
+
+
+def fetch_hs300_constituents(trade_date: str = "20240101") -> list[str]:
+    """拉取沪深300成分股代码列表。
+
+    用 index_weight 接口(需2000积分)。失败时降级到一组硬编码的大盘股
+    (保证流程能跑,但会打印警告)。
+    """
+    cache_name = f"hs300_{trade_date}"
+    cached = _read_cache(cache_name)
+    if cached is not None:
+        print(f"[cache] 命中沪深300成分股缓存: {len(cached)} 只")
+        return cached["con_code"].tolist()
+
+    try:
+        import tushare as ts
+        pro = ts.pro_api()
+        print(f"[api] 拉取沪深300成分股(trade_date={trade_date}) ...")
+        df = pro.index_weight(index_code="399300.SZ", start_date=trade_date,
+                              end_date=trade_date)
+        if df is None or df.empty:
+            # 该日无数据(非调仓日),放宽到整个月
+            df = pro.index_weight(index_code="399300.SZ",
+                                  start_date=trade_date[:6] + "01",
+                                  end_date=trade_date[:6] + "28")
+            df = df.drop_duplicates("con_code")
+        codes = df["con_code"].tolist()
+        _write_cache(cache_name, df[["con_code"]])
+        print(f"[api] 拉到 {len(codes)} 只成分股,已缓存。")
+        return codes
+    except Exception as e:
+        print(f"[warn] 沪深300成分股拉取失败,降级到硬编码大盘股: {e}")
+        # 降级:一组流动性好的大盘股,保证流程能继续
+        fallback = ["000001.SZ", "000002.SZ", "000063.SZ", "000333.SZ", "000651.SZ",
+                    "000858.SZ", "002594.SZ", "600000.SH", "600036.SH", "600519.SH"]
+        return fallback
+
+
+def fetch_batch(codes: list[str], start_date: str, end_date: str,
+                kind: str = "daily", sleep: float = _API_SLEEP) -> dict[str, pd.DataFrame]:
+    """批量拉取多只股票的 daily 或 moneyflow。
+
+    - 限流:每次调用后 sleep(避免触发频次限制)
+    - 断点续传:命中缓存的标的跳过,不重复拉
+    - 失败容错:单只失败记到 cache/_failed_{kind}.csv,不阻塞其余
+    - 进度:每 20 只打印一次进度
+
+    Returns:
+        {ts_code: DataFrame} 字典,只含成功拉取的标的。
+    """
+    assert kind in ("daily", "moneyflow")
+    fetch_fn = fetch_daily if kind == "daily" else fetch_moneyflow
+    results: dict[str, pd.DataFrame] = {}
+
+    failed_path = _CACHE_DIR / f"_failed_{kind}.csv"
+    failed_prev = set()
+    if failed_path.exists():
+        failed_prev = set(pd.read_csv(failed_path)["ts_code"].tolist())
+
+    n = len(codes)
+    new_failures: list[str] = []
+    for i, code in enumerate(codes, 1):
+        # 历史上失败过的标的,本次主动重试(可能之前是临时网络问题)
+        df = fetch_fn(code, start_date, end_date, use_cache=True)
+        if df is None or (hasattr(df, "empty") and df.empty):
+            new_failures.append(code)
+        else:
+            results[code] = df
+        if i % 20 == 0 or i == n:
+            ok = len(results)
+            print(f"[batch {kind}] 进度 {i}/{n}  成功 {ok}  失败 {len(new_failures)}")
+        time.sleep(sleep)
+
+    # 合并失败记录(去重)
+    all_failed = (failed_prev | set(new_failures)) - set(results.keys())
+    if all_failed:
+        pd.DataFrame({"ts_code": sorted(all_failed)}).to_csv(failed_path, index=False)
+        print(f"[batch {kind}] 失败标的已记录到 {failed_path.name}(共 {len(all_failed)} 只)")
+
+    return results
+
