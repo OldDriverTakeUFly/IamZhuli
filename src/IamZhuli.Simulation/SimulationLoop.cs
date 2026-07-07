@@ -120,6 +120,7 @@ public sealed class SimulationLoop
         {
             // 1. 挂单清零(撤销所有隔夜挂单)
             var removed = Session.Engine.ClearBook();
+            Session.OnBookCleared();   // 同步清理做空标记
             // 2. T+1 解锁
             Session.OnNewTradingDay();
             // 3. 参与者 OnNewDay(散户池内含情绪延续逻辑)

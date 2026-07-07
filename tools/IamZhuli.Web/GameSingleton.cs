@@ -131,6 +131,13 @@ public sealed class GameSingleton
             _newsSystem.Tick();   // 消息系统每 tick 应用持续影响 + 过期清理
             // 监管爆表 → 关卡失败
             if (_regulator.GetStatus().IsFailed && !IsLevelOver) EndLevel();
+            // 做空爆仓:担保比例<130% → 强制平仓
+            if (cur is { } markPrice)
+            {
+                var marginRatio = _player.MaintenanceRatio(markPrice);
+                if (marginRatio < 1.3m && _player.Position.HasShort && !IsLevelOver)
+                    _loop.Session.ForceLiquidate(Player, out int _covered);
+            }
         };
         // 权益曲线采集(供积分系统算回撤/波动率/三方排名)
         _equityCollector = new EquityCurveCollector(_loop, _player,
@@ -291,7 +298,7 @@ public sealed class GameSingleton
             return new MarketSnapshotDto(
                 0, 0, 0, 0, "Waiting", false, false, false,
                 null, null, null, 0m, 0m, 0m, 0m,
-                new(), new(), new AccountDto(0,0,0,0,0,0,0,0),
+                new(), new(), new AccountDto(0,0,0,0,0,0,0,0,0,0,0,0),
                 new(), null, new(), new(),
                 0m, "", "", new(), false, 0m, 0, new(), 0m, 0m, 0m, new(), 0, false, 0, 0m, 0m);
         }
@@ -308,7 +315,11 @@ public sealed class GameSingleton
             PositionT1Locked: _player.Position.T1Locked.Value,
             AverageCost: _player.Position.AverageCost.Value,
             TotalEquity: _player.TotalEquity(mark),
-            FloatingProfit: _player.Position.FloatingProfit(mark));
+            FloatingProfit: _player.Position.FloatingProfit(mark),
+            ShortQty: _player.Position.ShortQty.Value,
+            ShortCost: _player.Position.ShortCost.Value,
+            MarginFrozen: _player.MarginFrozen,
+            MaintenanceRatio: Math.Round(_player.MaintenanceRatio(mark), 2));
         return new MarketSnapshotDto(
             CurrentDay: _loop.Clock.CurrentDay, TotalDays: _loop.Clock.TotalDays,
             TickOfDay: _loop.Clock.CurrentTickOfDay, TicksPerDay: _loop.Clock.TicksPerDay,
@@ -358,7 +369,7 @@ public sealed class GameSingleton
             var side = dto.Side.Equals("buy", StringComparison.OrdinalIgnoreCase) ? Side.Buy : Side.Sell;
             var type = dto.Type.Equals("market", StringComparison.OrdinalIgnoreCase) ? OrderType.Market : OrderType.Limit;
             var price = type == OrderType.Limit ? new Price(dto.Price ?? 0m) : Price.Zero;
-            var req = new OrderRequest(Player, side, type, price, new Quantity(dto.Qty));
+            var req = new OrderRequest(Player, side, type, price, new Quantity(dto.Qty), IsShort: dto.IsShort);
             var result = _loop.Session.Submit(req);
             return new OrderResultDto(
                 result.OrderId.Value, result.FinalStatus.ToString(),

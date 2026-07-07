@@ -153,6 +153,8 @@
         <div class="seg" id="sideSeg">
           <button class="active" data-side="buy">买入</button>
           <button data-side="sell">卖出</button>
+          <button data-side="short">做空</button>
+          <button data-side="cover">平仓</button>
         </div>
         <div class="seg" id="typeSeg">
           <button class="active" data-type="limit">限价</button>
@@ -249,6 +251,8 @@
     <div class="acc-row"><span class="lbl">可卖</span><span class="val" id="posAvail">--</span></div>
     <div class="acc-row"><span class="lbl">T+1锁定</span><span class="val" id="posT1">--</span></div>
     <div class="acc-row"><span class="lbl">成本价</span><span class="val" id="cost">--</span></div>
+    <div class="acc-row" id="shortRow" style="display:none;"><span class="lbl" style="color:#26a69a;">空头持仓</span><span class="val" id="shortQty" style="color:#26a69a;">--</span></div>
+    <div class="acc-row" id="marginRow" style="display:none;"><span class="lbl" style="color:#26a69a;">担保比例</span><span class="val" id="marginRatio" style="color:#26a69a;">--</span></div>
     <h3 style="margin-top:16px;">🎯 关卡目标</h3>
     <div id="levelName" style="font-size:13px;color:#e8c44a;font-weight:bold;margin-bottom:2px;">--</div>
     <div id="levelBriefing" style="font-size:11px;color:#888;margin-bottom:6px;line-height:1.4;">--</div>
@@ -380,8 +384,9 @@ $('sideSeg').addEventListener('click', e => {
   side = e.target.dataset.side;
   [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === e.target));
   const btn = $('submitBtn');
-  btn.className = 'btn ' + (side === 'buy' ? 'btn-buy' : 'btn-sell');
-  btn.textContent = '确认' + (side === 'buy' ? '买入' : '卖出');
+  const labels = { buy: '买入', sell: '卖出', short: '做空', cover: '平仓' };
+  btn.className = 'btn ' + ((side === 'buy' || side === 'cover') ? 'btn-buy' : 'btn-sell');
+  btn.textContent = '确认' + labels[side];
 });
 $('typeSeg').addEventListener('click', e => {
   if (e.target.tagName !== 'BUTTON') return;
@@ -394,10 +399,14 @@ document.querySelectorAll('[data-qty]').forEach(b => b.addEventListener('click',
 // —— 下单 ——
 $('submitBtn').addEventListener('click', async () => {
   $('msg').textContent = '提交中...';
+  // 做空=Sell+IsShort, 平仓=Buy+IsShort
+  const isShort = side === 'short' || side === 'cover';
+  const apiSide = side === 'short' ? 'sell' : (side === 'cover' ? 'buy' : side);
   const body = {
-    side, type,
+    side: apiSide, type,
     price: type === 'limit' ? parseFloat($('price').value) : null,
-    qty: parseInt($('qty').value)
+    qty: parseInt($('qty').value),
+    isShort: isShort
   };
   try {
     const r = await fetch('/api/order', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
@@ -535,6 +544,16 @@ function renderAccount(snap) {
   $('posAvail').textContent = a.positionAvailable + ' 手';
   $('posT1').textContent = a.positionT1Locked + ' 手';
   $('cost').textContent = a.positionTotal > 0 ? a.averageCost.toFixed(2) : '--';
+  // 空头持仓 + 担保比例(有空头才显示)
+  const hasShort = a.shortQty > 0;
+  $('shortRow').style.display = hasShort ? 'flex' : 'none';
+  $('marginRow').style.display = hasShort ? 'flex' : 'none';
+  if (hasShort) {
+    $('shortQty').textContent = `${a.shortQty} 手 @${a.shortCost.toFixed(2)}`;
+    const mr = a.maintenanceRatio;
+    $('marginRatio').textContent = (mr * 100).toFixed(0) + '%';
+    $('marginRatio').style.color = mr < 1.3 ? '#ef5350' : (mr < 1.5 ? '#e8c44a' : '#26a69a');
+  }
 }
 
 // —— 渲染监管条 + 目标 ——

@@ -12,7 +12,8 @@ public readonly record struct OrderRequest(
     OrderType Type,
     Price Price,        // 市价单忽略
     Quantity Quantity,
-    OrderId? CancelOrderId = null);
+    OrderId? CancelOrderId = null,
+    bool IsShort = false);   // true=融券做空(Sell)或买回平仓(Buy)
 
 /// <summary>
 /// 交易会话:撮合引擎 + 参与者账户的协调层。
@@ -22,6 +23,8 @@ public sealed class TradingSession
 {
     public MatchingEngine Engine { get; }
     private readonly Dictionary<ParticipantId, Account> _accounts = new();
+    /// <summary>做空订单ID集合(maker结算时判断是否做空)。</summary>
+    private readonly HashSet<OrderId> _shortOrders = new();
 
     public TradingSession(MatchingEngine engine) => Engine = engine;
 
@@ -54,12 +57,30 @@ public sealed class TradingSession
         if (!_accounts.TryGetValue(req.Participant, out var acc))
             throw new InvalidOperationException($"参与者 {req.Participant} 未注册账户。");
 
-        // —— 卖单:校验可卖(T+1) ——
-        if (req.Side == Side.Sell && !acc.CanSell(req.Quantity))
+        // —— 卖单:校验可卖(T+1) —— 做空卖单跳过持仓校验
+        if (req.Side == Side.Sell && !req.IsShort && !acc.CanSell(req.Quantity))
             throw new InvalidOperationException("可卖持仓不足(含 T+1 锁定)。");
+        // —— 买回平仓:校验空头持仓 ——
+        if (req.Side == Side.Buy && req.IsShort && acc.Position.ShortQty.Value < req.Quantity.Value)
+            throw new InvalidOperationException("空头持仓不足,无法平仓。");
+
+        // —— 做空卖单:预冻结保证金(按限价或对手价估算) ——
+        decimal shortMarginFrozen = 0;
+        if (req.IsShort && req.Side == Side.Sell)
+        {
+            decimal estPrice = req.Type == OrderType.Limit ? req.Price.Value
+                : (Engine.View.BestBid ?? Engine.Rules.UpperLimit).Value;
+            decimal margin = estPrice * req.Quantity.Value * 100 * 0.5m;   // 50%保证金
+            if (acc.AvailableCash < margin)
+                throw new InvalidOperationException("保证金不足(做空需50%保证金)。");
+            // 不在这里扣,成交时由 ShortSell 统一处理
+        }
 
         // —— 创建订单(此时获得 OrderId) ——
         var order = Engine.CreateOrder(req.Participant, req.Side, req.Type, req.Price, req.Quantity);
+
+        // —— 做空单:记录orderId(maker结算时判断) ——
+        if (req.IsShort) _shortOrders.Add(order.Id);
 
         // —— 买单:冻结资金(需订单 ID 跟踪) ——
         if (req.Side == Side.Buy)
@@ -75,19 +96,33 @@ public sealed class TradingSession
         var result = Engine.Submit(order);
 
         // —— 结算成交(含 taker 与 maker 双方) ——
+        bool takerIsShort = req.IsShort;
         foreach (var trade in result.Trades)
         {
             var taker = _accounts[trade.TakerId];
             var maker = _accounts[trade.MakerId];
             if (trade.TakerSide == Side.Buy)
             {
-                taker.ApplyBuyFill(trade.TakerOrderId, trade.Quantity, trade.Price);
-                maker.ApplySellFill(trade.Quantity, trade.Price);
+                if (takerIsShort)
+                    taker.ShortCover(trade.Quantity, trade.Price);   // 买回平仓
+                else
+                    taker.ApplyBuyFill(trade.TakerOrderId, trade.Quantity, trade.Price);
+                // maker 侧:对手是卖单,需判断 maker 是否做空
+                if (_shortOrders.Contains(trade.MakerOrderId))
+                    maker.ShortSell(trade.Quantity, trade.Price);
+                else
+                    maker.ApplySellFill(trade.Quantity, trade.Price);
             }
             else
             {
-                taker.ApplySellFill(trade.Quantity, trade.Price);
-                maker.ApplyBuyFill(trade.MakerOrderId, trade.Quantity, trade.Price);
+                if (takerIsShort)
+                    taker.ShortSell(trade.Quantity, trade.Price);    // 做空卖出
+                else
+                    taker.ApplySellFill(trade.Quantity, trade.Price);
+                if (_shortOrders.Contains(trade.MakerOrderId))
+                    maker.ShortCover(trade.Quantity, trade.Price);
+                else
+                    maker.ApplyBuyFill(trade.MakerOrderId, trade.Quantity, trade.Price);
             }
             OnTrade?.Invoke(trade.Price, trade.Quantity, trade.TakerSide);
             OnTradeDetailed?.Invoke(trade);
@@ -107,6 +142,7 @@ public sealed class TradingSession
     public bool Cancel(ParticipantId participant, OrderId orderId)
     {
         if (!Engine.Cancel(orderId, out var order) || order == null) return false;
+        _shortOrders.Remove(orderId);   // 清理做空标记
         if (order.Participant.Equals(participant) && order.Side == Side.Buy)
             _accounts[participant].ReleaseBuyFreezeRemaining(orderId, order.RemainingQty);
         return true;
@@ -147,5 +183,28 @@ public sealed class TradingSession
     public void OnNewTradingDay()
     {
         foreach (var acc in _accounts.Values) acc.OnNewTradingDay();
+    }
+
+    /// <summary>订单簿清空时同步清理做空标记(日切隔夜挂单清零)。</summary>
+    public void OnBookCleared() => _shortOrders.Clear();
+
+    /// <summary>强制平仓(爆仓):市价买回全部空头持仓。
+    /// 返回是否执行了平仓(有空头才执行)。</summary>
+    public bool ForceLiquidate(ParticipantId participant, out int qtyCovered)
+    {
+        qtyCovered = 0;
+        if (!_accounts.TryGetValue(participant, out var acc)) return false;
+        int shortQty = acc.Position.ShortQty.Value;
+        if (shortQty <= 0) return false;
+        // 市价买回平仓(吃卖盘)
+        try
+        {
+            var req = new OrderRequest(participant, Side.Buy, OrderType.Market, Price.Zero,
+                new Quantity(shortQty), null, IsShort: true);
+            var result = Submit(req);
+            qtyCovered = result.TotalFilled.Value;
+            return true;
+        }
+        catch { return false; }
     }
 }

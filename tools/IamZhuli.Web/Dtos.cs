@@ -74,10 +74,14 @@ public record AccountDto(
     int PositionT1Locked,       // T+1 锁定(手)
     decimal AverageCost,        // 持仓成本(元)
     decimal TotalEquity,        // 总权益(元)
-    decimal FloatingProfit);    // 浮盈(元)
+    decimal FloatingProfit,     // 浮盈(元)
+    int ShortQty,               // 空头持仓(手)
+    decimal ShortCost,          // 空头成本
+    decimal MarginFrozen,       // 冻结保证金
+    decimal MaintenanceRatio);  // 担保比例
 
 // ── 下单 ──
-public record OrderRequestDto(string Side, string Type, decimal? Price, int Qty);
+public record OrderRequestDto(string Side, string Type, decimal? Price, int Qty, bool IsShort = false);
 public record OrderResultDto(
     long OrderId, string Status,
     decimal AvgFillPrice, int TotalFilled, int RemainingQty, string? Error);
