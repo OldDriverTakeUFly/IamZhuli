@@ -24,10 +24,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
+
+import plot_config   # 配置中文字体 + 无头模式(副作用导入)
 
 from data_loader import (load_token, fetch_hs300_constituents_multiyear,
                          fetch_batch)

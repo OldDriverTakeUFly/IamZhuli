@@ -163,3 +163,60 @@ def ic_summary_by_year(panel: pd.DataFrame, factor_col: str, fwd_col: str,
     return pd.DataFrame(rows).set_index("year")[
         ["mean", "ir", "t", "p", "significant", "win_rate", "n"]
     ].rename(columns={"mean": "ic_mean", "n": "n_days"})
+
+
+# ──────────────────────────────────────────────────────────────
+# 风险中性化(横截面回归取残差)
+# ──────────────────────────────────────────────────────────────
+
+
+def neutralize(panel: pd.DataFrame, factor_col: str,
+               industry_map: dict[str, str],
+               mv_col: str = "circ_mv",
+               min_stocks: int = 20) -> pd.Series:
+    """横截面回归中性化:剔除行业 + 市值影响,返回纯因子残差。
+
+    对每个 trade_date t,回归:
+        factor_i,t = α + β·log(mv_i,t) + Σ(γ_k · 行业哑变量_k) + ε_i,t
+    残差 ε 即中性化后的因子值(命名为 {factor_col}_neut)。
+
+    Args:
+        panel: 含 ts_code, trade_date, factor_col, mv_col 的面板
+        industry_map: {ts_code: 行业名}
+        mv_col: 市值列名(默认 circ_mv,流通市值)
+        min_stocks: 某日有效样本不足此数则跳过(残差置 NaN)
+
+    Returns:
+        与 panel 等长的 Series,index 对齐 panel,值为残差或 NaN。
+    """
+    import numpy as np
+
+    # 准备:只保留有因子值、有市值、有行业的行
+    df = panel[["ts_code", "trade_date", factor_col, mv_col]].copy()
+    df["_ind"] = df["ts_code"].map(industry_map)
+    df = df.dropna(subset=[factor_col, mv_col, "_ind"])
+    # 市值取 log(压缩量纲),过滤非正
+    df["_logmv"] = np.log(df[mv_col].astype(float).clip(lower=1))
+
+    result = pd.Series(np.nan, index=panel.index, name=f"{factor_col}_neut")
+
+    for date, grp in df.groupby("trade_date"):
+        if len(grp) < min_stocks:
+            continue
+        # 设计矩阵:[截距, log市值, 行业哑变量(去一列)]
+        dummies = pd.get_dummies(grp["_ind"], drop_first=True)
+        X = np.column_stack([
+            np.ones(len(grp)),                  # 截距
+            grp["_logmv"].to_numpy(),           # 市值
+            dummies.to_numpy().astype(float),   # 行业
+        ])
+        y = grp[factor_col].to_numpy()
+        try:
+            # 最小二乘解,取残差
+            coef, *_ = np.linalg.lstsq(X, y, rcond=None)
+            resid = y - X @ coef
+            result.loc[grp.index] = resid
+        except np.linalg.LinAlgError:
+            continue   # 奇异矩阵,跳过该日
+
+    return result

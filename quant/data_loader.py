@@ -253,3 +253,85 @@ def fetch_batch(codes: list[str], start_date: str, end_date: str,
 
     return results
 
+
+# ──────────────────────────────────────────────────────────────
+# 风险因子数据(行业 + 市值,用于中性化)
+# ──────────────────────────────────────────────────────────────
+
+def fetch_industry_map() -> dict[str, str]:
+    """拉取 {ts_code: industry} 行业映射(stock_basic,静态,低积分)。
+
+    返回全市场股票的行业分类;调用方自行按需要的 ts_code 筛选。
+    """
+    cache_name = "industry_map"
+    cached = _read_cache(cache_name)
+    if cached is not None:
+        print(f"[cache] 命中行业映射缓存: {len(cached)} 只")
+        return dict(zip(cached["ts_code"], cached["industry"]))
+
+    try:
+        import tushare as ts
+        pro = ts.pro_api()
+        print("[api] 拉取行业分类(stock_basic) ...")
+        df = pro.stock_basic(fields="ts_code,industry")
+        df = df.dropna(subset=["industry"])
+        _write_cache(cache_name, df)
+        print(f"[api] 拉到 {len(df)} 只股票的行业,已缓存。")
+        return dict(zip(df["ts_code"], df["industry"]))
+    except Exception as e:
+        print(f"[warn] 行业分类拉取失败: {e}")
+        return {}
+
+
+def fetch_daily_basic_batch(codes: list[str], start_date: str, end_date: str,
+                            sleep: float = _API_SLEEP) -> pd.DataFrame:
+    """批量拉取每日指标(daily_basic),取流通市值 circ_mv。
+
+    用于中性化:每个时点需要股票的市值做横截面回归。
+    返回长表:ts_code, trade_date, circ_mv(流通市值,万元)。
+
+    沿用限流 + 断点续传(按 ts_code 缓存)+ 失败容错。
+    """
+    frames = []
+    failed_path = _CACHE_DIR / "_failed_dbasic.csv"
+    failed_prev = set()
+    if failed_path.exists():
+        failed_prev = set(pd.read_csv(failed_path)["ts_code"].tolist())
+
+    n = len(codes)
+    new_failures: list[str] = []
+    for i, code in enumerate(codes, 1):
+        cache_name = f"dbasic_{code}_{start_date}_{end_date}"
+        cached = _read_cache(cache_name)
+        if cached is not None:
+            frames.append(cached[["ts_code", "trade_date", "circ_mv"]])
+            time.sleep(0)   # 命中缓存不睡
+        else:
+            try:
+                import tushare as ts
+                pro = ts.pro_api()
+                df = pro.daily_basic(ts_code=code, start_date=start_date,
+                                     end_date=end_date,
+                                     fields="ts_code,trade_date,circ_mv")
+                if df is None or df.empty:
+                    new_failures.append(code)
+                else:
+                    df = df.sort_values("trade_date")
+                    _write_cache(cache_name, df)
+                    frames.append(df[["ts_code", "trade_date", "circ_mv"]])
+            except Exception:
+                new_failures.append(code)
+            time.sleep(sleep)
+        if i % 50 == 0 or i == n:
+            print(f"[batch dbasic] 进度 {i}/{n}")
+
+    all_failed = (failed_prev | set(new_failures))
+    if all_failed:
+        pd.DataFrame({"ts_code": sorted(all_failed)}).to_csv(failed_path, index=False)
+
+    if not frames:
+        return pd.DataFrame(columns=["ts_code", "trade_date", "circ_mv"])
+    out = pd.concat(frames, ignore_index=True)
+    print(f"[batch dbasic] 完成: {out['ts_code'].nunique()} 只, {len(out)} 行")
+    return out
+

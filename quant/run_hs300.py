@@ -21,11 +21,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")   # 无头模式,直接存图不开窗
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+import plot_config   # 配置中文字体 + 无头模式(副作用导入)
 
 from data_loader import load_token, fetch_hs300_constituents, fetch_batch
 import factors
