@@ -1007,11 +1007,15 @@ $('beginBtn').onclick = async () => {
 // 关卡选择卡片
 const levelDefs = [
   { id: 'tutorial', name: '教程:首次拉升', icon: '📘',
-    briefing: '把鼎鼎集团从10元拉升到12元,完成你的第一次操盘。适合新手熟悉操作。' },
+    briefing: '把鼎鼎集团从10元拉升到12元,完成你的第一次操盘。适合新手熟悉操作。横盘场景。' },
   { id: 'accumulate', name: '隐蔽吸筹', icon: '🤫',
-    briefing: '不动声色地建仓至流通盘的15%,且全程监管关注值不超过50%。考验隐蔽性。' },
+    briefing: '不动声色地建仓至流通盘的15%,且全程监管关注值不超过50%。V型反转场景。' },
   { id: 'pump_dump', name: '拉升出货', icon: '💰',
-    briefing: '把股价从10元拉到13元,并在高位出货至少30%仓位。经典主力操盘套路。' }
+    briefing: '把股价从10元拉到13元,并在高位出货至少30%仓位。经典操盘套路。下跌场景。' },
+  { id: 'wash_pump', name: '洗盘再拉', icon: '🌊',
+    briefing: '先砸盘到9元以下清洗浮筹,再拉升到12元完成出货。上涨场景,两阶段目标。' },
+  { id: 'adversarial', name: '逆向博弈', icon: '⚔️',
+    briefing: '面对激进的AI主力,存活20天且不亏损。横盘场景,AI会主动反杀。' }
 ];
 function renderLevelCards() {
   $('levelCards').innerHTML = levelDefs.map(lv => `

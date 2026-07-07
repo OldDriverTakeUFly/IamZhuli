@@ -84,7 +84,7 @@ public sealed class GameSingleton
         if (level.PlayerInitialHolding > 0) _player.Position.Seed(new Quantity(level.PlayerInitialHolding), intrinsic);
 
         // —— 预演:让市场参与者跑完历史K线,状态真实涌现 ——
-        _scenario = new MarketScenario(ScenarioType.Decline, new Price(intrinsic.Value * 1.2m), intrinsic);
+        _scenario = new MarketScenario(level.Scenario, new Price(intrinsic.Value * 1.2m), intrinsic);
         var preplay = new MarketPreplay();
         var preplayResult = preplay.Run(_loop.Session, _loop, _scenario, seed: level.Id.GetHashCode());
 
@@ -543,6 +543,8 @@ public sealed class GameSingleton
         {
             "tutorial" => LevelDefinition.Tutorial(),
             "accumulate" => LevelDefinition.Accumulate(),
+            "wash_pump" => LevelDefinition.WashAndPump(),
+            "adversarial" => LevelDefinition.Adversarial(),
             _ => LevelDefinition.PumpAndDump()
         };
         await _gate.WaitAsync();

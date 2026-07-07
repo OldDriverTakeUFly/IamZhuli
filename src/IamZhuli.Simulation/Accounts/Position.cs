@@ -18,6 +18,36 @@ public sealed class Position
 
     public bool IsEmpty => Total.IsZero;
 
+    // —— 空头持仓(融券做空) ——
+    /// <summary>空头持仓量(手)。正数=做空了多少。0=无空头。</summary>
+    public Quantity ShortQty { get; private set; } = Quantity.Zero;
+    /// <summary>空头平均卖出价(做空成本)。平仓时按此价计算盈亏。</summary>
+    public Price ShortCost { get; private set; } = Price.Zero;
+    /// <summary>是否有空头持仓。</summary>
+    public bool HasShort => ShortQty.Value > 0;
+
+    /// <summary>融券做空:增加空头持仓,更新空头成本。</summary>
+    public void ApplyShortSell(Quantity qty, Price price)
+    {
+        if (qty.IsZero) return;
+        int newTotal = ShortQty.Value + qty.Value;
+        if (newTotal == 0) { ShortCost = Price.Zero; return; }
+        decimal oldCost = ShortCost.Value * ShortQty.Value;
+        ShortCost = new Price((oldCost + price.Value * qty.Value) / newTotal);
+        ShortQty = new Quantity(newTotal);
+    }
+
+    /// <summary>买回平仓:减少空头持仓。返回平仓盈亏(正=赚)。</summary>
+    public decimal ApplyShortCover(Quantity qty, Price price)
+    {
+        if (qty.IsZero || ShortQty.Value == 0) return 0;
+        int coverQty = Math.Min(qty.Value, ShortQty.Value);
+        decimal pnl = (ShortCost.Value - price.Value) * coverQty * 100;   // 做空赚=高卖低买
+        ShortQty = new Quantity(ShortQty.Value - coverQty);
+        if (ShortQty.IsZero) ShortCost = Price.Zero;
+        return pnl;
+    }
+
     public Position() { }
 
     /// <summary>买入成交:增加锁定筹码,更新加权成本。</summary>

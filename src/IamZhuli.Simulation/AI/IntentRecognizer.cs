@@ -31,6 +31,10 @@ public sealed class IntentAssessment
 public sealed class IntentRecognizer
 {
     private readonly MarketSignalTracker _tracker;
+    /// <summary>近期大单挂撤计数(检测 Spoofing/挂墙诱多)。</summary>
+    private int _bigOrderPlaceCount;    // 近 window 内大单挂入次数
+    private int _bigOrderCancelCount;   // 近 window 内大单撤回次数
+    private int _ticksSinceDecay;
 
     public IntentRecognizer(int window = 30)
     {
@@ -42,8 +46,30 @@ public sealed class IntentRecognizer
     /// <summary>记录一笔成交(由 AIMainForce 订阅 Session.OnTrade 转发)。</summary>
     public void RecordTrade(int qty) => _tracker.RecordTrade(qty);
 
+    /// <summary>记录玩家挂入大单(由 AIMainForce 订阅 Session.OnOrderPlaced 转发,qty>阈值才算)。</summary>
+    public void RecordBigOrderPlaced(int qty)
+    {
+        if (qty >= 500) _bigOrderPlaceCount++;   // 500手以上算大单
+    }
+
+    /// <summary>记录玩家撤回大单(由 AIMainForce 订阅撤单事件转发)。</summary>
+    public void RecordBigOrderCancelled(int qty)
+    {
+        if (qty >= 500) _bigOrderCancelCount++;
+    }
+
     /// <summary>每 tick 更新市场数据。传入快照(模拟器由 SessionMarketDataSnapshot 适配,真实行情同理)。</summary>
-    public void Observe(IMarketDataSnapshot snapshot) => _tracker.RecordTick(snapshot);
+    public void Observe(IMarketDataSnapshot snapshot)
+    {
+        _tracker.RecordTick(snapshot);
+        // 挂撤计数衰减(每 tick 减 1,最少 0)
+        if (++_ticksSinceDecay >= 5)
+        {
+            _ticksSinceDecay = 0;
+            if (_bigOrderPlaceCount > 0) _bigOrderPlaceCount--;
+            if (_bigOrderCancelCount > 0) _bigOrderCancelCount--;
+        }
+    }
 
     /// <summary>评估当前玩家意图。</summary>
     public IntentAssessment Assess()
@@ -56,6 +82,12 @@ public sealed class IntentRecognizer
         bool volumeSpike = recentVol > m.AvgVolume * 2.0 && m.AvgVolume > 0;
         bool priceSpike = momentum > 0.015m;        // 短期涨超1.5%
         bool priceDrop = momentum < -0.015m;
+
+        // —— 虚假挂单/挂墙诱多:反复挂大单又撤(挂撤比高,且价格没真正成交) ——
+        if (_bigOrderCancelCount >= 3 && _bigOrderPlaceCount >= 3 && !volumeSpike)
+            return new IntentAssessment { Primary = PlayerIntent.Spoofing, Confidence = 0.65,
+                Reason = $"疑似挂墙诱多:近期挂入{_bigOrderPlaceCount}次/撤回{_bigOrderCancelCount}次大单,无对应成交量",
+                RecentVolume = recentVol, Momentum = momentum };
 
         // —— 推价:放量 + 上涨 ——
         if (priceSpike && volumeSpike)

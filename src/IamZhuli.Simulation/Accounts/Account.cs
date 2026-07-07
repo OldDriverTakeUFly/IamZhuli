@@ -86,9 +86,59 @@ public sealed class Account
     /// <summary>非交易资金扣减(消息系统/水军等费用)。</summary>
     public void DebitCash(decimal amount) => Cash -= amount;
 
-    /// <summary>总权益 = 现金 + 持仓市值。</summary>
+    // —— 融券做空 ——
+    /// <summary>保证金(做空需要冻结的资金,用于爆仓保护)。</summary>
+    public decimal MarginFrozen { get; private set; }
+
+    /// <summary>融券做空:卖出借来的券,获得现金,冻结保证金。
+    /// 保证金 = 卖出金额 × 保证金比例(默认50%)。</summary>
+    public void ShortSell(Quantity qty, Price price, decimal marginRatio = 0.5m)
+    {
+        decimal proceeds = price.Value * qty.Value * 100;           // 卖出获得现金
+        decimal margin = proceeds * marginRatio;                     // 冻结保证金
+        Cash += proceeds;
+        MarginFrozen += margin;
+        Position.ApplyShortSell(qty, price);
+        TotalSoldQty += qty.Value;
+    }
+
+    /// <summary>买回平仓:还券,释放保证金,结算盈亏。
+    /// 买回花费从现金扣,保证金释放,空头盈亏已由 Position 算出。</summary>
+    public void ShortCover(Quantity qty, Price price)
+    {
+        decimal cost = price.Value * qty.Value * 100;                // 买回花费
+        Cash -= cost;
+        decimal pnl = Position.ApplyShortCover(qty, price);          // 平仓盈亏
+        Cash += pnl;                                                  // 盈亏结算到现金
+        // 释放保证金(按平仓比例)
+        decimal releaseRatio = Position.ShortQty.Value == 0 ? 1m :
+            (double)qty.Value / (Position.ShortQty.Value + qty.Value) > 1 ? 1m :
+            (decimal)qty.Value / (Position.ShortQty.Value + qty.Value);
+        decimal release = MarginFrozen * releaseRatio;
+        MarginFrozen -= release;
+        Cash += release;
+        TotalBoughtQty += qty.Value;
+    }
+
+    /// <summary>维持担保比例 = 总权益 / (空头持仓市值 + 保证金)。
+    /// 低于 130% 时触发爆仓(强制平仓)。高于则安全。</summary>
+    public decimal MaintenanceRatio(Price markPrice)
+    {
+        decimal shortValue = Position.HasShort ? markPrice.Value * Position.ShortQty.Value * 100 : 0;
+        decimal totalDebt = shortValue + MarginFrozen;
+        if (totalDebt <= 0) return 10m;   // 无负债,比例无限大
+        return TotalEquity(markPrice) / totalDebt;
+    }
+
+    /// <summary>总权益 = 现金 + 多头市值 - 空头负债 + 保证金。
+    /// 空头的盈亏已实时反映:空头持仓市值随价格变动。</summary>
     public decimal TotalEquity(Price markPrice)
-        => Cash + (Position.Total.IsZero ? 0m : markPrice.Value * Position.Total.Value * 100);
+    {
+        decimal longValue = Position.Total.IsZero ? 0m : markPrice.Value * Position.Total.Value * 100;
+        decimal shortDebt = Position.HasShort ? markPrice.Value * Position.ShortQty.Value * 100 : 0;
+        // 空头:卖出时已收现金,持仓是负债(需买回)。权益 = 现金 + 多头 + 保证金 - 空头负债
+        return Cash + longValue + MarginFrozen - shortDebt;
+    }
 
     public override string ToString()
         => $"现金{Cash / 10000:F2}万(可用{AvailableCash / 10000:F2}万) 持仓{Position}";

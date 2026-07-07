@@ -41,15 +41,26 @@ public sealed class AIMainForce : IParticipant
         _snapshot = new SessionMarketDataSnapshot(session);
         // 订阅成交事件,把真实成交量喂给识别器(让放量识别准确)
         session.OnTrade += (p, q, s) => _recognizer.RecordTrade(q.Value);
+        // 撤单事件→识别器(检测虚假挂单/挂墙诱多)
+        session.OnOrderCancelled += (who, price, qty, placedTick) =>
+        {
+            if (who.Value == "Player") _recognizer.RecordBigOrderCancelled(qty.Value);
+        };
         _brain = new AIStateMachine { Sensitivity = sensitivity, Profile = profile };
         _strength = 1500;   // 单次操作量级基准
         _rng = new Random(seed ?? Environment.TickCount);
     }
 
+    private int _prevTopBookQty;   // 上一 tick 最优5档总量(检测大单突挂)
+
     public void Act(TradingSession session, SimulationClock clock, Random rng)
     {
         // 1. 观察
         _recognizer.Observe(_snapshot);
+        // 大单挂入检测:5档总量突增>2000手 → 可能是挂墙
+        int curTopBook = (_snapshot.BidLevels?.Sum(q => q.Quantity.Value) ?? 0) + (_snapshot.AskLevels?.Sum(q => q.Quantity.Value) ?? 0);
+        if (curTopBook - _prevTopBookQty > 2000) _recognizer.RecordBigOrderPlaced(curTopBook - _prevTopBookQty);
+        _prevTopBookQty = curTopBook;
 
         // 2. 识别意图
         var intent = _recognizer.Assess();

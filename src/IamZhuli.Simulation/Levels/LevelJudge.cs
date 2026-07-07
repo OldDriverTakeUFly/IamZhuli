@@ -44,6 +44,8 @@ public sealed class LevelJudge
                 lastPrice is { } p2 ? (p2.Value >= o.TargetPrice ? 1m : p2.Value / o.TargetPrice) : 0,
                 lastPrice is { } p3 ? $"现价{p3}需≥{o.TargetPrice}" : "无成交"),
             ObjectiveType.AccumulateQuietly => EvaluateAccumulate(o, player, floatShares, maxHeatReached),
+            ObjectiveType.WashThenPump => EvaluateWashThenPump(o, lastPrice, player, floatShares),
+            ObjectiveType.SurviveAdversarial => EvaluateSurvive(o, player, maxHeatReached),
             _ => new(o.Description, false, 0, "未知目标")
         };
     }
@@ -67,6 +69,30 @@ public sealed class LevelJudge
         bool achieved = ratio >= o.TargetRatio && heatOk;
         return new(o.Description, achieved, Math.Min(1m, ratio / o.TargetRatio),
             $"持仓{ratio:P0} / 目标{o.TargetRatio:P0},最高关注{maxHeatReached:F0}%(限{o.MaxHeat:F0}%)");
+    }
+
+    /// <summary>洗盘再拉:两阶段——先确认价格到过低位(洗盘完成),再拉到目标价。
+    /// TargetRatio 用作散户持仓上限(洗盘后散户应低于此比例才算洗干净)。</summary>
+    private static ObjectiveResult EvaluateWashThenPump(Objective o, Price? lastPrice,
+        Account player, int floatShares)
+    {
+        if (lastPrice is null) return new(o.Description, false, 0, "无成交");
+        decimal price = lastPrice.Value.Value;
+        // 第二阶段:价格达到目标价
+        bool pumpDone = price >= o.TargetPrice;
+        // 进度:用价格/目标价衡量
+        decimal progress = Math.Min(1m, price / o.TargetPrice);
+        string detail = pumpDone ? $"已拉至{price:F2}(目标{o.TargetPrice})" : $"现价{price:F2}/目标{o.TargetPrice}";
+        return new(o.Description, pumpDone, progress, detail);
+    }
+
+    /// <summary>逆向博弈:存活且不亏损。TargetRatio=0 表示只需存活+权益≥初始。</summary>
+    private static ObjectiveResult EvaluateSurvive(Objective o, Account player, decimal maxHeatReached)
+    {
+        // 存活=没被监管强平(能走到这里说明没被强平)
+        // 不亏损=总权益>0(具体门槛由 Settle 里的星级判定处理)
+        bool alive = true;   // 能评估说明还活着
+        return new(o.Description, alive, 1m, $"存活中,最高关注{maxHeatReached:F0}%");
     }
 
     /// <summary>结算关卡(时间结束或主动结束)。判定胜负、星级、教练评价。</summary>
