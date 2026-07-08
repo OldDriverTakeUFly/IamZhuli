@@ -80,6 +80,7 @@ public sealed class GameSingleton
         };
         var engine = new MatchingEngine(rules);
         _loop = new SimulationLoop(engine, new SimulationClock(level.TicksPerDay, level.TotalDays));
+        _loop.Session.InitShortablePool(level.FloatShares);   // 初始化可融券池(流通盘20%)
         _player = _loop.Session.GetOrCreateAccount(Player, level.PlayerCash);
         if (level.PlayerInitialHolding > 0) _player.Position.Seed(new Quantity(level.PlayerInitialHolding), intrinsic);
 
@@ -300,7 +301,7 @@ public sealed class GameSingleton
                 null, null, null, 0m, 0m, 0m, 0m,
                 new(), new(), new AccountDto(0,0,0,0,0,0,0,0,0,0,0,0),
                 new(), null, new(), new(),
-                0m, "", "", new(), false, 0m, 0, new(), 0m, 0m, 0m, new(), 0, false, 0, 0m, 0m);
+                0m, "", "", new(), false, 0m, 0, new(), 0m, 0m, 0m, new(), 0, false, 0, 0m, 0m, 0, 0);
         }
         var view = _loop.Session.Engine.View;
         var mark = view.LastPrice ?? new Price(10.00m);
@@ -357,7 +358,9 @@ public sealed class GameSingleton
             WaterArmyActive: _waterArmy.IsActive,
             WaterArmyDays: _waterArmy.ActiveDays,
             WaterArmyDailyCost: _waterArmy.DailyCost,
-            InfoHeat: Math.Round(_regulator.InfoHeat, 1));
+            InfoHeat: Math.Round(_regulator.InfoHeat, 1),
+            ShortablePool: _loop.Session.ShortablePool,
+            TotalShortable: _loop.Session.TotalShortable);
     }
 
     /// <summary>提交下单。返回订单结果;失败返回带 Error 的 DTO。</summary>

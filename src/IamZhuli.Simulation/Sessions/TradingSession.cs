@@ -25,8 +25,19 @@ public sealed class TradingSession
     private readonly Dictionary<ParticipantId, Account> _accounts = new();
     /// <summary>做空订单ID集合(maker结算时判断是否做空)。</summary>
     private readonly HashSet<OrderId> _shortOrders = new();
+    /// <summary>可融券池余量(手)。初始=流通盘×20%,做空时扣减,平仓时归还。先到先得。</summary>
+    public int ShortablePool { get; private set; }
+    /// <summary>可融券总量(用于显示比例)。</summary>
+    public int TotalShortable { get; private set; }
 
     public TradingSession(MatchingEngine engine) => Engine = engine;
+
+    /// <summary>初始化可融券池(按流通盘的20%设置)。由 GameSingleton.LoadLevel 调用。</summary>
+    public void InitShortablePool(int floatShares)
+    {
+        TotalShortable = Math.Max(1000, floatShares / 5);   // 流通盘20%,最少1000手
+        ShortablePool = TotalShortable;
+    }
 
     /// <summary>每笔成交触发(参数=成交价、量、主动方方向)。</summary>
     public event Action<Price, Quantity, Side>? OnTrade;
@@ -64,16 +75,20 @@ public sealed class TradingSession
         if (req.Side == Side.Buy && req.IsShort && acc.Position.ShortQty.Value < req.Quantity.Value)
             throw new InvalidOperationException("空头持仓不足,无法平仓。");
 
-        // —— 做空卖单:预冻结保证金(按限价或对手价估算) ——
+        // —— 做空卖单:预冻结保证金(按限价或对手价估算) + 券池余量检查 ——
         decimal shortMarginFrozen = 0;
         if (req.IsShort && req.Side == Side.Sell)
         {
+            // 券池余量检查(先到先得)
+            if (ShortablePool < req.Quantity.Value)
+                throw new InvalidOperationException($"可融券不足(剩余{ShortablePool}手,需要{req.Quantity.Value}手)。");
             decimal estPrice = req.Type == OrderType.Limit ? req.Price.Value
                 : (Engine.View.BestBid ?? Engine.Rules.UpperLimit).Value;
             decimal margin = estPrice * req.Quantity.Value * 100 * 0.5m;   // 50%保证金
             if (acc.AvailableCash < margin)
                 throw new InvalidOperationException("保证金不足(做空需50%保证金)。");
-            // 不在这里扣,成交时由 ShortSell 统一处理
+            // 预扣券池(防止同一tick多个做空单超额)
+            ShortablePool -= req.Quantity.Value;
         }
 
         // —— 创建订单(此时获得 OrderId) ——
@@ -104,23 +119,32 @@ public sealed class TradingSession
             if (trade.TakerSide == Side.Buy)
             {
                 if (takerIsShort)
+                {
                     taker.ShortCover(trade.Quantity, trade.Price);   // 买回平仓
+                    ShortablePool += trade.Quantity.Value;            // 平仓归还券池
+                }
                 else
                     taker.ApplyBuyFill(trade.TakerOrderId, trade.Quantity, trade.Price);
                 // maker 侧:对手是卖单,需判断 maker 是否做空
                 if (_shortOrders.Contains(trade.MakerOrderId))
+                {
                     maker.ShortSell(trade.Quantity, trade.Price);
+                    // maker做空成交,券池已在Submit时预扣,不重复扣
+                }
                 else
                     maker.ApplySellFill(trade.Quantity, trade.Price);
             }
             else
             {
                 if (takerIsShort)
-                    taker.ShortSell(trade.Quantity, trade.Price);    // 做空卖出
+                    taker.ShortSell(trade.Quantity, trade.Price);    // 做空卖出(券池已预扣)
                 else
                     taker.ApplySellFill(trade.Quantity, trade.Price);
                 if (_shortOrders.Contains(trade.MakerOrderId))
+                {
                     maker.ShortCover(trade.Quantity, trade.Price);
+                    ShortablePool += trade.Quantity.Value;            // maker平仓归还券池
+                }
                 else
                     maker.ApplyBuyFill(trade.MakerOrderId, trade.Quantity, trade.Price);
             }
@@ -129,9 +153,14 @@ public sealed class TradingSession
         }
 
         // —— taker 买单结束处理:未挂簿(成交/作废)则释放剩余冻结记录 ——
-        if (req.Side == Side.Buy && result.FinalStatus != OrderStatus.Active)
+        if (req.Side == Side.Buy && !req.IsShort && result.FinalStatus != OrderStatus.Active)
         {
             acc.ReleaseBuyFreezeRemaining(order.Id, result.RemainingQty);
+        }
+        // —— 做空卖单未成交(作废):归还预扣的券池 ——
+        if (req.IsShort && req.Side == Side.Sell && result.FinalStatus != OrderStatus.Active)
+        {
+            ShortablePool += result.RemainingQty.Value;   // 归还未成交部分
         }
         // 挂簿(Active)的买单:冻结保留在 Account 中,后续被吃时由 maker 路径结算,撤单时由 Cancel 处理。
 
@@ -142,8 +171,11 @@ public sealed class TradingSession
     public bool Cancel(ParticipantId participant, OrderId orderId)
     {
         if (!Engine.Cancel(orderId, out var order) || order == null) return false;
-        _shortOrders.Remove(orderId);   // 清理做空标记
-        if (order.Participant.Equals(participant) && order.Side == Side.Buy)
+        bool wasShort = _shortOrders.Remove(orderId);   // 清理做空标记
+        // 做空卖单撤单:归还剩余券池
+        if (wasShort && order.Side == Side.Sell)
+            ShortablePool += order.RemainingQty.Value;
+        if (order.Participant.Equals(participant) && order.Side == Side.Buy && !wasShort)
             _accounts[participant].ReleaseBuyFreezeRemaining(orderId, order.RemainingQty);
         return true;
     }

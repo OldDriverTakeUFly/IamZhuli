@@ -30,7 +30,8 @@ public record MarketSnapshotDto(
     decimal Confidence, decimal HerdMood, decimal NewsBias,
     List<NewsItemDto> ActiveNews,
     int WaterArmyLevel, bool WaterArmyActive, int WaterArmyDays, decimal WaterArmyDailyCost,
-    decimal InfoHeat);   // 信息操纵关注值
+    decimal InfoHeat,   // 信息操纵关注值
+    int ShortablePool, int TotalShortable);   // 可融券余量/总量
 
 // ── 消息 ──
 public record NewsItemDto(string Type, string Headline, int RemainingTicks);
