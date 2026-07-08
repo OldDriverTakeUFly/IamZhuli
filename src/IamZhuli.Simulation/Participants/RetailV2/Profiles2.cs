@@ -47,11 +47,21 @@ public sealed class SpeculatorProfile : RetailProfile
     {
         _profitTakingSensitivity = 1.2m;   // 投机客最快止盈:快进快出
         _stopLossThreshold = 0.03m;   // 亏3%止损:短线客止损最灵敏(纪律性强)
+        _canShortSell = true;         // 投机客具备做空能力
     }
 
     protected override void Decide(TradingSession s, RetailMarketContext ctx)
     {
         if (ctx.LastPrice is null) return;
+        // 严重高估 → 做空博下跌(投机客最敏感)
+        if (ctx.IntrinsicValue > 0 && ctx.LastPrice.Value.Value > ctx.IntrinsicValue * 1.15m
+            && Account.Position.ShortQty.Value < 500
+            && Rand() < 0.2 * (double)RiskPreference)
+        {
+            int qty = RandInt(2, 5) * 10;
+            decimal price = Val(ctx.BestBid ?? ctx.LastPrice, (decimal)ctx.IntrinsicValue);
+            ShortSell(s, price, qty);
+        }
         // 波动放大 + 活跃 → 频繁小单,方向随短期动量
         if (ctx.Volatility > 0.015m && Rand() < 0.5 * (double)RiskPreference)
         {
@@ -80,11 +90,22 @@ public sealed class HerdProfile : RetailProfile
     {
         _profitTakingSensitivity = 0.6m;   // 羊群型温和止盈:别人卖才跟着卖
         _stopLossThreshold = 0.10m;   // 亏10%止损:羊群型迟钝(别人跑才跟着跑,反应慢)
+        _canShortSell = true;         // 羊群型也具备做空能力(跟风做空)
     }
 
     protected override void Decide(TradingSession s, RetailMarketContext ctx)
     {
         if (ctx.LastPrice is null) return;
+        // 恐惧情绪 + 价格高估 → 跟风做空(别人做空我跟着做)
+        if (ctx.Sentiment.Fear > 0.6m && ctx.IntrinsicValue > 0
+            && ctx.LastPrice.Value.Value > ctx.IntrinsicValue * 1.10m
+            && Account.Position.ShortQty.Value < 300
+            && Rand() < 0.15 * (double)RiskPreference)
+        {
+            int qty = RandInt(2, 5) * 10;
+            decimal price = Val(ctx.BestBid ?? ctx.LastPrice, (decimal)ctx.IntrinsicValue);
+            ShortSell(s, price, qty);
+        }
         // 放量(成交活跃)+ 情绪偏激 → 跟着别人买(正反馈传染)
         if (ctx.VolumeSpike > 1.5m && ctx.Sentiment.Extremity > 0.15m && Rand() < 0.25 * (double)RiskPreference)
         {

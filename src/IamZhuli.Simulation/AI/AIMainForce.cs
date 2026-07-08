@@ -117,6 +117,8 @@ public sealed class AIMainForce : IParticipant
                 CounterAttack(session, price);
                 break;
         }
+        // 空头止盈检查(无论什么状态,有空头浮盈就考虑平仓)
+        TryCoverShort(session, price);
     }
 
     // —— 行为模板 ——
@@ -179,13 +181,37 @@ public sealed class AIMainForce : IParticipant
 
     private void CounterAttack(TradingSession s, Price price)
     {
-        // 识破玩家出货 → 砸盘,趁火打劫
-        if (_account.Position.Available.Value < 100) return;
-        if (_rng.NextDouble() < 0.5)
+        // 识破玩家出货 → 砸盘+做空,趁火打劫
+        if (_account.Position.Available.Value >= 100 && _rng.NextDouble() < 0.5)
         {
             int qty = Math.Min(_account.Position.Available.Value / 3, _strength);
             qty = Math.Max(20, (qty / 10) * 10);
             s.Submit(new OrderRequest(Id, Side.Sell, OrderType.Market, Price.Zero, new Quantity(qty)));
+        }
+        // 高位做空:价格远超内在价值时,卖空博下跌
+        if (price.Value > _intrinsic.Value * 1.1m && _account.Position.ShortQty.Value < _strength * 3
+            && _rng.NextDouble() < 0.3)
+        {
+            int shortQty = _rng.Next(2, 5) * 10;
+            try { s.Submit(new OrderRequest(Id, Side.Sell, OrderType.Limit, price, new Quantity(shortQty), IsShort: true)); }
+            catch { /* 保证金不足忽略 */ }
+        }
+    }
+
+    /// <summary>空头止盈:空头浮盈足够时买回平仓。</summary>
+    private void TryCoverShort(TradingSession s, Price price)
+    {
+        if (_account.Position.ShortQty.Value <= 0) return;
+        decimal shortCost = _account.Position.ShortCost.Value;
+        if (shortCost <= 0) return;
+        decimal profit = (shortCost - price.Value) / shortCost;   // 做空盈亏比(正=赚)
+        // 盈利5%以上按概率平仓,盈利10%以上大概率平仓
+        double prob = profit > 0.10m ? 0.4 : (profit > 0.05m ? 0.15 : 0);
+        if (prob > 0 && _rng.NextDouble() < prob)
+        {
+            int coverQty = _account.Position.ShortQty.Value;
+            try { s.Submit(new OrderRequest(Id, Side.Buy, OrderType.Market, Price.Zero, new Quantity(coverQty), IsShort: true)); }
+            catch { }
         }
     }
 

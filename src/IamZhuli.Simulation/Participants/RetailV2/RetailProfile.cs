@@ -83,6 +83,8 @@ public abstract class RetailProfile
         TryProfitTaking(session, ctx);
         // 通用止损:浮亏超阈值时按概率减仓(恐慌情绪加速)
         TryStopLoss(session, ctx);
+        // 通用空头平仓(有空头持仓时检查止盈)
+        TryCoverShort(session, ctx);
         // 再决策下单
         Decide(session, ctx);
     }
@@ -111,6 +113,35 @@ public abstract class RetailProfile
     /// <summary>止损阈值(亏损比例,超过则触发止损)。0=不止损(长线价投)。
     /// 子类设置:短线客灵敏(0.03~0.05),长线迟钝(0.10~0.15),价投=0。</summary>
     protected decimal _stopLossThreshold = 0.08m;   // 默认8%,子类可覆盖
+
+    /// <summary>是否具备做空能力(投机客/羊群型为true,其他false)。</summary>
+    protected bool _canShortSell = false;
+
+    /// <summary>空头止盈:有空头浮盈时按概率平仓。</summary>
+    private void TryCoverShort(TradingSession session, RetailMarketContext ctx)
+    {
+        if (!Account.Position.HasShort) return;
+        if (ctx.LastPrice is null) return;
+        decimal cost = Account.Position.ShortCost.Value;
+        if (cost <= 0) return;
+        decimal profit = (cost - ctx.LastPrice.Value.Value) / cost;   // 做空盈亏(正=赚)
+        if (profit < 0.03m) return;   // 盈利<3%不平
+        double prob = profit > 0.08m ? 0.3 : 0.1;
+        if (Rand() >= prob) return;
+        int qty = Account.Position.ShortQty.Value;
+        try { session.Submit(new OrderRequest(Account.Id, Side.Buy, OrderType.Market,
+            Price.Zero, new Quantity(qty), IsShort: true)); }
+        catch { }
+    }
+
+    /// <summary>做空辅助:限价做空卖出(子类调用)。</summary>
+    protected void ShortSell(TradingSession s, decimal price, int qty)
+    {
+        if (qty <= 0 || !_canShortSell) return;
+        try { s.Submit(new OrderRequest(Account.Id, Side.Sell, OrderType.Limit,
+            new Price(Math.Round(price, 2)), new Quantity(qty), IsShort: true)); }
+        catch { /* 保证金不足忽略 */ }
+    }
 
     /// <summary>通用止损:浮亏超阈值时按概率减仓。恐慌情绪下阈值降低、概率升高。
     /// 和止盈对称——越亏越想跑,恐慌时加速。短线客阈值低,长线阈值高。</summary>

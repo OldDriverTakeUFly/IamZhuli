@@ -86,6 +86,42 @@ public sealed class InstitutionB : IParticipant
         TakeProfitIfOvervalued(session);
         // 亏损止损:持仓浮亏超限时纪律性减仓(机构风控铁律,比散户更果断)
         CutLossIfUnderwater(session);
+        // 高位做空+空头平仓
+        ShortIfOvervalued(session);
+        CoverShortIfProfitable(session);
+    }
+
+    /// <summary>严重高估时做空(博下跌)。机构比AI主力更纪律性。</summary>
+    private void ShortIfOvervalued(TradingSession session)
+    {
+        var view = session.Engine.View;
+        decimal price = view.LastPrice?.Value ?? _fairValue.Value;
+        decimal overvalued = price / _fairValue.Value - 1m;
+        if (overvalued <= 0.10m) return;   // 高估>10%才做空
+        if (_account.Position.ShortQty.Value > 5000) return;   // 空头已有持仓,不追加
+        double prob = Math.Min(0.3, (double)overvalued * 1.5);
+        if (_rng.NextDouble() >= prob) return;
+        int qty = _rng.Next(5, 15) * 10;
+        try { session.Submit(new OrderRequest(Id, Side.Sell, OrderType.Limit,
+            new Price(price), new Quantity(qty), IsShort: true)); }
+        catch { }
+    }
+
+    /// <summary>空头止盈:浮盈足够时买回平仓。</summary>
+    private void CoverShortIfProfitable(TradingSession session)
+    {
+        if (_account.Position.ShortQty.Value <= 0) return;
+        decimal cost = _account.Position.ShortCost.Value;
+        if (cost <= 0) return;
+        var price = session.Engine.View.LastPrice?.Value ?? _fairValue.Value;
+        decimal profit = (cost - price) / cost;
+        if (profit < 0.05m) return;   // 盈利<5%不平
+        double prob = profit > 0.10m ? 0.5 : 0.2;
+        if (_rng.NextDouble() >= prob) return;
+        int qty = _account.Position.ShortQty.Value;
+        try { session.Submit(new OrderRequest(Id, Side.Buy, OrderType.Market,
+            Price.Zero, new Quantity(qty), IsShort: true)); }
+        catch { }
     }
 
     /// <summary>持仓浮亏止损:机构对亏损容忍度低,亏损超阈值时果断减仓。
