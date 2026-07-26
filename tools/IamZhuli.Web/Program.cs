@@ -88,6 +88,18 @@ app.MapPost("/api/signal", (GameSingleton game, string type) =>
     return Results.Ok(new { ok, error });
 });
 
+app.MapPost("/api/card/play", (GameSingleton game, int handIndex) =>
+{
+    var ok = game.PlayCard(handIndex, out var error);
+    return Results.Ok(new { ok, error });
+});
+
+app.MapPost("/api/card/endturn", (GameSingleton game) =>
+{
+    game.EndCardTurn();
+    return Results.Ok(new { ok = true });
+});
+
 app.MapPost("/api/retry", async (GameSingleton game) =>
 { await game.RetryAsync(); return Results.Ok(); });
 

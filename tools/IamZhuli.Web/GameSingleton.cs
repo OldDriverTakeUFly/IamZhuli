@@ -1,6 +1,7 @@
 using IamZhuli.Core;
 using IamZhuli.Engine;
 using IamZhuli.Simulation;
+using IamZhuli.Simulation.Cards;
 using IamZhuli.Simulation.Accounts;
 using IamZhuli.Simulation.AI;
 using IamZhuli.Simulation.Levels;
@@ -45,6 +46,9 @@ public sealed class GameSingleton
     private NewsSystem _newsSystem = null!;
     private WaterArmyNetwork _waterArmy = null!;
     private BlockTradeSignal _blockSignal = null!;
+    private IamZhuli.Simulation.Cards.CardEngine? _cardEngine;
+    /// <summary>是否启用卡牌模式(完全替换实时操作)。</summary>
+    public bool CardMode { get; set; } = true;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public IHubContext<GameHub> Hub { get; }
@@ -164,6 +168,8 @@ public sealed class GameSingleton
         }
         _loop.Start();
         IsPreMarket = true;   // 进入盘前准备态,等玩家研究完点"开始操盘"
+        // 卡牌引擎初始化(开始操盘时启动第一回合)
+        if (CardMode) _cardEngine = new CardEngine(seed: level.Id.GetHashCode() + 7);
         IsInitialized = true;
     }
 
@@ -172,6 +178,7 @@ public sealed class GameSingleton
     {
         IsPreMarket = false;
         _loop.Resume();
+        _cardEngine?.Init();   // 卡牌模式:启动第一回合(进入Play阶段)
     }
 
     /// <summary>结束关卡并结算(积分制)。</summary>
@@ -275,7 +282,25 @@ public sealed class GameSingleton
         {
             // 盘前态:不推进 tick,但仍推快照(让玩家看K线/盘口)
             if (IsPreMarket) return BuildSnapshotUnsafe();
+            // 卡牌模式:Play阶段冻结(等玩家出牌)
+            if (CardMode && _cardEngine is { } ce && ce.Phase == CardPhase.Play)
+                return BuildSnapshotUnsafe();
             _loop.Step();
+            // 卡牌模式:每tick推进卡牌引擎(延迟效果+回合计时)
+            if (CardMode && _cardEngine is { } ce2 && ce2.Phase == CardPhase.Resolve)
+            {
+                bool turnEnded = ce2.OnTick(pe =>
+                {
+                    // 执行延迟效果(目前只有分批卖出)
+                    if (pe.Effect == CardEffect.ScheduledSell)
+                    {
+                        try { _loop.Session.Submit(new OrderRequest(Player, Side.Sell, OrderType.Limit,
+                            _loop.Session.Engine.View.BestAsk ?? new Price(10m),
+                            new Quantity(pe.EffectValue))); } catch { }
+                    }
+                });
+                if (turnEnded) ce2.StartNewTurn();   // 进入下一回合Play阶段
+            }
             // 关卡时间结束 → 自动结算
             if (_loop.IsFinished && !IsLevelOver) EndLevel();
             return BuildSnapshotUnsafe();
@@ -301,7 +326,7 @@ public sealed class GameSingleton
                 null, null, null, 0m, 0m, 0m, 0m,
                 new(), new(), new AccountDto(0,0,0,0,0,0,0,0,0,0,0,0),
                 new(), null, new(), new(),
-                0m, "", "", new(), false, 0m, 0, new(), 0m, 0m, 0m, new(), 0, false, 0, 0m, 0m, 0, 0);
+                0m, "", "", new(), false, 0m, 0, new(), 0m, 0m, 0m, new(), 0, false, 0, 0m, 0m, 0, 0, null);
         }
         var view = _loop.Session.Engine.View;
         var mark = view.LastPrice ?? new Price(10.00m);
@@ -360,7 +385,24 @@ public sealed class GameSingleton
             WaterArmyDailyCost: _waterArmy.DailyCost,
             InfoHeat: Math.Round(_regulator.InfoHeat, 1),
             ShortablePool: _loop.Session.ShortablePool,
-            TotalShortable: _loop.Session.TotalShortable);
+            TotalShortable: _loop.Session.TotalShortable,
+            CardState: GetCardState());
+    }
+
+    /// <summary>构建卡牌状态 DTO(卡牌模式才有值)。</summary>
+    private CardStateDto? GetCardState()
+    {
+        if (!CardMode || _cardEngine == null) return null;
+        return new CardStateDto(
+            Turn: _cardEngine.Turn,
+            Energy: _cardEngine.Energy,
+            Phase: _cardEngine.Phase.ToString(),
+            CardsPlayed: _cardEngine.CardsPlayedThisTurn,
+            MaxCardsPerTurn: 2,
+            Hand: _cardEngine.Hand.Select(c => new CardInstanceDto(
+                c.UniqueId, c.Definition.Name, c.Definition.Category.ToString(),
+                c.Definition.EnergyCost, c.Definition.CashCost, c.Definition.Description)).ToList(),
+            LastCombo: _cardEngine.LastCombo);
     }
 
     /// <summary>提交下单。返回订单结果;失败返回带 Error 的 DTO。</summary>
@@ -449,6 +491,7 @@ public sealed class GameSingleton
             _newsSystem.OnNewDay();
             _retail.Sentiment.DailyDecay();
             _waterArmy.OnNewDay(_player, _newsSystem);   // 扣维持费+自动注入Pump
+            _cardEngine?.OnNewDay();   // 卡牌引擎日切重置
             _loop.StartNextDay();
         }
         finally { _gate.Release(); }
@@ -529,6 +572,88 @@ public sealed class GameSingleton
         }
         error = "关卡已结束";
         return false;
+    }
+
+    /// <summary>卡牌模式:出牌。handIndex=手牌索引。</summary>
+    public bool PlayCard(int handIndex, out string error)
+    {
+        error = "";
+        if (_cardEngine == null) { error = "卡牌模式未启用"; return false; }
+        return _cardEngine.PlayCard(handIndex, (def, seq) => ExecuteCardEffect(def), out error);
+    }
+
+    /// <summary>卡牌模式:结束回合 → 进入执行阶段。</summary>
+    public void EndCardTurn()
+    {
+        _cardEngine?.EndTurn();
+    }
+
+    /// <summary>执行卡牌效果(由 CardEngine.PlayCard 调用)。</summary>
+    private bool ExecuteCardEffect(CardDefinition def)
+    {
+        var session = _loop.Session;
+        var view = session.Engine.View;
+        try
+        {
+            switch (def.Effect)
+            {
+                case CardEffect.LimitBuy:
+                    decimal bid = view.BestBid?.Value ?? 10m;
+                    session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Limit, new Price(bid - 0.01m), new Quantity(def.EffectValue)));
+                    break;
+                case CardEffect.MarketBuy:
+                    session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Market, Price.Zero, new Quantity(def.EffectValue)));
+                    break;
+                case CardEffect.MarketSell:
+                    session.Submit(new OrderRequest(Player, Side.Sell, OrderType.Market, Price.Zero, new Quantity(def.EffectValue)));
+                    break;
+                case CardEffect.LimitWall:
+                    decimal p = view.LastPrice?.Value ?? 10m;
+                    session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Limit, new Price(p - 0.03m), new Quantity(def.EffectValue)));
+                    session.Submit(new OrderRequest(Player, Side.Sell, OrderType.Limit, new Price(p + 0.03m), new Quantity(def.EffectValue)));
+                    break;
+                case CardEffect.ScheduledSell:
+                    // 延迟效果,由 OnTick 中 CardEngine.PendingEffects 执行,这里不立即做
+                    break;
+                case CardEffect.ShortSell:
+                    session.Submit(new OrderRequest(Player, Side.Sell, OrderType.Market, Price.Zero, new Quantity(def.EffectValue), IsShort: true));
+                    break;
+                case CardEffect.ShortCover:
+                    int coverQty = _player.Position.ShortQty.Value;
+                    if (coverQty <= 0) return false;
+                    session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Market, Price.Zero, new Quantity(coverQty), IsShort: true));
+                    break;
+                case CardEffect.NewsPositive:
+                    _retail.Sentiment.NewsShock(true, 0.15m);
+                    break;
+                case CardEffect.NewsNegative:
+                    _retail.Sentiment.NewsShock(false, 0.15m);
+                    break;
+                case CardEffect.NewsRumor:
+                    PublishNews("rumor", out _);
+                    break;
+                case CardEffect.NewsPump:
+                    PublishNews("pump", out _);
+                    break;
+                case CardEffect.SignalFakeSell:
+                    PublishSignal("fakebigsell", out _);
+                    break;
+                case CardEffect.SignalFakeBuy:
+                    PublishSignal("fakebigbuy", out _);
+                    break;
+                case CardEffect.SignalDragonList:
+                    PublishSignal("dragonlist", out _);
+                    break;
+                case CardEffect.CancelAll:
+                    session.CancelAllBySide(Player, Side.Buy);
+                    session.CancelAllBySide(Player, Side.Sell);
+                    break;
+                case CardEffect.LayLow:
+                    break;   // 蛰伏冷却:效果由 CardEngine(IsLayingLow) 处理
+            }
+            return true;
+        }
+        catch { return false; }
     }
 
     public async Task<LevelResultDto> EndLevelAsync()

@@ -57,6 +57,18 @@
   .order-row.buy .o-side, .order-row.buy .o-price { color: #ef5350; }
   .order-row.sell .o-side, .order-row.sell .o-price { color: #26a69a; }
   .orders-empty { color: #555; font-size: 12px; padding: 8px 4px; text-align: center; }
+  /* 卡牌 */
+  .card-item { background:#1e2530; border:1px solid #3a4a5a; border-radius:6px; padding:6px 8px; cursor:pointer; transition:border-color 0.15s; }
+  .card-item:hover { border-color:#e8c44a; }
+  .card-item.disabled { opacity:0.4; cursor:not-allowed; }
+  .card-item.disabled:hover { border-color:#3a4a5a; }
+  .card-name { font-size:12px; font-weight:bold; color:#e0e0e0; }
+  .card-cost { font-size:10px; color:#888; }
+  .card-desc { font-size:10px; color:#666; margin-top:2px; }
+  .card-cat-Trading { border-left:3px solid #ef5350; }
+  .card-cat-Media { border-left:3px solid #e8c44a; }
+  .card-cat-Signal { border-left:3px solid #8c6ae8; }
+  .card-cat-Defense { border-left:3px solid #4a9a8c; }
   /* 成交 */
   .trade-list { font-family: monospace; font-size: 12px; max-height: 160px; overflow-y: auto; }
   .trade-item { display: grid; grid-template-columns: 1fr 1fr 40px; gap: 6px; padding: 2px 0; }
@@ -147,7 +159,21 @@
 
   <!-- 下单 + 控制 -->
   <div class="panel">
-    <h3>下单</h3>
+    <!-- 卡牌手牌区(卡牌模式显示) -->
+    <div id="cardPanel" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <h3 style="margin:0;">🎴 手牌</h3>
+        <span style="font-size:11px;color:#888;">回合 <span id="cardTurn">1</span>/5 · 能量 <span id="cardEnergy">●●●</span> · <span id="cardPhase">出牌中</span></span>
+      </div>
+      <div id="cardHand" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-buy" id="endTurnBtn" style="font-size:13px;padding:6px 16px;width:auto;">结束回合 ▶</button>
+        <span id="cardPlayed" style="font-size:11px;color:#888;">已出 0/2</span>
+        <span id="cardCombo" style="font-size:11px;color:#e8c44a;display:none;"></span>
+      </div>
+      <div id="cardMsg" style="font-size:11px;color:#888;margin-top:4px;min-height:14px;"></div>
+    </div>
+    <h3 id="orderTitle">下单</h3>
     <div class="order-form">
       <div class="row">
         <div class="seg" id="sideSeg">
@@ -510,6 +536,58 @@ function renderBook(snap) {
   $('lastPrice').textContent = lp != null ? lp.toFixed(2) : '--';
   $('lastPrice').className = 'lastprice ' + (lp == null ? 'flat' : (lp >= 10 ? 'up' : 'down'));
 }
+
+// —— 渲染卡牌手牌 ——
+function renderCards(snap) {
+  const cs = snap.cardState;
+  const panel = $('cardPanel');
+  const orderTitle = $('orderTitle');
+  if (!cs) {
+    panel.style.display = 'none';
+    orderTitle.style.display = 'block';
+    return;
+  }
+  panel.style.display = 'block';
+  orderTitle.style.display = 'none';   // 卡牌模式隐藏下单区标题
+  // 回合/能量
+  $('cardTurn').textContent = cs.turn + 1;
+  $('cardEnergy').textContent = '●'.repeat(cs.energy) + '○'.repeat(Math.max(0, 10 - cs.energy));
+  $('cardPhase').textContent = cs.phase === 'Play' ? '出牌中⏸' : '执行中▶';
+  $('cardPlayed').textContent = `已出 ${cs.cardsPlayed}/${cs.maxCardsPerTurn}`;
+  // 连招提示
+  if (cs.lastCombo) {
+    $('cardCombo').style.display = 'inline';
+    $('cardCombo').textContent = '✨ ' + cs.lastCombo;
+  } else {
+    $('cardCombo').style.display = 'none';
+  }
+  // 手牌
+  $('cardHand').innerHTML = cs.hand.map((c, i) => {
+    const canPlay = cs.phase === 'Play' && cs.cardsPlayed < cs.maxCardsPerTurn && c.energyCost <= cs.energy;
+    const cls = canPlay ? '' : 'disabled';
+    return `<div class="card-item card-cat-${c.category} ${cls}" data-cardidx="${i}">
+      <div style="display:flex;justify-content:space-between;">
+        <span class="card-name">${c.name}</span>
+        <span class="card-cost">${c.energyCost > 0 ? '⚡'.repeat(c.energyCost) : '免费'} ${c.cashCost > 0 ? (c.cashCost/10000)+'w' : ''}</span>
+      </div>
+      <div class="card-desc">${c.description}</div>
+    </div>`;
+  }).join('');
+  // 出牌点击
+  document.querySelectorAll('.card-item:not(.disabled)').forEach(el => {
+    el.onclick = async () => {
+      const idx = parseInt(el.dataset.cardidx);
+      const r = await (await fetch('/api/card/play?handIndex=' + idx, { method: 'POST' })).json();
+      $('cardMsg').textContent = r.ok ? '✓ 已出牌' : '✗ ' + r.error;
+      $('cardMsg').style.color = r.ok ? '#26a69a' : '#ef5350';
+    };
+  });
+}
+// 结束回合
+$('endTurnBtn').onclick = async () => {
+  await fetch('/api/card/endturn', { method: 'POST' });
+  $('cardMsg').textContent = '回合结束,执行中...';
+};
 
 // —— 渲染我的挂单(每次快照刷新)——
 function renderOrders(snap) {
@@ -1271,7 +1349,7 @@ function updateCharts(snap) {
 const conn = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
 conn.on('snapshot', snap => {
   // 每个 render 独立 try-catch,防止某个函数异常拖垮整个页面
-  const fns = [renderBook, renderAccount, renderHeader, updateCharts, renderRegulator, renderObjectives, renderOrders];
+  const fns = [renderBook, renderAccount, renderHeader, updateCharts, renderRegulator, renderObjectives, renderOrders, renderCards];
   for (const fn of fns) {
     try { fn(snap); } catch(e) { console.error(fn.name, e); }
   }

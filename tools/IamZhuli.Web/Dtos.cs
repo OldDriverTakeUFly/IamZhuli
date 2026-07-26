@@ -31,10 +31,18 @@ public record MarketSnapshotDto(
     List<NewsItemDto> ActiveNews,
     int WaterArmyLevel, bool WaterArmyActive, int WaterArmyDays, decimal WaterArmyDailyCost,
     decimal InfoHeat,   // 信息操纵关注值
-    int ShortablePool, int TotalShortable);   // 可融券余量/总量
+    int ShortablePool, int TotalShortable,   // 可融券余量/总量
+    CardStateDto? CardState);   // 卡牌状态(卡牌模式)
 
 // ── 消息 ──
 public record NewsItemDto(string Type, string Headline, int RemainingTicks);
+
+// ── 卡牌 ──
+public record CardInstanceDto(int Id, string Name, string Category, int EnergyCost,
+    decimal CashCost, string Description);
+public record CardStateDto(int Turn, int Energy, string Phase,
+    int CardsPlayed, int MaxCardsPerTurn,
+    List<CardInstanceDto> Hand, string? LastCombo);
 
 // ── 关卡结算 ──
 public record LevelResultDto(bool IsVictory, int Stars, string CoachComment, string FailureReason,
