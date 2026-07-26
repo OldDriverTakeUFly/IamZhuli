@@ -313,6 +313,25 @@
   </div>
 </div>
 
+<!-- 组牌界面:选关卡后、盘前研究前显示 -->
+<div id="deckBuilderModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:96;align-items:center;justify-content:center;">
+  <div style="background:#1a1d24;padding:20px 28px;border-radius:12px;max-width:720px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <span style="font-size:18px;font-weight:bold;color:#e8c44a;">🎴 组建你的牌组</span>
+      <span style="font-size:12px;color:#888;">已选 <span id="deckCount" style="color:#e8c44a;font-weight:bold;">0</span>/15 张</span>
+    </div>
+    <div style="font-size:11px;color:#666;margin-bottom:10px;">从牌库中选15张(可重复),组成你的操盘策略。选越多同一张牌,抽到概率越高。</div>
+    <div id="deckLibrary" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;"></div>
+    <div style="font-size:11px;color:#888;margin-bottom:6px;">当前牌组:</div>
+    <div id="deckList" style="display:flex;flex-wrap:wrap;gap:4px;min-height:30px;margin-bottom:12px;padding:6px;background:#11141a;border-radius:6px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-buy" id="deckConfirmBtn" style="width:auto;padding:8px 24px;">确认牌组 → 盘前研究</button>
+      <button class="btn btn-ctrl" id="deckRandomBtn" style="width:auto;padding:8px 16px;">随机15张</button>
+      <button class="btn btn-ctrl" id="deckClearBtn" style="width:auto;padding:8px 16px;">清空</button>
+    </div>
+  </div>
+</div>
+
 <!-- 结算弹窗 -->
 <div id="resultModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;">
   <div style="background:#23272f;padding:30px 40px;border-radius:12px;max-width:560px;text-align:center;">
@@ -962,6 +981,12 @@ function renderHeader(snap) {
   $('preMarketBar').style.display = snap.isPreMarket ? 'block' : 'none';
   $('preMarketCtrl').style.display = snap.isPreMarket ? 'block' : 'none';
   $('tradingCtrl').style.display = snap.isPreMarket ? 'none' : 'flex';
+  // 卡牌模式:进入盘前时显示组牌界面(只显示一次)
+  if (snap.isPreMarket && snap.cardState !== null && !_deckBuilderShown) {
+    _deckBuilderShown = true;
+    showDeckBuilder();
+  }
+  if (!snap.isPreMarket) _deckBuilderShown = false;
   // 盘前态自动切到日K模式,让玩家研究历史K线和筹码(只切一次,避免循环)
   if (snap.isPreMarket && chartMode !== 'daily' && !_preMarketSwitched) {
     _preMarketSwitched = true;
@@ -970,6 +995,81 @@ function renderHeader(snap) {
   if (!snap.isPreMarket) _preMarketSwitched = false;
 }
 let _preMarketSwitched = false;
+let _deckBuilderShown = false;
+let _deckLibrary = null;
+let _deckSelected = [];
+
+// 组牌界面
+async function showDeckBuilder() {
+  // 加载牌库(缓存)
+  if (!_deckLibrary) {
+    try { _deckLibrary = await (await fetch('/api/card/library')).json(); }
+    catch { _deckLibrary = []; }
+  }
+  _deckSelected = [];
+  renderDeckBuilder();
+  $('deckBuilderModal').style.display = 'flex';
+}
+
+function renderDeckBuilder() {
+  // 牌库列表(可点击添加)
+  $('deckLibrary').innerHTML = _deckLibrary.map(c => {
+    const count = _deckSelected.filter(n => n === c.name).length;
+    return `<div class="card-item card-cat-${c.category}" data-cardname="${c.name}" style="cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;">
+        <span class="card-name">${c.name}</span>
+        <span class="card-cost">${'⚡'.repeat(c.energyCost)||'免费'} ${count > 0 ? `×${count}` : ''}</span>
+      </div>
+      <div class="card-desc">${c.description}</div>
+    </div>`;
+  }).join('');
+  // 点击牌库卡片=添加到牌组
+  document.querySelectorAll('#deckLibrary .card-item').forEach(el => {
+    el.onclick = () => {
+      if (_deckSelected.length >= 15) return;
+      _deckSelected.push(el.dataset.cardname);
+      renderDeckBuilder();
+    };
+  });
+  // 当前牌组(可点击移除)
+  $('deckList').innerHTML = _deckSelected.length === 0
+    ? '<span style="color:#555;font-size:11px;">点击上方卡牌添加到牌组</span>'
+    : _deckSelected.map((n, i) => {
+        return `<span class="card-item" data-remidx="${i}" style="cursor:pointer;padding:2px 6px;font-size:11px;">${n} ✕</span>`;
+      }).join('');
+  document.querySelectorAll('#deckList .card-item').forEach(el => {
+    el.onclick = () => {
+      _deckSelected.splice(parseInt(el.dataset.remidx), 1);
+      renderDeckBuilder();
+    };
+  });
+  $('deckCount').textContent = _deckSelected.length;
+}
+
+$('deckConfirmBtn').onclick = async () => {
+  if (_deckSelected.length === 0) {
+    // 空牌组=不组牌,用默认随机
+    $('deckBuilderModal').style.display = 'none';
+    return;
+  }
+  const r = await (await fetch('/api/card/deck', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(_deckSelected)
+  })).json();
+  if (r.ok) {
+    $('deckBuilderModal').style.display = 'none';
+  } else {
+    alert(r.error);
+  }
+};
+$('deckRandomBtn').onclick = () => {
+  _deckSelected = [];
+  for (let i = 0; i < 15; i++) {
+    _deckSelected.push(_deckLibrary[Math.floor(Math.random() * _deckLibrary.length)].name);
+  }
+  renderDeckBuilder();
+};
+$('deckClearBtn').onclick = () => { _deckSelected = []; renderDeckBuilder(); };
 let _chipDay = 0;
 async function loadDayChipPanel(day) {
   try {

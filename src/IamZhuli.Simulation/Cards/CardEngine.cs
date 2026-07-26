@@ -35,6 +35,15 @@ public sealed class CardEngine
     /// <summary>上次触发的连招(供前端展示)。</summary>
     public string? LastCombo { get; private set; }
 
+    /// <summary>自配牌组(玩家从牌库挑选的牌,可重复)。为空则用全牌库随机。</summary>
+    private List<CardDefinition> _deck = new();
+    /// <summary>牌组抽牌队列(洗牌后的顺序)。</summary>
+    private Queue<CardDefinition> _drawPile = new();
+    /// <summary>弃牌堆(用过的牌)。</summary>
+    private List<CardDefinition> _discardPile = new();
+    /// <summary>是否使用自配牌组。</summary>
+    public bool HasCustomDeck => _deck.Count > 0;
+
     /// <summary>延迟效果定义。</summary>
     public sealed record PendingEffect(CardEffect Effect, int RemainingTicks, int EffectValue, int TickInterval, int TicksSinceLast);
 
@@ -54,7 +63,31 @@ public sealed class CardEngine
         _rng = new Random(seed ?? Environment.TickCount);
     }
 
-    /// <summary>初始化:抽起始手牌,进入第一回合Play阶段。</summary>
+    /// <summary>设置自配牌组(从牌库挑选的牌列表,可重复同一张)。</summary>
+    public void SetDeck(List<CardDefinition> deck)
+    {
+        _deck = deck;
+        _drawPile.Clear();
+        _discardPile.Clear();
+    }
+
+    /// <summary>洗牌:把弃牌堆+剩余牌重新打乱放入抽牌队列。</summary>
+    private void Shuffle()
+    {
+        var all = new List<CardDefinition>(_drawPile);
+        all.AddRange(_discardPile);
+        _discardPile.Clear();
+        _drawPile.Clear();
+        // Fisher-Yates 洗牌
+        for (int i = all.Count - 1; i > 0; i--)
+        {
+            int j = _rng.Next(i + 1);
+            (all[i], all[j]) = (all[j], all[i]);
+        }
+        foreach (var c in all) _drawPile.Enqueue(c);
+    }
+
+    /// <summary>初始化:洗牌、抽起始手牌、进入第一回合Play阶段。</summary>
     public void Init()
     {
         Turn = 0;
@@ -63,6 +96,14 @@ public sealed class CardEngine
         CardsPlayedThisTurn = 0;
         IsLayingLow = false;
         Hand.Clear();
+        _drawPile.Clear();
+        _discardPile.Clear();
+        // 准备抽牌堆:自配牌组 or 全牌库
+        if (HasCustomDeck)
+        {
+            foreach (var c in _deck) _drawPile.Enqueue(c);
+            Shuffle();
+        }
         for (int i = 0; i < HandSize; i++) DrawCard();
         Phase = CardPhase.Play;
     }
@@ -91,8 +132,9 @@ public sealed class CardEngine
         Energy -= def.EnergyCost;
         CardsPlayedThisTurn++;
 
-        // 从手牌移除,抽新牌
+        // 从手牌移除,放入弃牌堆,抽新牌
         Hand.RemoveAt(handIndex);
+        if (HasCustomDeck) _discardPile.Add(def);
         DrawCard();
 
         // 记录出牌(连招检测)
@@ -179,8 +221,23 @@ public sealed class CardEngine
     private void DrawCard()
     {
         if (Hand.Count >= HandSize) return;
-        var def = CardDefinition.Library[_rng.Next(CardDefinition.Library.Count)];
-        Hand.Add(new CardInstance(++_cardIdSeq, def));
+        // 自配牌组模式:从抽牌堆抽,空了则洗弃牌堆
+        if (HasCustomDeck)
+        {
+            if (_drawPile.Count == 0)
+            {
+                if (_discardPile.Count == 0) return;   // 牌组耗尽
+                Shuffle();   // 弃牌堆洗回
+            }
+            var def = _drawPile.Dequeue();
+            Hand.Add(new CardInstance(++_cardIdSeq, def));
+        }
+        else
+        {
+            // 无自配牌组:全牌库随机(原行为)
+            var def = CardDefinition.Library[_rng.Next(CardDefinition.Library.Count)];
+            Hand.Add(new CardInstance(++_cardIdSeq, def));
+        }
     }
 
     /// <summary>日切重置:回合归零,清延迟效果。</summary>

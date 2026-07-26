@@ -100,6 +100,17 @@ app.MapPost("/api/card/endturn", (GameSingleton game) =>
     return Results.Ok(new { ok = true });
 });
 
+app.MapGet("/api/card/library", () =>
+    Results.Ok(IamZhuli.Simulation.Cards.CardDefinition.Library
+        .Select(c => new { name = c.Name, category = c.Category.ToString(), energyCost = c.EnergyCost,
+            cashCost = c.CashCost, description = c.Description }).ToList()));
+
+app.MapPost("/api/card/deck", async (GameSingleton game, List<string> cardNames) =>
+{
+    var ok = game.SetDeck(cardNames, out var error);
+    return Results.Ok(new { ok, error });
+});
+
 app.MapPost("/api/retry", async (GameSingleton game) =>
 { await game.RetryAsync(); return Results.Ok(); });
 

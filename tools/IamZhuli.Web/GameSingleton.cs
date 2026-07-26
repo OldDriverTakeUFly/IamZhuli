@@ -588,6 +588,26 @@ public sealed class GameSingleton
         _cardEngine?.EndTurn();
     }
 
+    /// <summary>卡牌模式:设置自配牌组。cardNames=牌名列表(可重复)。</summary>
+    public bool SetDeck(List<string> cardNames, out string error)
+    {
+        error = "";
+        if (_cardEngine == null) { error = "卡牌模式未启用"; return false; }
+        if (cardNames.Count == 0) { error = "牌组不能为空"; return false; }
+        if (cardNames.Count > 30) { error = "牌组最多30张"; return false; }
+
+        var deck = new List<IamZhuli.Simulation.Cards.CardDefinition>();
+        foreach (var name in cardNames)
+        {
+            var def = IamZhuli.Simulation.Cards.CardDefinition.Library
+                .FirstOrDefault(c => c.Name == name);
+            if (def == null) { error = $"未知卡牌: {name}"; return false; }
+            deck.Add(def);
+        }
+        _cardEngine.SetDeck(deck);
+        return true;
+    }
+
     /// <summary>执行卡牌效果(由 CardEngine.PlayCard 调用)。</summary>
     private bool ExecuteCardEffect(CardDefinition def)
     {
