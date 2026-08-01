@@ -585,7 +585,93 @@ public sealed class GameSingleton
     /// <summary>卡牌模式:结束回合 → 进入执行阶段。</summary>
     public void EndCardTurn()
     {
-        _cardEngine?.EndTurn();
+        if (_cardEngine == null) return;
+
+        // —— 揭牌:收集所有人的订单意图,统一撮合 ——
+        var engine = _loop.Session.Engine;
+        var session = _loop.Session;
+
+        // 1. AI 产出意图
+        if (_ai != null)
+            _cardEngine.PendingIntents.AddRange(_ai.ProduceIntents(session));
+        if (_institutionB != null)
+            _cardEngine.PendingIntents.AddRange(_institutionB.ProduceIntents(session));
+
+        // 2. 清空订单簿(清除上一回合的残余挂单)
+        engine.ClearBook();
+        session.OnBookCleared();
+
+        // 3. 所有限价意图 Rest 到订单簿;市价意图暂存
+        var marketIntents = new List<IamZhuli.Simulation.Cards.OrderIntent>();
+        foreach (var intent in _cardEngine.PendingIntents)
+        {
+            if (intent.Type == OrderType.Limit)
+            {
+                // 创建限价单并 Rest 到簿(不撮合)
+                try
+                {
+                    var order = engine.CreateOrder(intent.Participant, intent.Side, OrderType.Limit,
+                        new Price(intent.Price), new Quantity(intent.Qty));
+                    engine.RestOrder(order);
+                    if (intent.IsShort) session.MarkShortOrder(order.Id);
+                }
+                catch { /* 无效价格忽略 */ }
+            }
+            else
+            {
+                marketIntents.Add(intent);
+            }
+        }
+
+        // 4. 市价单转换为最优价限价单(以当前盘口价格挂入)
+        foreach (var intent in marketIntents)
+        {
+            try
+            {
+                decimal price = intent.Side == Side.Buy
+                    ? (engine.View.BestAsk?.Value ?? engine.Rules.UpperLimit.Value)
+                    : (engine.View.BestBid?.Value ?? engine.Rules.LowerLimit.Value);
+                var order = engine.CreateOrder(intent.Participant, intent.Side, OrderType.Limit,
+                    new Price(price), new Quantity(intent.Qty));
+                engine.RestOrder(order);
+                if (intent.IsShort) session.MarkShortOrder(order.Id);
+            }
+            catch { }
+        }
+
+        // 5. 集合竞价定价
+        var auction = engine.CallAuction();
+
+        // 6. 如果有交叉,集中撮合
+        if (auction is { } result)
+        {
+            engine.SetLastPrice(result.Price);
+            var trades = engine.SweepAtPrice(result.Price);
+
+            // 7. 结算成交(复用现有结算逻辑)
+            foreach (var trade in trades)
+            {
+                var taker = session.AllAccounts.FirstOrDefault(a => a.Id.Equals(trade.TakerId));
+                var maker = session.AllAccounts.FirstOrDefault(a => a.Id.Equals(trade.MakerId));
+                if (taker == null || maker == null) continue;
+
+                bool takerShort = session.IsShortOrder(trade.TakerOrderId);
+                bool makerShort = session.IsShortOrder(trade.MakerOrderId);
+
+                if (trade.TakerSide == Side.Buy)
+                {
+                    if (takerShort) taker.ShortCover(trade.Quantity, trade.Price);
+                    else taker.ApplyBuyFill(trade.TakerOrderId, trade.Quantity, trade.Price);
+                    if (makerShort) maker.ShortSell(trade.Quantity, trade.Price);
+                    else maker.ApplySellFill(trade.Quantity, trade.Price);
+                }
+                session.NotifyTrade(trade);
+            }
+        }
+
+        // 8. 清空意图,进入执行阶段
+        _cardEngine.PendingIntents.Clear();
+        _cardEngine.EndTurn();
     }
 
     /// <summary>卡牌模式:设置自配牌组。cardNames=牌名列表(可重复)。</summary>
@@ -608,7 +694,8 @@ public sealed class GameSingleton
         return true;
     }
 
-    /// <summary>执行卡牌效果(由 CardEngine.PlayCard 调用)。</summary>
+    /// <summary>执行卡牌效果(由 CardEngine.PlayCard 调用)。
+    /// 操盘牌→收集 OrderIntent(揭牌时撮合);舆论/信号牌→立即生效。</summary>
     private bool ExecuteCardEffect(CardDefinition def)
     {
         var session = _loop.Session;
@@ -617,31 +704,39 @@ public sealed class GameSingleton
         {
             switch (def.Effect)
             {
+                // —— 操盘牌:收集为 OrderIntent(不立即撮合) ——
                 case CardEffect.LimitBuy:
                     decimal bid = view.BestBid?.Value ?? 10m;
-                    session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Limit, new Price(bid - 0.01m), new Quantity(def.EffectValue)));
+                    _cardEngine!.PendingIntents.Add(new IamZhuli.Simulation.Cards.OrderIntent(
+                        Player, Side.Buy, OrderType.Limit, bid - 0.01m, def.EffectValue));
                     break;
                 case CardEffect.MarketBuy:
-                    session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Market, Price.Zero, new Quantity(def.EffectValue)));
+                    _cardEngine!.PendingIntents.Add(new IamZhuli.Simulation.Cards.OrderIntent(
+                        Player, Side.Buy, OrderType.Market, 0, def.EffectValue));
                     break;
                 case CardEffect.MarketSell:
-                    session.Submit(new OrderRequest(Player, Side.Sell, OrderType.Market, Price.Zero, new Quantity(def.EffectValue)));
+                    _cardEngine!.PendingIntents.Add(new IamZhuli.Simulation.Cards.OrderIntent(
+                        Player, Side.Sell, OrderType.Market, 0, def.EffectValue));
                     break;
                 case CardEffect.LimitWall:
                     decimal p = view.LastPrice?.Value ?? 10m;
-                    session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Limit, new Price(p - 0.03m), new Quantity(def.EffectValue)));
-                    session.Submit(new OrderRequest(Player, Side.Sell, OrderType.Limit, new Price(p + 0.03m), new Quantity(def.EffectValue)));
+                    _cardEngine!.PendingIntents.Add(new IamZhuli.Simulation.Cards.OrderIntent(
+                        Player, Side.Buy, OrderType.Limit, p - 0.03m, def.EffectValue));
+                    _cardEngine!.PendingIntents.Add(new IamZhuli.Simulation.Cards.OrderIntent(
+                        Player, Side.Sell, OrderType.Limit, p + 0.03m, def.EffectValue));
                     break;
                 case CardEffect.ScheduledSell:
-                    // 延迟效果,由 OnTick 中 CardEngine.PendingEffects 执行,这里不立即做
+                    // 延迟效果,由 OnTick 中 CardEngine.PendingEffects 执行
                     break;
                 case CardEffect.ShortSell:
-                    session.Submit(new OrderRequest(Player, Side.Sell, OrderType.Market, Price.Zero, new Quantity(def.EffectValue), IsShort: true));
+                    _cardEngine!.PendingIntents.Add(new IamZhuli.Simulation.Cards.OrderIntent(
+                        Player, Side.Sell, OrderType.Market, 0, def.EffectValue, IsShort: true));
                     break;
                 case CardEffect.ShortCover:
                     int coverQty = _player.Position.ShortQty.Value;
                     if (coverQty <= 0) return false;
-                    session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Market, Price.Zero, new Quantity(coverQty), IsShort: true));
+                    _cardEngine!.PendingIntents.Add(new IamZhuli.Simulation.Cards.OrderIntent(
+                        Player, Side.Buy, OrderType.Market, 0, coverQty, IsShort: true));
                     break;
                 case CardEffect.NewsPositive:
                     _retail.Sentiment.NewsShock(true, 0.15m);

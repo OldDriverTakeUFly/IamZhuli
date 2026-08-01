@@ -1,6 +1,7 @@
 using IamZhuli.Core;
 using IamZhuli.Engine;
 using IamZhuli.Simulation.Accounts;
+using IamZhuli.Simulation.Cards;
 using IamZhuli.Simulation.Participants;
 using IamZhuli.Simulation.Sessions;
 using IamZhuli.Simulation.Time;
@@ -222,6 +223,46 @@ public sealed class AIMainForce : IParticipant
         var side = buy ? Side.Buy : Side.Sell;
         try { s.Submit(new OrderRequest(Id, side, OrderType.Limit, p, new Quantity(qty))); }
         catch { /* 资金/持仓不足,忽略 */ }
+    }
+
+    /// <summary>卡牌模式:AI 根据当前状态产出订单意图(不立即撮合,揭牌时统一撮合)。</summary>
+    public List<OrderIntent> ProduceIntents(TradingSession session)
+    {
+        var intents = new List<OrderIntent>();
+        var view = session.Engine.View;
+        var price = view.LastPrice ?? _intrinsic;
+        decimal p = price.Value;
+
+        // 根据状态机当前状态产出意图
+        switch (_brain.State)
+        {
+            case AIState.Defend:
+                // 护盘:限价买入(挂在现价下方)
+                intents.Add(new OrderIntent(Id, Side.Buy, OrderType.Limit, p - 0.02m, _strength / 3));
+                break;
+            case AIState.Wash:
+                // 洗盘:市价卖出(砸)
+                if (_account.Position.Available.Value > 100)
+                    intents.Add(new OrderIntent(Id, Side.Sell, OrderType.Market, 0, Math.Min(_account.Position.Available.Value / 4, _strength / 2)));
+                break;
+            case AIState.Distribute:
+                // 出货:限价卖出
+                if (_account.Position.Available.Value > 50)
+                    intents.Add(new OrderIntent(Id, Side.Sell, OrderType.Limit, p + 0.02m, Math.Min(_account.Position.Available.Value / 6, _strength / 3)));
+                break;
+            case AIState.Follow:
+                // 跟风:市价买入
+                intents.Add(new OrderIntent(Id, Side.Buy, OrderType.Market, 0, _rng.Next(2, 6) * 10));
+                break;
+            case AIState.Counter:
+                // 反杀:市价卖出 + 可能做空
+                if (_account.Position.Available.Value > 100)
+                    intents.Add(new OrderIntent(Id, Side.Sell, OrderType.Market, 0, Math.Min(_account.Position.Available.Value / 3, _strength)));
+                if (p > _intrinsic.Value * 1.1m && _account.Position.ShortQty.Value < _strength * 3)
+                    intents.Add(new OrderIntent(Id, Side.Sell, OrderType.Limit, p, _rng.Next(2, 5) * 10, IsShort: true));
+                break;
+        }
+        return intents;
     }
 
     public void OnNewDay() { /* T+1 解锁由 Session 统一处理 */ }

@@ -31,6 +31,9 @@ public sealed class MatchingEngine
                              Price price, Quantity qty)
         => new(new OrderId(++_orderIdSeq), participant, side, type, price, qty, ++_orderSeq);
 
+    /// <summary>将限价单挂入订单簿(不撮合,用于集中竞价收集阶段)。</summary>
+    public void RestOrder(Order order) => _book.Rest(order);
+
     /// <summary>
     /// 提交订单进入撮合。返回撮合结果(成交列表、最终状态、剩余量)。
     /// 限价单剩余挂簿;市价单剩余作废(Expired)。
@@ -190,6 +193,53 @@ public sealed class MatchingEngine
 
     /// <summary>设置现价(集合竞价后确立开盘价用)。</summary>
     public void SetLastPrice(Price price) => _book.RecordTrade(price);
+
+    /// <summary>在指定价格一次性撮合所有交叉订单(集中竞价撮合)。
+    /// 买单价格≥auctionPrice 的吃卖单价格≤auctionPrice 的,直到一方耗尽。
+    /// 成交价统一为 auctionPrice(最大成交量原则确定的价格)。
+    /// 返回所有成交记录。撮合后未成交的限价单保留在簿中。</summary>
+    public List<Trade> SweepAtPrice(Price auctionPrice)
+    {
+        var trades = new List<Trade>();
+        decimal p = auctionPrice.Value;
+
+        while (true)
+        {
+            var bestBid = _book.BestLevel(Side.Buy);
+            var bestAsk = _book.BestLevel(Side.Sell);
+            // 双方都必须存在且价格交叉(买价≥P 且 卖价≤P)
+            if (bestBid == null || bestAsk == null) break;
+            if (bestBid.Price.Value < p || bestAsk.Price.Value > p) break;
+
+            var bidOrder = bestBid.Peek();
+            var askOrder = bestAsk.Peek();
+            int fillQty = Math.Min(bidOrder.RemainingQty.Value, askOrder.RemainingQty.Value);
+            if (fillQty <= 0) break;
+
+            var qty = new Quantity(fillQty);
+            bidOrder.Fill(qty);
+            askOrder.Fill(qty);
+
+            // 成交价统一为竞价价格 auctionPrice
+            var trade = new Trade(
+                new TradeId(++_tradeSeq), _orderSeq,
+                auctionPrice, qty,
+                Side.Buy, bidOrder.Participant, bidOrder.Id,
+                askOrder.Participant, askOrder.Id);
+            trades.Add(trade);
+
+            // 清理已完成的订单
+            if (bidOrder.IsFilled || bidOrder.RemainingQty.IsZero)
+                _book.Remove(bidOrder);
+            if (askOrder.IsFilled || askOrder.RemainingQty.IsZero)
+                _book.Remove(askOrder);
+        }
+
+        if (trades.Count > 0)
+            _book.RecordTrade(auctionPrice);
+
+        return trades;
+    }
     public int CancelAll(ParticipantId participant)
     {
         // 简化实现:遍历索引撤单(M1 阶段挂单量不大,够用)

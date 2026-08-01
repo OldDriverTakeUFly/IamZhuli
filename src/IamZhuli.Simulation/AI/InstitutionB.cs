@@ -1,6 +1,7 @@
 using IamZhuli.Core;
 using IamZhuli.Engine;
 using IamZhuli.Simulation.Accounts;
+using IamZhuli.Simulation.Cards;
 using IamZhuli.Simulation.Participants;
 using IamZhuli.Simulation.Sessions;
 using IamZhuli.Simulation.Time;
@@ -255,5 +256,34 @@ public sealed class InstitutionB : IParticipant
     }
 
     private static decimal Align(decimal v) => Math.Round(Math.Round(v / 0.01m) * 0.01m, 2);
+    /// <summary>卡牌模式:机构B 根据风险等级产出订单意图。</summary>
+    public List<OrderIntent> ProduceIntents(TradingSession session)
+    {
+        var intents = new List<OrderIntent>();
+        var view = session.Engine.View;
+        decimal price = view.LastPrice?.Value ?? _fairValue.Value;
+        int depth = Math.Max(10, _baseDepthPerLevel);
+        decimal spread = MarketMakerRiskController.SpreadFactor(CurrentRiskLevel);
+
+        // 做市:买卖各挂几档(正常状态)
+        if (CurrentRiskLevel < RiskLevel.Critical)
+        {
+            decimal df = CurrentRiskLevel == RiskLevel.High ? 0.3m : 1m;
+            for (int i = 1; i <= _levels; i++)
+            {
+                intents.Add(new OrderIntent(Id, Side.Buy, OrderType.Limit, price - i * spread, (int)(depth * df)));
+                intents.Add(new OrderIntent(Id, Side.Sell, OrderType.Limit, price + i * spread, (int)(depth * df)));
+            }
+        }
+        // 高风险:减仓
+        if (CurrentRiskLevel >= RiskLevel.High && _account.Position.Available.Value > 100)
+            intents.Add(new OrderIntent(Id, Side.Sell, OrderType.Market, 0, Math.Min(_account.Position.Available.Value / 5, 500)));
+        // 严重高估:做空
+        if (price > _fairValue.Value * 1.10m && _account.Position.ShortQty.Value < 5000)
+            intents.Add(new OrderIntent(Id, Side.Sell, OrderType.Limit, price, _rng.Next(5, 15) * 10, IsShort: true));
+
+        return intents;
+    }
+
     public void OnNewDay() { }
 }

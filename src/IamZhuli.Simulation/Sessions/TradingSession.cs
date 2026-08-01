@@ -220,6 +220,19 @@ public sealed class TradingSession
     /// <summary>订单簿清空时同步清理做空标记(日切隔夜挂单清零)。</summary>
     public void OnBookCleared() => _shortOrders.Clear();
 
+    /// <summary>标记某订单为做空单(集中竞价用)。</summary>
+    public void MarkShortOrder(OrderId orderId) => _shortOrders.Add(orderId);
+
+    /// <summary>判断某订单是否为做空单。</summary>
+    public bool IsShortOrder(OrderId orderId) => _shortOrders.Contains(orderId);
+
+    /// <summary>通知成交(触发OnTrade事件,集中竞价结算后调用)。</summary>
+    public void NotifyTrade(Trade trade)
+    {
+        OnTrade?.Invoke(trade.Price, trade.Quantity, trade.TakerSide);
+        OnTradeDetailed?.Invoke(trade);
+    }
+
     /// <summary>强制平仓(爆仓):市价买回全部空头持仓。
     /// 返回是否执行了平仓(有空头才执行)。</summary>
     public bool ForceLiquidate(ParticipantId participant, out int qtyCovered)

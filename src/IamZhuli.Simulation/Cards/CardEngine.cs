@@ -1,4 +1,12 @@
+using IamZhuli.Core;
+using IamZhuli.Engine;
+
 namespace IamZhuli.Simulation.Cards;
+
+/// <summary>订单意图(回合出牌收集,揭牌时统一撮合)。</summary>
+public record OrderIntent(
+    ParticipantId Participant, Side Side, OrderType Type,
+    decimal Price, int Qty, bool IsShort = false);
 
 /// <summary>
 /// 卡牌引擎:管理回合/能量/手牌/出牌验证/延迟效果执行/连招检测。
@@ -34,6 +42,9 @@ public sealed class CardEngine
     public bool IsLayingLow { get; private set; }
     /// <summary>上次触发的连招(供前端展示)。</summary>
     public string? LastCombo { get; private set; }
+
+    /// <summary>本回合收集的订单意图(玩家+AI+散户),揭牌时统一撮合。</summary>
+    public List<OrderIntent> PendingIntents { get; } = new();
 
     /// <summary>自配牌组(玩家从牌库挑选的牌,可重复)。为空则用全牌库随机。</summary>
     private List<CardDefinition> _deck = new();
