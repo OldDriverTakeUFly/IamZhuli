@@ -335,3 +335,58 @@ def fetch_daily_basic_batch(codes: list[str], start_date: str, end_date: str,
     print(f"[batch dbasic] 完成: {out['ts_code'].nunique()} 只, {len(out)} 行")
     return out
 
+
+# ──────────────────────────────────────────────────────────────
+# 筹码分布(主力行为研究用,需 5000 积分)
+# ──────────────────────────────────────────────────────────────
+
+def fetch_cyq_perf_batch(codes: list[str], start_date: str, end_date: str,
+                         sleep: float = _API_SLEEP) -> pd.DataFrame:
+    """批量拉取每日筹码及胜率(cyq_perf),每只股每日一行。
+
+    含字段:weight_avg(加权平均成本)、winner_rate(获利盘比例%)、
+    cost_5/15/50/85/95pct(成本分位数)、his_low/his_high。
+    用于主力行为蒸馏:筹码集中度/获利盘/成本迁移等信号。
+
+    沿用限流 + 断点续传 + 失败容错。5000 积分,cyq_perf 一次返回完整区间(无截断)。
+    """
+    frames = []
+    failed_path = _CACHE_DIR / "_failed_cyqperf.csv"
+    failed_prev = set()
+    if failed_path.exists():
+        failed_prev = set(pd.read_csv(failed_path)["ts_code"].tolist())
+
+    n = len(codes)
+    new_failures: list[str] = []
+    for i, code in enumerate(codes, 1):
+        cache_name = f"cyqperf_{code}_{start_date}_{end_date}"
+        cached = _read_cache(cache_name)
+        if cached is not None and not cached.empty:
+            frames.append(cached)
+            continue   # 命中缓存不睡
+        try:
+            import tushare as ts
+            pro = ts.pro_api()
+            df = pro.cyq_perf(ts_code=code, start_date=start_date, end_date=end_date)
+            if df is None or df.empty:
+                new_failures.append(code)
+            else:
+                df = df.sort_values("trade_date")
+                _write_cache(cache_name, df)
+                frames.append(df)
+        except Exception:
+            new_failures.append(code)
+        time.sleep(sleep)
+        if i % 50 == 0 or i == n:
+            print(f"[batch cyqperf] 进度 {i}/{n}  成功 {len(frames)}  失败 {len(new_failures)}")
+
+    all_failed = (failed_prev | set(new_failures))
+    if all_failed:
+        pd.DataFrame({"ts_code": sorted(all_failed)}).to_csv(failed_path, index=False)
+
+    if not frames:
+        return pd.DataFrame()
+    out = pd.concat(frames, ignore_index=True)
+    print(f"[batch cyqperf] 完成: {out['ts_code'].nunique()} 只, {len(out)} 行")
+    return out
+
