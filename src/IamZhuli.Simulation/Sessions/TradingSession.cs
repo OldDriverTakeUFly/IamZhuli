@@ -65,6 +65,33 @@ public sealed class TradingSession
     /// <summary>提交下单请求。返回订单结果(成交、状态)。</summary>
     public OrderResult Submit(OrderRequest req)
     {
+        var order = PrepareOrder(req);
+
+        // —— 提交撮合 ——
+        var result = Engine.Submit(order);
+
+        // —— 结算成交(含 taker 与 maker 双方) ——
+        SettleTrades(result.Trades);
+
+        // —— taker 买单结束处理:未挂簿(成交/作废)则释放剩余冻结记录 ——
+        if (req.Side == Side.Buy && !req.IsShort && result.FinalStatus != OrderStatus.Active)
+        {
+            _accounts[req.Participant].ReleaseBuyFreezeRemaining(order.Id, result.RemainingQty);
+        }
+        // —— 做空卖单未成交(作废):归还预扣的券池 ——
+        if (req.IsShort && req.Side == Side.Sell && result.FinalStatus != OrderStatus.Active)
+        {
+            ShortablePool += result.RemainingQty.Value;   // 归还未成交部分
+        }
+        // 挂簿(Active)的买单:冻结保留在 Account 中,后续被吃时由 maker 路径结算,撤单时由 Cancel 处理。
+
+        return result;
+    }
+
+    /// <summary>校验并准备订单(可卖/空头持仓/券池预扣/保证金/买单冻结)。
+    /// Submit 与 TryRestForAuction 共用。失败抛异常。</summary>
+    private Order PrepareOrder(OrderRequest req)
+    {
         if (!_accounts.TryGetValue(req.Participant, out var acc))
             throw new InvalidOperationException($"参与者 {req.Participant} 未注册账户。");
 
@@ -76,7 +103,6 @@ public sealed class TradingSession
             throw new InvalidOperationException("空头持仓不足,无法平仓。");
 
         // —— 做空卖单:预冻结保证金(按限价或对手价估算) + 券池余量检查 ——
-        decimal shortMarginFrozen = 0;
         if (req.IsShort && req.Side == Side.Sell)
         {
             // 券池余量检查(先到先得)
@@ -97,8 +123,9 @@ public sealed class TradingSession
         // —— 做空单:记录orderId(maker结算时判断) ——
         if (req.IsShort) _shortOrders.Add(order.Id);
 
-        // —— 买单:冻结资金(需订单 ID 跟踪) ——
-        if (req.Side == Side.Buy)
+        // —— 买单:冻结资金(需订单 ID 跟踪)。
+        //    买回平仓单(IsShort)不冻结:履约保障是保证金(MarginFrozen),冻结现金会双重占用。
+        if (req.Side == Side.Buy && !req.IsShort)
         {
             var frozenPrice = req.Type == OrderType.Limit ? req.Price
                 : (Engine.View.BestAsk ?? Engine.Rules.UpperLimit);
@@ -107,15 +134,18 @@ public sealed class TradingSession
                     ? "可用资金不足。" : "可用资金不足(市价单按对手价预估)。");
         }
 
-        // —— 提交撮合 ——
-        var result = Engine.Submit(order);
+        return order;
+    }
 
-        // —— 结算成交(含 taker 与 maker 双方) ——
-        bool takerIsShort = req.IsShort;
-        foreach (var trade in result.Trades)
+    /// <summary>结算一批成交(taker+maker 双方,含做空路径)。Submit 与集中撮合共用。
+    /// 做空判定统一按 _shortOrders 标记(PrepareOrder 已在 IsShort 时登记)。</summary>
+    private void SettleTrades(IEnumerable<Trade> trades)
+    {
+        foreach (var trade in trades)
         {
             var taker = _accounts[trade.TakerId];
             var maker = _accounts[trade.MakerId];
+            bool takerIsShort = _shortOrders.Contains(trade.TakerOrderId);
             if (trade.TakerSide == Side.Buy)
             {
                 if (takerIsShort)
@@ -129,7 +159,7 @@ public sealed class TradingSession
                 if (_shortOrders.Contains(trade.MakerOrderId))
                 {
                     maker.ShortSell(trade.Quantity, trade.Price);
-                    // maker做空成交,券池已在Submit时预扣,不重复扣
+                    // maker做空成交,券池已在PrepareOrder时预扣,不重复扣
                 }
                 else
                     maker.ApplySellFill(trade.Quantity, trade.Price);
@@ -151,20 +181,48 @@ public sealed class TradingSession
             OnTrade?.Invoke(trade.Price, trade.Quantity, trade.TakerSide);
             OnTradeDetailed?.Invoke(trade);
         }
+    }
 
-        // —— taker 买单结束处理:未挂簿(成交/作废)则释放剩余冻结记录 ——
-        if (req.Side == Side.Buy && !req.IsShort && result.FinalStatus != OrderStatus.Active)
-        {
-            acc.ReleaseBuyFreezeRemaining(order.Id, result.RemainingQty);
-        }
-        // —— 做空卖单未成交(作废):归还预扣的券池 ——
-        if (req.IsShort && req.Side == Side.Sell && result.FinalStatus != OrderStatus.Active)
-        {
-            ShortablePool += result.RemainingQty.Value;   // 归还未成交部分
-        }
-        // 挂簿(Active)的买单:冻结保留在 Account 中,后续被吃时由 maker 路径结算,撤单时由 Cancel 处理。
+    // —— 集中撮合(卡牌模式回合制) ——
 
-        return result;
+    /// <summary>把限价订单校验后挂入订单簿但不撮合(回合末集合竞价用)。
+    /// 校验/冻结/券池预扣与 Submit 完全一致。校验失败(资金/券池/持仓不足)返回 false,该意图作废。</summary>
+    public bool TryRestForAuction(OrderRequest req)
+    {
+        if (req.Type != OrderType.Limit)
+            throw new InvalidOperationException("集中撮合仅接受限价单(市价意图须先转换为限价)。");
+        try
+        {
+            var order = PrepareOrder(req);
+            Engine.RestOrder(order);
+            return true;
+        }
+        catch { return false; }   // 校验失败/非法价格:意图作废,不透支
+    }
+
+    /// <summary>集中撮合成交结算(与 Submit 同一路径,含券池归还/事件触发)。</summary>
+    public void SettleAuctionTrades(IEnumerable<Trade> trades) => SettleTrades(trades);
+
+    /// <summary>清空订单簿并释放全部挂单资源:买单解冻现金、做空卖单归还券池预扣。
+    /// 回合开始清场(EndCardTurn)与日切隔夜清零(StartNextDay)共用。</summary>
+    public int ClearBookAndRefund()
+    {
+        var orders = Engine.ClearBook();
+        int refunded = 0;
+        foreach (var order in orders)
+        {
+            bool wasShort = _shortOrders.Remove(order.Id);
+            if (wasShort && order.Side == Side.Sell)
+            {
+                ShortablePool += order.RemainingQty.Value;   // 归还预扣券池
+                refunded++;
+            }
+            if (order.Side == Side.Buy && !wasShort
+                && _accounts.TryGetValue(order.Participant, out var acc))
+                acc.ReleaseBuyFreezeRemaining(order.Id, order.RemainingQty);
+        }
+        _shortOrders.Clear();   // 兜底清理孤立标记
+        return refunded;
     }
 
     /// <summary>撤销某参与者的指定订单,并释放买单剩余冻结。</summary>
@@ -215,22 +273,6 @@ public sealed class TradingSession
     public void OnNewTradingDay()
     {
         foreach (var acc in _accounts.Values) acc.OnNewTradingDay();
-    }
-
-    /// <summary>订单簿清空时同步清理做空标记(日切隔夜挂单清零)。</summary>
-    public void OnBookCleared() => _shortOrders.Clear();
-
-    /// <summary>标记某订单为做空单(集中竞价用)。</summary>
-    public void MarkShortOrder(OrderId orderId) => _shortOrders.Add(orderId);
-
-    /// <summary>判断某订单是否为做空单。</summary>
-    public bool IsShortOrder(OrderId orderId) => _shortOrders.Contains(orderId);
-
-    /// <summary>通知成交(触发OnTrade事件,集中竞价结算后调用)。</summary>
-    public void NotifyTrade(Trade trade)
-    {
-        OnTrade?.Invoke(trade.Price, trade.Quantity, trade.TakerSide);
-        OnTradeDetailed?.Invoke(trade);
     }
 
     /// <summary>强制平仓(爆仓):市价买回全部空头持仓。

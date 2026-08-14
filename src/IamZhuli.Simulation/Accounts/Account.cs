@@ -45,7 +45,9 @@ public sealed class Account
     }
 
     /// <summary>
-    /// 买单成交结算:按实际成交价扣现金、转入持仓;并按冻结价同步释放该成交部分的冻结(差额补回现金)。
+    /// 买单成交结算:按实际成交价扣现金、转入持仓;并同步释放该成交部分对应的冻结。
+    /// 冻结只是占用标记(现金未离开账户),因此只按冻结价解除占用,不做现金增减——
+    /// 多付的差额自然留在现金里。
     /// </summary>
     public void ApplyBuyFill(OrderId orderId, Quantity qty, Price fillPrice)
     {
@@ -53,11 +55,10 @@ public sealed class Account
         Position.ApplyBuy(qty, fillPrice);
         TotalBoughtQty += qty.Value;
 
-        // 释放该成交部分对应的冻结:冻结价×成交量 释放,差额(冻结价-成交价)补回现金
+        // 释放该成交部分对应的冻结(冻结价×成交量)
         if (_buyFreezes.TryGetValue(orderId, out var f))
         {
             FrozenCash -= f.price.Value * qty.Value * 100;
-            Cash += (f.price.Value - fillPrice.Value) * qty.Value * 100;
         }
     }
 

@@ -278,14 +278,17 @@ public class PlayerSimulationTests
         }
         catch { /* 券池可能不足,允许跳过 */ }
 
-        // 第4天:平仓测试
+        // 第4天:平仓测试(市价单依赖瞬时盘口深度,可能部分成交,循环平仓直到清零)
         AdvanceDay(loop);
         if (player.Position.HasShort)
         {
-            session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Market, Price.Zero,
-                new Quantity(player.Position.ShortQty.Value), IsShort: true));
-            RunTicks(loop, 50);
-            Assert.True(player.Position.ShortQty.Value == 0, "第4天平仓后空头应清零");
+            for (int attempt = 0; attempt < 5 && player.Position.ShortQty.Value > 0; attempt++)
+            {
+                session.Submit(new OrderRequest(Player, Side.Buy, OrderType.Market, Price.Zero,
+                    new Quantity(player.Position.ShortQty.Value), IsShort: true));
+                RunTicks(loop, 50);
+            }
+            Assert.True(player.Position.ShortQty.Value == 0, $"第4天平仓后空头应清零,实际剩{player.Position.ShortQty.Value}");
         }
 
         // 跑完剩余天数

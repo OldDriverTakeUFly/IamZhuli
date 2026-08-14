@@ -118,9 +118,8 @@ public sealed class SimulationLoop
         Clock.AdvanceDay();
         if (!IsFinished)
         {
-            // 1. 挂单清零(撤销所有隔夜挂单)
-            var removed = Session.Engine.ClearBook();
-            Session.OnBookCleared();   // 同步清理做空标记
+            // 1. 挂单清零(撤销所有隔夜挂单,释放买单冻结/归还做空券池)
+            Session.ClearBookAndRefund();
             // 2. T+1 解锁
             Session.OnNewTradingDay();
             // 3. 参与者 OnNewDay(散户池内含情绪延续逻辑)
@@ -152,7 +151,7 @@ public sealed class SimulationLoop
     public void PreplayAdvanceDay()
     {
         if (!IsDayClosed) return;
-        Session.Engine.ClearBook();
+        Session.ClearBookAndRefund();
         Clock.AdvanceDay();
         if (!IsFinished)
         {

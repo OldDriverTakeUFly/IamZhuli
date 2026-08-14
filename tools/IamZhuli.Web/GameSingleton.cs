@@ -582,94 +582,51 @@ public sealed class GameSingleton
         return _cardEngine.PlayCard(handIndex, (def, seq) => ExecuteCardEffect(def), out error);
     }
 
-    /// <summary>卡牌模式:结束回合 → 进入执行阶段。</summary>
+    /// <summary>卡牌模式:结束回合 → 揭牌集中撮合 → 进入执行阶段。</summary>
     public void EndCardTurn()
     {
         if (_cardEngine == null) return;
 
-        // —— 揭牌:收集所有人的订单意图,统一撮合 ——
         var engine = _loop.Session.Engine;
         var session = _loop.Session;
 
-        // 1. AI 产出意图
+        // 1. AI 产出意图(与玩家意图一起进入拍卖)
         if (_ai != null)
             _cardEngine.PendingIntents.AddRange(_ai.ProduceIntents(session));
         if (_institutionB != null)
             _cardEngine.PendingIntents.AddRange(_institutionB.ProduceIntents(session));
 
-        // 2. 清空订单簿(清除上一回合的残余挂单)
-        engine.ClearBook();
-        session.OnBookCleared();
+        // 2. 清场:清空订单簿,释放上一回合挂单的冻结资金/预扣券池
+        session.ClearBookAndRefund();
 
-        // 3. 所有限价意图 Rest 到订单簿;市价意图暂存
-        var marketIntents = new List<IamZhuli.Simulation.Cards.OrderIntent>();
-        foreach (var intent in _cardEngine.PendingIntents)
+        // 3. 限价意图校验后挂入(资金/券池/持仓不足的意图作废,不透支)
+        foreach (var intent in _cardEngine.PendingIntents.Where(i => i.Type == OrderType.Limit))
         {
-            if (intent.Type == OrderType.Limit)
-            {
-                // 创建限价单并 Rest 到簿(不撮合)
-                try
-                {
-                    var order = engine.CreateOrder(intent.Participant, intent.Side, OrderType.Limit,
-                        new Price(intent.Price), new Quantity(intent.Qty));
-                    engine.RestOrder(order);
-                    if (intent.IsShort) session.MarkShortOrder(order.Id);
-                }
-                catch { /* 无效价格忽略 */ }
-            }
-            else
-            {
-                marketIntents.Add(intent);
-            }
+            session.TryRestForAuction(new OrderRequest(
+                intent.Participant, intent.Side, OrderType.Limit,
+                new Price(intent.Price), new Quantity(intent.Qty), IsShort: intent.IsShort));
         }
 
-        // 4. 市价单转换为最优价限价单(以当前盘口价格挂入)
-        foreach (var intent in marketIntents)
+        // 4. 市价意图转为对手价限价单挂入(无对手价时按涨跌停价,符合集合竞价市价单语义)
+        foreach (var intent in _cardEngine.PendingIntents.Where(i => i.Type == OrderType.Market))
         {
-            try
-            {
-                decimal price = intent.Side == Side.Buy
-                    ? (engine.View.BestAsk?.Value ?? engine.Rules.UpperLimit.Value)
-                    : (engine.View.BestBid?.Value ?? engine.Rules.LowerLimit.Value);
-                var order = engine.CreateOrder(intent.Participant, intent.Side, OrderType.Limit,
-                    new Price(price), new Quantity(intent.Qty));
-                engine.RestOrder(order);
-                if (intent.IsShort) session.MarkShortOrder(order.Id);
-            }
-            catch { }
+            decimal price = intent.Side == Side.Buy
+                ? (engine.View.BestAsk?.Value ?? engine.Rules.UpperLimit.Value)
+                : (engine.View.BestBid?.Value ?? engine.Rules.LowerLimit.Value);
+            session.TryRestForAuction(new OrderRequest(
+                intent.Participant, intent.Side, OrderType.Limit,
+                new Price(price), new Quantity(intent.Qty), IsShort: intent.IsShort));
         }
 
-        // 5. 集合竞价定价
-        var auction = engine.CallAuction();
-
-        // 6. 如果有交叉,集中撮合
-        if (auction is { } result)
+        // 5. 集合竞价定价 → 集中撮合(成交价统一为竞价价)→ 统一结算
+        if (engine.CallAuction() is { } result)
         {
             engine.SetLastPrice(result.Price);
             var trades = engine.SweepAtPrice(result.Price);
-
-            // 7. 结算成交(复用现有结算逻辑)
-            foreach (var trade in trades)
-            {
-                var taker = session.AllAccounts.FirstOrDefault(a => a.Id.Equals(trade.TakerId));
-                var maker = session.AllAccounts.FirstOrDefault(a => a.Id.Equals(trade.MakerId));
-                if (taker == null || maker == null) continue;
-
-                bool takerShort = session.IsShortOrder(trade.TakerOrderId);
-                bool makerShort = session.IsShortOrder(trade.MakerOrderId);
-
-                if (trade.TakerSide == Side.Buy)
-                {
-                    if (takerShort) taker.ShortCover(trade.Quantity, trade.Price);
-                    else taker.ApplyBuyFill(trade.TakerOrderId, trade.Quantity, trade.Price);
-                    if (makerShort) maker.ShortSell(trade.Quantity, trade.Price);
-                    else maker.ApplySellFill(trade.Quantity, trade.Price);
-                }
-                session.NotifyTrade(trade);
-            }
+            session.SettleAuctionTrades(trades);
         }
 
-        // 8. 清空意图,进入执行阶段
+        // 6. 清空意图,进入执行阶段
         _cardEngine.PendingIntents.Clear();
         _cardEngine.EndTurn();
     }
