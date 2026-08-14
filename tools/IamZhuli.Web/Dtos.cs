@@ -40,9 +40,15 @@ public record NewsItemDto(string Type, string Headline, int RemainingTicks);
 // ── 卡牌 ──
 public record CardInstanceDto(int Id, string Name, string Category, int EnergyCost,
     decimal CashCost, string Description);
+/// <summary>揭牌成交单笔(买方→卖方,含做空标记)。</summary>
+public record AuctionTradeDto(string Buyer, string Seller, decimal Price, int Qty,
+    bool BuyerIsShort, bool SellerIsShort);
+/// <summary>上回合揭牌结果:竞价价/总量/逐笔成交。</summary>
+public record AuctionResultDto(int Turn, decimal Price, int Volume, List<AuctionTradeDto> Trades);
 public record CardStateDto(int Turn, int Energy, string Phase,
     int CardsPlayed, int MaxCardsPerTurn,
-    List<CardInstanceDto> Hand, string? LastCombo);
+    List<CardInstanceDto> Hand, string? LastCombo,
+    AuctionResultDto? LastAuction);
 
 // ── 关卡结算 ──
 public record LevelResultDto(bool IsVictory, int Stars, string CoachComment, string FailureReason,

@@ -97,7 +97,7 @@ app.MapPost("/api/card/play", (GameSingleton game, int handIndex) =>
 app.MapPost("/api/card/endturn", (GameSingleton game) =>
 {
     game.EndCardTurn();
-    return Results.Ok(new { ok = true });
+    return Results.Ok(new { ok = true, auction = game.LastAuction });
 });
 
 app.MapGet("/api/card/library", () =>

@@ -47,6 +47,8 @@ public sealed class GameSingleton
     private WaterArmyNetwork _waterArmy = null!;
     private BlockTradeSignal _blockSignal = null!;
     private IamZhuli.Simulation.Cards.CardEngine? _cardEngine;
+    /// <summary>上回合揭牌结果(集中撮合价/量/逐笔,随快照推送)。</summary>
+    private AuctionResultDto? _lastAuction;
     /// <summary>是否启用卡牌模式(完全替换实时操作)。</summary>
     public bool CardMode { get; set; } = true;
 
@@ -169,7 +171,7 @@ public sealed class GameSingleton
         _loop.Start();
         IsPreMarket = true;   // 进入盘前准备态,等玩家研究完点"开始操盘"
         // 卡牌引擎初始化(开始操盘时启动第一回合)
-        if (CardMode) _cardEngine = new CardEngine(seed: level.Id.GetHashCode() + 7);
+        if (CardMode) { _cardEngine = new CardEngine(seed: level.Id.GetHashCode() + 7); _lastAuction = null; }
         IsInitialized = true;
     }
 
@@ -402,7 +404,8 @@ public sealed class GameSingleton
             Hand: _cardEngine.Hand.Select(c => new CardInstanceDto(
                 c.UniqueId, c.Definition.Name, c.Definition.Category.ToString(),
                 c.Definition.EnergyCost, c.Definition.CashCost, c.Definition.Description)).ToList(),
-            LastCombo: _cardEngine.LastCombo);
+            LastCombo: _cardEngine.LastCombo,
+            LastAuction: _lastAuction);
     }
 
     /// <summary>提交下单。返回订单结果;失败返回带 Error 的 DTO。</summary>
@@ -619,17 +622,36 @@ public sealed class GameSingleton
         }
 
         // 5. 集合竞价定价 → 集中撮合(成交价统一为竞价价)→ 统一结算
-        if (engine.CallAuction() is { } result)
+        if (engine.CallAuction() is { } auction)
         {
-            engine.SetLastPrice(result.Price);
-            var trades = engine.SweepAtPrice(result.Price);
+            engine.SetLastPrice(auction.Price);
+            var trades = engine.SweepAtPrice(auction.Price);
             session.SettleAuctionTrades(trades);
+
+            // 记录揭牌结果(随快照推送,前端展示"谁在什么价买卖多少")
+            int turn = _cardEngine.Turn;
+            _lastAuction = new AuctionResultDto(turn, auction.Price.Value,
+                trades.Sum(t => t.Quantity.Value),
+                trades.Select(t => new AuctionTradeDto(
+                    DisplayName(t.TakerId), DisplayName(t.MakerId),
+                    t.Price.Value, t.Quantity.Value,
+                    session.IsShortOrder(t.TakerOrderId), session.IsShortOrder(t.MakerOrderId))).ToList());
+        }
+        else
+        {
+            _lastAuction = new AuctionResultDto(_cardEngine.Turn, 0m, 0, new());
         }
 
         // 6. 清空意图,进入执行阶段
         _cardEngine.PendingIntents.Clear();
         _cardEngine.EndTurn();
     }
+
+    /// <summary>上回合揭牌结果(只读,供 endturn 端点直接返回)。</summary>
+    public AuctionResultDto? LastAuction => _lastAuction;
+
+    /// <summary>参与者显示名(Player→你,其余用原始名)。</summary>
+    private static string DisplayName(ParticipantId id) => id.ToString() == "Player" ? "你" : id.ToString();
 
     /// <summary>卡牌模式:设置自配牌组。cardNames=牌名列表(可重复)。</summary>
     public bool SetDeck(List<string> cardNames, out string error)

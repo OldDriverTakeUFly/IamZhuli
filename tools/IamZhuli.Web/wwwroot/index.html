@@ -172,6 +172,13 @@
         <span id="cardCombo" style="font-size:11px;color:#e8c44a;display:none;"></span>
       </div>
       <div id="cardMsg" style="font-size:11px;color:#888;margin-top:4px;min-height:14px;"></div>
+      <!-- 上回合揭牌(集中撮合结果) -->
+      <div id="revealPanel" style="display:none;margin-top:8px;border-top:1px dashed #444;padding-top:6px;">
+        <div style="font-size:11px;color:#e8c44a;margin-bottom:4px;">
+          🏛 第<span id="revealTurn">1</span>回合揭牌 · 竞价价 <span id="revealPrice" style="font-weight:bold;">--</span> · 总量 <span id="revealVol">0</span>手
+        </div>
+        <div id="revealTrades" style="max-height:150px;overflow-y:auto;font-size:11px;"></div>
+      </div>
     </div>
     <h3 id="orderTitle">下单</h3>
     <div class="order-form">
@@ -592,6 +599,26 @@ function renderCards(snap) {
       <div class="card-desc">${c.description}</div>
     </div>`;
   }).join('');
+  // 揭牌结果(谁在什么价买卖多少,涉及你的行高亮)
+  const ra = cs.lastAuction;
+  if (ra) {
+    $('revealPanel').style.display = 'block';
+    $('revealTurn').textContent = ra.turn + 1;
+    $('revealPrice').textContent = ra.volume > 0 ? ra.price.toFixed(2) : '无交叉';
+    $('revealVol').textContent = ra.volume;
+    $('revealTrades').innerHTML = ra.trades.map(t => {
+      const b = t.buyer + (t.buyerIsShort ? '<span style="color:#ab47bc">·平仓</span>' : '');
+      const s = t.seller + (t.sellerIsShort ? '<span style="color:#ab47bc">·做空</span>' : '');
+      const mine = (t.buyer === '你' || t.seller === '你') ? 'background:#2a2e38;' : '';
+      return `<div style="display:flex;justify-content:space-between;padding:2px 4px;border-radius:3px;${mine}">
+        <span style="color:#ef5350;flex:1;">${b}</span>
+        <span style="color:#888;">${t.qty}手 @${t.price.toFixed(2)}</span>
+        <span style="color:#26a69a;flex:1;text-align:right;">${s}</span>
+      </div>`;
+    }).join('');
+  } else {
+    $('revealPanel').style.display = 'none';
+  }
   // 出牌点击
   document.querySelectorAll('.card-item:not(.disabled)').forEach(el => {
     el.onclick = async () => {
@@ -604,8 +631,12 @@ function renderCards(snap) {
 }
 // 结束回合
 $('endTurnBtn').onclick = async () => {
-  await fetch('/api/card/endturn', { method: 'POST' });
-  $('cardMsg').textContent = '回合结束,执行中...';
+  const r = await (await fetch('/api/card/endturn', { method: 'POST' })).json();
+  const a = r.auction;
+  $('cardMsg').textContent = a && a.volume > 0
+    ? `🏛 揭牌:竞价价 ${a.price.toFixed(2)},成交 ${a.volume} 手`
+    : '🏛 揭牌:无交叉成交,挂单保留';
+  $('cardMsg').style.color = '#e8c44a';
 };
 
 // —— 渲染我的挂单(每次快照刷新)——
