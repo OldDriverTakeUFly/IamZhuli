@@ -55,3 +55,35 @@ IamZhuli.Simulation / Engine / Core (DLL:撮合/散户/AI/监管/复盘)
 ## DLL 更新
 
 逻辑层代码改动后:重新执行 `bash unity/build-dlls.sh`,回 Unity 等待自动重编译。
+
+## 测试(三层,由早到晚)
+
+### 1. 离线静态门禁(不装 Unity,现在就跑)
+
+```bash
+bash unity/validate-offline.sh
+```
+
+检查 UXML 语法 / asmdef·manifest JSON / C# 版本纪律(禁 C#10+ 特性,保 2022.3 兼容) / 括号平衡 /
+**MainUI↔UXML 元素名一致性**(解析 43 个 Q 查询对照 UXML) / UxmlFactory。提交前必跑。
+
+### 2. 编辑器内 Test Runner(装好 Unity 后)
+
+`Window → General → Test Runner`:
+
+- **EditMode**(9 个): `GameCoreSmokeTests`(DLL 加载/预演/手牌/揭牌/整局自动打到结算+三方排名/重试)、
+  `UxmlSanityTests`(UXML 元素齐全/主题加载/自绘图表实例化与数据安全)、`SceneBuilderTests`(一键场景接线)
+- **PlayMode**(2 个): GameHost 真实帧驱动发快照、卡牌出牌阶段时钟冻结
+
+### 3. CLI 跑器(免开编辑器,CI 可用)
+
+```bash
+UNITY_PATH=~/Unity/Hub/Editor/2022.3.22f1/Editor/Unity bash unity/run-tests.sh All
+# 或只跑 EditMode(支持无图形 -batchmode):
+UNITY_PATH=... bash unity/run-tests.sh EditMode
+```
+
+结果 NUnit XML 在 `unity/test-results/`,附摘要打印。
+
+> 逻辑层本身(撮合/散户/AI/卡牌结算)的 149 个 xUnit 测试仍在仓库根目录跑:
+> `rtk dotnet test`——Unity 只测"桥与皮",内核测试不重复。

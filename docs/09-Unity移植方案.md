@@ -90,4 +90,8 @@ UI 控制器(订阅 GameHost.OnSnapshot)→ UXML 元素刷新
 
 - M1: `dotnet build` 0 错误、149+ 测试全过、Web 端到端 curl(选关→出牌→揭牌→结算数字吻合)。
 - M2/M3: C# 侧无法编译(UnityEngine 引用缺失),靠 API 纪律(只用稳定 API)+ 用户打开编辑器后首轮编译零错的验收标准;UXML/USS 为声明式,风险低。
+- **测试三层**:
+  1. `unity/validate-offline.sh`——离线静态门禁(UXML/JSON 语法、C# 版本纪律、MainUI↔UXML 43 个元素名一致性),**不装 Unity 即跑**,提交前必过;
+  2. Unity Test Framework——EditMode 9 个(GameCore 全流程冒烟/UXML 一致性/场景搭建接线)+ PlayMode 2 个(GameHost 帧驱动/出牌冻结),装好编辑器后在 Test Runner 一键跑;
+  3. `unity/run-tests.sh`——Unity CLI 跑器(NUnit XML 结果,EditMode 支持无图形),供 CI。
 - 每步 git 提交,可回退。

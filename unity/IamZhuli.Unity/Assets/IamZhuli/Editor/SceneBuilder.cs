@@ -18,7 +18,10 @@ namespace IamZhuli.Unity.EditorTools
         private const string ScenePath = "Assets/Scenes/Main.unity";
 
         [MenuItem("我是主力/一键搭建场景")]
-        public static void Build()
+        public static void Build() => Build(interactive: true);
+
+        /// <summary>搭建场景。interactive=false 供测试调用(不弹窗)。</summary>
+        public static void Build(bool interactive)
         {
             // 1. PanelSettings(不存在则创建,挂默认运行时主题)
             var panel = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelPath);
@@ -66,7 +69,8 @@ namespace IamZhuli.Unity.EditorTools
             // 6. 保存
             if (!Directory.Exists("Assets/Scenes")) Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);
-            EditorUtility.DisplayDialog("我是主力", "场景搭建完成:\n" + ScenePath + "\n\n点击 ▶ Play 开始游戏(先选关卡)。", "好");
+            if (interactive)
+                EditorUtility.DisplayDialog("我是主力", "场景搭建完成:\n" + ScenePath + "\n\n点击 ▶ Play 开始游戏(先选关卡)。", "好");
             Debug.Log("场景搭建完成: " + ScenePath);
         }
     }

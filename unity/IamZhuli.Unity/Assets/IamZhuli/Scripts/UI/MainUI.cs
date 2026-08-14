@@ -53,6 +53,13 @@ namespace IamZhuli.Unity
         private Button _retryBtn;
 
         private bool _resultShown;
+        private readonly Action<TradeDto> _onTrade;
+
+        public MainUI()
+        {
+            // 持有委托实例,OnDestroy 才能真正取消订阅(lambda 现场写无法 -=)
+            _onTrade = _ => RenderTrades();
+        }
 
         void Start()
         {
@@ -65,7 +72,7 @@ namespace IamZhuli.Unity
             _root = GetComponent<UIDocument>().rootVisualElement;
             Bind();
             _host.SnapshotUpdated += Render;
-            _host.TradeTick += _ => RenderTrades();
+            _host.TradeTick += _onTrade;
             ShowLevelSelect();
             Render(_host.Core.BuildSnapshot());
         }
@@ -75,7 +82,7 @@ namespace IamZhuli.Unity
             if (_host != null)
             {
                 _host.SnapshotUpdated -= Render;
-                _host.TradeTick -= _ => RenderTrades();
+                _host.TradeTick -= _onTrade;
             }
         }
 
