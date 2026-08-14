@@ -70,9 +70,9 @@ API 纪律: 只用 2022.3 就有的 API,不用 Unity 6 独占特性。
 
 ## 6. 里程碑
 
-- **M1 Presenter 抽取**(离线,全验证): 新建 `src/IamZhuli.Presenter`,`GameCore` 收编 GameSingleton 的全部游戏流程;Web 变薄壳;149 测试 + 端到端 curl 全过。
-- **M2 UI Toolkit 界面**(离线): `unity/.../Assets/UI/` 下 UXML(主界面四栏+卡牌手牌+揭牌面板+关卡选择)+ USS 主题(暗色,对齐 Web);`Scripts/UI/` 控制器绑定 GameCore。
-- **M3 工程配置**(离线): asmdef、SceneBuilder、build-dlls.sh 纳入 Presenter、README 更新为"三步开场"。
+- **M1 Presenter 抽取** ✅(1d25131): `src/IamZhuli.Presenter` 建成,`GameCore` 收编 GameSingleton 全部游戏流程;Web 变薄壳;149 测试 + 端到端全过。顺手修 3 个存量 bug(信号牌 null 监管、融券利润双计、保证金凭空增发)。
+- **M2 UI Toolkit 界面** ✅(离线): `Main.uxml`/`Theme.uss`(四栏+卡牌手牌+揭牌+关卡选择+结算)、`MainUI` 控制器、`TimeshareElement` 自绘分时、`GameHost` 桥。
+- **M3 工程配置** ✅(离线): Runtime/Editor asmdef、SceneBuilder 一键建场景、build-dlls.sh 纳入 Presenter、README 三步开场、ProjectVersion 固定 2022.3.22f1。
 - **M4 编辑器接入**(需 Unity): 一键建场景 → 跑通一局 → 图表/布局调优。
 - **M5 对齐 Web 功能**(需 Unity): 复盘回放、筹码峰、组牌界面。
 

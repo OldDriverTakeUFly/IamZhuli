@@ -85,8 +85,9 @@ public sealed class GameCore
         LoadLevel(level);
     }
 
-    /// <summary>当前关卡信息(供表现层展示关卡名/简报)。</summary>
-    public object CurrentLevel => new { id = _level.Id, name = _level.Name, briefing = _level.Briefing };
+    /// <summary>当前关卡信息(供表现层展示;未加载关卡时为 null)。</summary>
+    public LevelInfoDto? CurrentLevel => _level == null ? null
+        : new LevelInfoDto(_level.Id, _level.Name, _level.Briefing);
 
     /// <summary>加载关卡:重建整个大脑。</summary>
     public void LoadLevel(LevelDefinition level)

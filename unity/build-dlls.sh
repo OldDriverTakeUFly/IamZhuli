@@ -8,7 +8,7 @@ PLUGINS="$ROOT/unity/IamZhuli.Unity/Assets/Plugins"
 
 echo "=== 构建逻辑层 netstandard2.1 ==="
 cd "$ROOT"
-for proj in IamZhuli.Core IamZhuli.Engine IamZhuli.Factors IamZhuli.Simulation; do
+for proj in IamZhuli.Core IamZhuli.Engine IamZhuli.Factors IamZhuli.Simulation IamZhuli.Presenter; do
     echo "构建 $proj ..."
     dotnet build "src/$proj" -f netstandard2.1 -c Release --nologo -v q
 done
@@ -16,7 +16,7 @@ done
 echo ""
 echo "=== 复制 DLL 到 Unity Plugins ==="
 mkdir -p "$PLUGINS"
-for proj in IamZhuli.Core IamZhuli.Engine IamZhuli.Factors IamZhuli.Simulation; do
+for proj in IamZhuli.Core IamZhuli.Engine IamZhuli.Factors IamZhuli.Simulation IamZhuli.Presenter; do
     src=$(find "$ROOT/src/$proj/bin/Release/netstandard2.1" -name "$proj.dll" | head -1)
     if [ -z "$src" ]; then
         echo "✗ 找不到 $proj.dll"

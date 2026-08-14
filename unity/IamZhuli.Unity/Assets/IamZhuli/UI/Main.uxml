@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+  <Style src="Theme.uss" />
+  <ui:VisualElement style="flex-grow:1;" class="root">
+
+    <!-- 顶栏:时钟/价格/情绪/监管 -->
+    <ui:VisualElement class="top-bar">
+      <ui:Label text="我是主力" class="title" />
+      <ui:Label text="--" name="phaseLabel" class="chip" />
+      <ui:Label text="--" name="lastPriceLabel" class="price" />
+      <ui:VisualElement style="flex-direction:row;align-items:center;margin-left:auto;">
+        <ui:Label text="情绪" class="dim" />
+        <ui:Label text="--" name="sentimentLabel" class="chip" />
+        <ui:Label text="监管" class="dim" />
+        <ui:Label text="--" name="regulatorLabel" class="chip warn" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement style="flex-direction:row;flex-grow:1;">
+
+      <!-- 左栏:盘口 + 成交 -->
+      <ui:VisualElement class="col" style="width:230px;">
+        <ui:Label text="盘口五档" class="panel-title" />
+        <ui:VisualElement name="asksContainer" />
+        <ui:Label text="--" name="lastPriceBig" class="price-big" />
+        <ui:VisualElement name="bidsContainer" />
+        <ui:Label text="成交明细" class="panel-title" style="margin-top:8px;" />
+        <ui:ScrollView name="tradesScrollView" style="flex-grow:1;max-height:220px;">
+          <ui:VisualElement name="tradesContainer" />
+        </ui:ScrollView>
+      </ui:VisualElement>
+
+      <!-- 中栏:分时图 + 卡牌/下单 -->
+      <ui:VisualElement class="col" style="flex-grow:1;">
+        <ui:VisualElement name="timeshareChart" style="flex-grow:1;min-height:180px;" class="chart" />
+        <ui:VisualElement style="flex-direction:row;font-size:10px;">
+          <ui:Label text="量 --" name="volLabel" class="dim" />
+          <ui:Label text="换手 --" name="turnoverLabel" class="dim" style="margin-left:12px;" />
+        </ui:VisualElement>
+
+        <!-- 卡牌面板(卡牌模式) -->
+        <ui:VisualElement name="cardPanel" style="margin-top:6px;">
+          <ui:VisualElement style="flex-direction:row;align-items:center;">
+            <ui:Label text="手牌" class="panel-title" />
+            <ui:Label text="回合 1/5" name="turnLabel" class="chip" style="margin-left:8px;" />
+            <ui:Label text="能量 ●●●" name="energyLabel" class="chip" />
+            <ui:Label text="出牌中" name="cardPhaseLabel" class="chip" />
+            <ui:Button text="结束回合 ▶" name="endTurnBtn" class="btn-primary" style="margin-left:auto;" />
+          </ui:VisualElement>
+          <ui:VisualElement name="handContainer" style="flex-direction:row;" />
+          <ui:VisualElement name="revealPanel" class="reveal-box">
+            <ui:Label text="🏛 上回合揭牌" class="reveal-title" />
+            <ui:Label text="--" name="revealSummary" class="reveal-summary" />
+            <ui:VisualElement name="revealTrades" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- 下单面板(连续模式,卡牌模式隐藏) -->
+        <ui:VisualElement name="orderPanel" style="display:none;flex-direction:row;align-items:center;margin-top:6px;">
+          <ui:Button text="买入" name="buyBtn" class="btn-buy" />
+          <ui:Button text="卖出" name="sellBtn" class="btn-sell" />
+          <ui:Button text="撤全部" name="cancelAllBtn" class="btn-ghost" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <!-- 右栏:账户 + 目标 -->
+      <ui:VisualElement class="col" style="width:250px;">
+        <ui:Label text="账户" class="panel-title" />
+        <ui:Label text="--" name="equityLabel" class="stat-big" />
+        <ui:Label text="--" name="cashLabel" class="stat" />
+        <ui:Label text="--" name="positionLabel" class="stat" />
+        <ui:Label text="--" name="costLabel" class="stat" />
+        <ui:Label text="--" name="floatLabel" class="stat" />
+        <ui:Label text="--" name="shortLabel" class="stat" />
+        <ui:Label text="关卡目标" class="panel-title" style="margin-top:10px;" />
+        <ui:VisualElement name="objectivesContainer" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- 底栏:控制 -->
+    <ui:VisualElement class="bottom-bar">
+      <ui:Button text="1x" name="speed1Btn" class="btn-ghost speed-btn active" />
+      <ui:Button text="3x" name="speed3Btn" class="btn-ghost speed-btn" />
+      <ui:Button text="10x" name="speed10Btn" class="btn-ghost speed-btn" />
+      <ui:Button text="暂停" name="pauseBtn" class="btn-ghost" />
+      <ui:Button text="下一日" name="nextDayBtn" class="btn-ghost" />
+      <ui:Label text="" name="msgLabel" class="dim" style="margin-left:12px;flex-grow:1;" />
+    </ui:VisualElement>
+
+    <!-- 关卡选择(开局覆盖层) -->
+    <ui:VisualElement name="levelSelectOverlay" class="overlay">
+      <ui:VisualElement class="modal">
+        <ui:Label text="选择关卡" class="modal-title" />
+        <ui:VisualElement name="levelList" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- 结算覆盖层 -->
+    <ui:VisualElement name="resultOverlay" class="overlay" style="display:none;">
+      <ui:VisualElement class="modal">
+        <ui:Label text="结算" class="modal-title" name="resultTitle" />
+        <ui:Label text="" name="resultBody" class="stat" style="white-space:normal;" />
+        <ui:Button text="再来一局" name="retryBtn" class="btn-primary" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+  </ui:VisualElement>
+</ui:UXML>

@@ -37,6 +37,10 @@ public record MarketSnapshotDto(
 // ── 消息 ──
 public record NewsItemDto(string Type, string Headline, int RemainingTicks);
 
+// ── 关卡 ──
+/// <summary>关卡信息(名称/简报;匿名类型跨程序集不可访问,用类型化 DTO)。</summary>
+public record LevelInfoDto(string Id, string Name, string Briefing);
+
 // ── 卡牌 ──
 public record CardInstanceDto(int Id, string Name, string Category, int EnergyCost,
     decimal CashCost, string Description);

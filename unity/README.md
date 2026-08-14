@@ -1,109 +1,57 @@
-# IamZhuli Unity 移植
+# IamZhuli Unity 客户端
 
-Unity 客户端,通过 DLL 直引用逻辑层(单机模式,不需要后端)。
+单机 Unity 版,通过 DLL 直引用全部逻辑层(与 Web 版共用 `IamZhuli.Presenter.GameCore`,零逻辑复制)。
+UI 用 **UI Toolkit**(UXML/USS 纯文本),场景用**编辑器脚本一键生成**。
 
-## 快速开始
-
-### 1. 构建 DLL(在项目根目录执行)
+## 三步开场
 
 ```bash
+# 1. 构建逻辑层 DLL(项目根目录执行)
 bash unity/build-dlls.sh
 ```
 
-编译逻辑层 `netstandard2.1` DLL 并复制到 `unity/IamZhuli.Unity/Assets/Plugins/`。
+```
+2. 用 Unity 打开 unity/IamZhuli.Unity/ 目录
+   (Unity 2022.3 LTS / Unity 6 / 团结引擎 均可,详见 docs/09-Unity移植方案.md)
 
-### 2. 安装 Unity
+3. 菜单栏 → 我是主力 → 一键搭建场景 → 保存后点 ▶ Play
+```
 
-- 需要 **Unity 6 LTS** (6000.0.x)
-- 安装 Unity Hub → 添加此版本 → 用 "Open Project" 打开 `unity/IamZhuli.Unity/` 目录
+首个画面是关卡选择(盘前态,背景可见预演历史K线),选关 → 看简报 → **开始操盘**。
 
-### 3. 首次打开
+## 已实现(离线完成,待编辑器验收)
 
-Unity 编辑器首次打开会:
-- 恢复 Packages
-- 导入 Plugins 里的 DLL
-- 编译 Scripts
+- ✅ GameHost 桥:主线程驱动 GameCore,速度 1x/3x/10x、暂停
+- ✅ 主界面(UI Toolkit):顶栏时钟/价格/情绪/监管,四栏布局对齐 Web 版
+- ✅ 盘口五档 + 成交明细滚动
+- ✅ 分时图自绘(价格折线+昨收基准+量柱,Mesh 无第三方依赖)
+- ✅ 卡牌模式:手牌(按类别着色/能量费用/可出牌置灰)、回合/能量、揭牌面板(买方→卖方@价,涉及你高亮)
+- ✅ 账户(权益/现金/持仓/T+1/浮盈/空头担保)、关卡目标进度
+- ✅ 关卡选择 + 盘前简报 + 开始操盘;结算覆盖层(星级+三方排名+再来一局)
+- ✅ 连续模式快捷市价单(买入/卖出/撤全部)
+- ✅ SceneBuilder:菜单一键建场景(PanelSettings+UIDocument+脚本挂载)
 
-如果 DLL 更新了,重新执行 `build-dlls.sh` 然后 Unity 会自动检测变更。
+## 待编辑器环境(M4/M5)
 
-### 4. 搭建场景
-
-当前版本未提供 Scene 文件(二进制资产)。你需要在编辑器里:
-
-1. 新建 Scene
-2. 创建空 GameObject,挂载 `GameHost` 脚本
-3. 创建 Canvas(UGUI)
-4. 按下面布局创建 UI 元素并绑定脚本
-
-## UI 布局指南
-
-### OrderBookPanel(盘口五档)
-- 5 个 Text(卖5→卖1,从上到下) → 绑定 `askTexts[0..4]`
-- 1 个 Text(现价) → 绑定 `lastPriceText`
-- 5 个 Text(买1→买5,从上到下) → 绑定 `bidTexts[0..4]`
-
-### OrderFormPanel(下单)
-- 2 个 InputField(价格、数量) → 绑定 `priceInput`、`qtyInput`
-- 1 个 Toggle(市价/限价) → 绑定 `isMarketToggle`
-- 2 个 Button(买入、卖出) → 绑定 `buyButton`、`sellButton`
-- 1 个 Text(反馈) → 绑定 `messageText`
-
-### AccountPanel(账户)
-- 多个 Text(权益/现金/持仓/成本/监管/情绪) → 按字段绑定
-
-### TradeListPanel(成交明细)
-- 1 个 Text(放在 ScrollView 里) → 绑定 `tradeListText`
+- 场景实际生成与首轮编译零错验收
+- 日K蜡烛图、筹码峰、复盘回放、组牌界面
+- 移动端适配(布局已是 flex,预计改动小)
 
 ## 架构
 
 ```
-逻辑层 DLL (netstandard2.1)
-    ↑ 引用
-GameHost.cs (MonoBehaviour,驱动 SimulationLoop)
-    ↑ 事件/方法调用
-UI 面板 (UGUI Text/Button)
+GameHost (MonoBehaviour: Update 驱动 + 事件分发)
+    │
+IamZhuli.Presenter.GameCore (DLL,与 Web 共用:关卡/tick/卡牌回合/揭牌/结算/快照)
+    │
+IamZhuli.Simulation / Engine / Core (DLL:撮合/散户/AI/监管/复盘)
 ```
 
-- **GameHost** 替代 Web 端的 GameSingleton,用协程驱动 tick
-- **MarketSnapshot** struct 供 UI 绑定(类似 Web 的 DTO)
-- UI 面板订阅 `GameHost.OnTickEvent` 回调刷新
+- **UI**: `Assets/IamZhuli/UI/Main.uxml` + `Theme.uss`(暗色主题)
+- **控制器**: `Assets/IamZhuli/Scripts/UI/MainUI.cs`(绑定+渲染+输入)
+- **自绘图表**: `Scripts/UI/TimeshareElement.cs`(generateVisualContent)
+- **场景生成**: `Assets/IamZhuli/Editor/SceneBuilder.cs`
 
-## 已实现
+## DLL 更新
 
-- ✅ 盘口五档(OrderBookPanel)
-- ✅ 下单表单(OrderFormPanel:限价/市价/买/卖)
-- ✅ 账户持仓(AccountPanel:权益/现金/持仓/成本/监管/情绪)
-- ✅ 成交明细(TradeListPanel)
-
-## 待实现(后续)
-
-- 图表(K线/分时/筹码)——需要第三方图表插件
-- 复盘系统 UI
-- 盘前/盘后操作面板
-- 关卡选择界面
-
-## 文件结构
-
-```
-unity/
-├── build-dlls.sh                          # DLL 构建脚本
-├── README.md                              # 本文件
-└── IamZhuli.Unity/
-    ├── Assets/
-    │   ├── Plugins/                       # 逻辑层 DLL
-    │   │   ├── IamZhuli.Core.dll
-    │   │   ├── IamZhuli.Engine.dll
-    │   │   ├── IamZhuli.Factors.dll
-    │   │   └── IamZhuli.Simulation.dll
-    │   └── Scripts/
-    │       ├── GameHost.cs                # 主控制器
-    │       └── UI/
-    │           ├── OrderBookPanel.cs      # 盘口五档
-    │           ├── OrderFormPanel.cs      # 下单
-    │           ├── AccountPanel.cs        # 账户
-    │           └── TradeListPanel.cs      # 成交
-    ├── Packages/
-    │   └── manifest.json
-    └── ProjectSettings/
-        └── ProjectVersion.txt
-```
+逻辑层代码改动后:重新执行 `bash unity/build-dlls.sh`,回 Unity 等待自动重编译。

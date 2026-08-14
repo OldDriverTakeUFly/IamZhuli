@@ -1,0 +1,171 @@
+/* 我是主力 - 暗色主题(对齐 Web 版配色) */
+
+:root {
+    font-size: 13px;
+    color: #d8dce2;
+    background-color: #17191f;
+    -unity-font-style: normal;
+}
+
+.root {
+    flex-grow: 1;
+    padding: 8px;
+}
+
+/* —— 顶栏/底栏 —— */
+.top-bar {
+    flex-direction: row;
+    align-items: center;
+    height: 40px;
+    padding: 4px 8px;
+    background-color: #1e222a;
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+.bottom-bar {
+    flex-direction: row;
+    align-items: center;
+    height: 40px;
+    padding: 4px 8px;
+    background-color: #1e222a;
+    border-radius: 6px;
+    margin-top: 6px;
+}
+.title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #e8c44a;
+    margin-right: 14px;
+}
+.price { font-size: 16px; font-weight: 700; color: #ef5350; margin-left: 10px; }
+.price-big { font-size: 22px; font-weight: 800; color: #ef5350; -unity-text-align: middle-center; margin: 4px 0; }
+
+/* —— 面板 —— */
+.col {
+    background-color: #1e222a;
+    border-radius: 6px;
+    padding: 8px;
+    margin: 0 3px;
+}
+.panel-title {
+    font-size: 12px;
+    color: #8892a0;
+    margin-bottom: 4px;
+}
+.chart { background-color: #14161b; border-radius: 4px; }
+
+/* —— 文本组件 —— */
+.chip {
+    font-size: 11px;
+    background-color: #2a2e38;
+    border-radius: 8px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    color: #b8c0cc;
+}
+.chip.warn { color: #ef5350; }
+.dim { font-size: 11px; color: #6b7280; }
+.stat { font-size: 12px; color: #b8c0cc; margin: 2px 0; }
+.stat-big { font-size: 18px; font-weight: 700; color: #e8c44a; margin: 4px 0 8px 0; }
+
+/* 盘口行 */
+.book-row { flex-direction: row; justify-content: space-between; padding: 1px 4px; font-size: 12px; }
+.book-row .price { font-size: 12px; font-weight: 400; margin-left: 0; }
+.book-ask .price { color: #26a69a; }
+.book-bid .price { color: #ef5350; }
+.book-qty { color: #8892a0; }
+
+/* 成交明细行 */
+.trade-row { flex-direction: row; justify-content: space-between; padding: 1px 4px; font-size: 11px; }
+
+/* —— 按钮 —— */
+.btn-primary {
+    background-color: #e8c44a;
+    color: #17191f;
+    border-radius: 4px;
+    font-weight: 700;
+    margin: 2px;
+    padding: 6px 14px;
+}
+.btn-primary:hover { background-color: #f4d35e; }
+.btn-buy { background-color: #ef5350; color: #fff; border-radius: 4px; font-weight: 700; margin: 2px; padding: 6px 14px; }
+.btn-buy:hover { background-color: #f66f66; }
+.btn-sell { background-color: #26a69a; color: #fff; border-radius: 4px; font-weight: 700; margin: 2px; padding: 6px 14px; }
+.btn-sell:hover { background-color: #2fc0ab; }
+.btn-ghost {
+    background-color: #2a2e38;
+    color: #d8dce2;
+    border-radius: 4px;
+    margin: 2px;
+    padding: 6px 12px;
+}
+.btn-ghost:hover { background-color: #383e4a; }
+.speed-btn.active { background-color: #e8c44a; color: #17191f; font-weight: 700; }
+
+/* —— 卡牌 —— */
+.card {
+    width: 108px;
+    height: 78px;
+    background-color: #262b36;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: #3a4150;
+    padding: 6px;
+    margin: 3px;
+}
+.card.trading { border-color: #ef5350; }
+.card.media { border-color: #e8c44a; }
+.card.signal { border-color: #ab47bc; }
+.card.defense { border-color: #42a5f5; }
+.card.disabled { opacity: 0.4; }
+.card-name { font-size: 12px; font-weight: 700; color: #e6e9ef; }
+.card-cost { font-size: 10px; color: #e8c44a; margin-top: 2px; }
+.card-desc { font-size: 10px; color: #8892a0; margin-top: 3px; white-space: normal; }
+
+/* 揭牌面板 */
+.reveal-box {
+    margin-top: 8px;
+    border-top-width: 1px;
+    border-top-color: #3a4150;
+    border-top-style: dashed;
+    padding-top: 6px;
+}
+.reveal-title { font-size: 12px; color: #e8c44a; margin-bottom: 3px; }
+.reveal-summary { font-size: 12px; color: #d8dce2; margin-bottom: 4px; }
+.reveal-row { flex-direction: row; justify-content: space-between; padding: 2px 4px; font-size: 11px; }
+.reveal-row.mine { background-color: #2a2e38; border-radius: 3px; }
+.reveal-buyer { color: #ef5350; }
+.reveal-seller { color: #26a69a; }
+.reveal-mid { color: #6b7280; }
+.reveal-short { color: #ab47bc; }
+
+/* —— 目标 —— */
+.objective-row { flex-direction: row; font-size: 11px; margin: 2px 0; }
+.objective-check { width: 16px; color: #26a69a; }
+.objective-check.pending { color: #6b7280; }
+
+/* —— 覆盖层/模态 —— */
+.overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(10, 12, 16, 0.88);
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+}
+.modal {
+    background-color: #1e222a;
+    border-radius: 8px;
+    padding: 20px;
+    width: 420px;
+}
+.modal-title { font-size: 18px; font-weight: 700; color: #e8c44a; margin-bottom: 12px; }
+.level-btn {
+    background-color: #2a2e38;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 4px 0;
+}
+.level-btn:hover { background-color: #383e4a; }
+.level-btn .name { font-size: 14px; font-weight: 700; color: #e6e9ef; }
+.level-btn .brief { font-size: 11px; color: #8892a0; white-space: normal; margin-top: 2px; }
