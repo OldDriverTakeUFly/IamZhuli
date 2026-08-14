@@ -183,6 +183,9 @@ public class CardAuctionTests
         var seller = session.GetOrCreateAccount(Seller, 500_000m);
         seller.Position.Seed(new Quantity(1000), new Price(10m));
         int poolBefore = session.ShortablePool;
+        decimal shorterCashBefore = shorter.Cash;
+        decimal buyerCashBefore = buyer.Cash;
+        decimal sellerCashBefore = seller.Cash;
 
         // —— 回合1:做空拍卖 ——
         Assert.True(session.TryRestForAuction(new OrderRequest(
@@ -190,7 +193,7 @@ public class CardAuctionTests
         Assert.True(session.TryRestForAuction(new OrderRequest(
             Buyer, Side.Buy, OrderType.Limit, new Price(10.10m), new Quantity(50))));
         var r1 = engine.CallAuction();
-        Assert.True(r1 is { });
+        Assert.True(r1.HasValue);
         var trades1 = engine.SweepAtPrice(r1!.Value.Price);
         Assert.NotEmpty(trades1);
         session.SettleAuctionTrades(trades1);
@@ -198,6 +201,9 @@ public class CardAuctionTests
         Assert.Equal(50, shorter.Position.ShortQty.Value);   // 空头开仓
         Assert.Equal(poolBefore - 50, session.ShortablePool);   // 券池扣减(借出)
         Assert.True(shorter.MarginFrozen > 0, "做空应冻结保证金");
+        // 做空结算后权益守恒:现金+保证金占用不变,空头负债按成交价计
+        decimal sellPrice = trades1[0].Price.Value;
+        Assert.Equal(shorterCashBefore + sellPrice * 50 * 100, shorter.Cash);
 
         // —— 清场(模拟下一回合开始) ——
         session.ClearBookAndRefund();
@@ -209,7 +215,7 @@ public class CardAuctionTests
         Assert.True(session.TryRestForAuction(new OrderRequest(
             Seller, Side.Sell, OrderType.Limit, new Price(10.05m), new Quantity(50))));
         var r2 = engine.CallAuction();
-        Assert.True(r2 is { });
+        Assert.True(r2.HasValue);
         var trades2 = engine.SweepAtPrice(r2!.Value.Price);
         Assert.NotEmpty(trades2);
         session.SettleAuctionTrades(trades2);
@@ -217,6 +223,16 @@ public class CardAuctionTests
         Assert.Equal(0, shorter.Position.ShortQty.Value);   // 空头清零
         Assert.Equal(poolBefore, session.ShortablePool);   // 券池全额归还
         Assert.Equal(0m, shorter.MarginFrozen);   // 保证金释放
+        // 现金守恒:做空者净现金变化 = 做空所得 - 平仓花费 = 每手价差×量(利润只计一次)
+        decimal coverPrice = trades2[0].Price.Value;
+        decimal expectedShorterCash = shorterCashBefore + (sellPrice - coverPrice) * 50 * 100;
+        Assert.Equal(expectedShorterCash, shorter.Cash);
+        // 三方现金守恒:shorter+buyer+seller 现金增量之和 = 0(零和,无凭空生钱)
+        decimal buyerDelta = buyer.Cash - buyerCashBefore;
+        decimal sellerDelta = seller.Cash - sellerCashBefore;
+        Assert.Equal(expectedShorterCash - shorterCashBefore + buyerDelta + sellerDelta,
+                     shorter.Cash - shorterCashBefore + buyerDelta + sellerDelta);
+        Assert.Equal(0m, shorter.Cash - shorterCashBefore + buyerDelta + sellerDelta, 2);
     }
 
     // ══════════════════════════════════════

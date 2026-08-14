@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\IamZhuli.Simulation\IamZhuli.Simulation.csproj" />
+    <ProjectReference Include="..\..\src\IamZhuli.Presenter\IamZhuli.Presenter.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,4 +1,4 @@
-namespace IamZhuli.Web;
+namespace IamZhuli.Presenter;
 
 // ── 盘口快照 ──
 public record PriceLevelDto(decimal Price, int Qty);

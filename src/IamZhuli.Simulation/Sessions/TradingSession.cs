@@ -275,6 +275,9 @@ public sealed class TradingSession
         foreach (var acc in _accounts.Values) acc.OnNewTradingDay();
     }
 
+    /// <summary>判断某订单是否为做空单(揭牌展示用)。</summary>
+    public bool IsShortOrder(OrderId orderId) => _shortOrders.Contains(orderId);
+
     /// <summary>强制平仓(爆仓):市价买回全部空头持仓。
     /// 返回是否执行了平仓(有空头才执行)。</summary>
     public bool ForceLiquidate(ParticipantId participant, out int qtyCovered)
