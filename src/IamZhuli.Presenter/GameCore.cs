@@ -48,6 +48,8 @@ public sealed class GameCore
     private CardEngine? _cardEngine;
     /// <summary>上回合揭牌结果(集中撮合价/量/逐笔,随快照推送)。</summary>
     private AuctionResultDto? _lastAuction;
+    /// <summary>信息操纵封口剩余 tick(立案调查期间禁止发布消息/信号)。</summary>
+    private int _infoGagTicks;
 
     /// <summary>是否启用卡牌模式(完全替换实时操作)。</summary>
     public bool CardMode { get; set; } = true;
@@ -98,6 +100,7 @@ public sealed class GameCore
         LastResult = null;
         IsLevelOver = false;
         _prevPriceForVolatility = null;
+        _infoGagTicks = 0;
 
         var intrinsic = new Price(level.IntrinsicValue);
         var rules = new MarketRules
@@ -138,6 +141,25 @@ public sealed class GameCore
         _waterArmy = new WaterArmyNetwork();
         _blockSignal = new BlockTradeSignal(_retail.Sentiment, _regulator);
 
+        // 信息操纵惩罚阶梯:警示(60)=辟谣反弹+水军捣毁+罚款;立案(80)=强辟谣+重罚+封口1天
+        _regulator.InfoPenaltyEscalated += lvl =>
+        {
+            bool investigation = lvl == PenaltyLevel.Investigation;
+            decimal shock = investigation ? 0.30m : 0.15m;
+            _retail.Sentiment.NewsShock(positive: false, shock);   // 辟谣:证伪反转(信心/消息偏差/贪婪齐挫)
+            if (_waterArmy.IsActive)
+            {
+                _waterArmy.Stop();   // 水军网络被监管曝光捣毁
+                _regulator.RecordExternalEvent($"[辟谣] 水军网络被曝光捣毁(等级{_waterArmy.Level}清零运营)");
+            }
+            decimal fine = investigation ? 5_000_000m : 500_000m;
+            _player.DebitCash(fine);
+            if (investigation) _infoGagTicks = level.TicksPerDay;   // 封口一整天(5回合)
+            _regulator.RecordExternalEvent(investigation
+                ? $"[立案调查] 信息操纵罚款{fine / 10000:F0}万,辟谣澄清,禁止发布消息1天"
+                : $"[警示] 信息操纵罚款{fine / 10000:F0}万,监管公开辟谣");
+        };
+
         // 被动资金流(指数ETF/定投/养老金底盘):无视涨跌,每tick小额买入,保证阴跌不死锁
         _passive = new PassiveFlow(_loop.Session, new ParticipantId("被动资金"), level.FloatShares, seed: 77);
         _loop.AddParticipant(_passive);
@@ -163,6 +185,7 @@ public sealed class GameCore
             _regulator.OnTick(ratio);
             _maxHeatReached = Math.Max(_maxHeatReached, _regulator.Heat);
             _newsSystem.Tick();   // 消息系统每 tick 应用持续影响 + 过期清理
+            if (_infoGagTicks > 0) _infoGagTicks--;   // 封口期倒计时
             // 监管爆表 → 关卡失败
             if (_regulator.GetStatus().IsFailed && !IsLevelOver) EndLevel();
             // 做空爆仓:担保比例<130% → 强制平仓
@@ -445,9 +468,23 @@ public sealed class GameCore
 
     /// <summary>玩家盘后发布消息(影响次日开盘情绪)。扣除成本,注入 NewsSystem。</summary>
     public bool PublishNews(string newsType, out string error)
+        => PublishNewsInternal(newsType, out error, checkTiming: true);
+
+    /// <summary>卡牌舆论牌发布消息:不受"收盘后/盘前"时机限制(出牌即生效),仍扣成本+触发监管。</summary>
+    private bool PublishNewsFromCard(string newsType, out string error)
+        => PublishNewsInternal(newsType, out error, checkTiming: false);
+
+    private bool PublishNewsInternal(string newsType, out string error, bool checkTiming)
     {
         error = "";
-        if (!IsLevelOver && (_loop.IsDayClosed || IsPreMarket))   // 日终收盘后 或 盘前态可发消息
+        if (_infoGagTicks > 0) { error = "监管问询期间,禁止发布消息"; return false; }
+        // 时机闸门:盘后面板操作要求收盘后/盘前;卡牌舆论牌出牌即生效,跳过
+        if (checkTiming && !(IsPreMarket || _loop.IsDayClosed || IsLevelOver))
+        {
+            error = "只能在收盘后或盘前发布消息";
+            return false;
+        }
+        if (IsLevelOver && _loop.IsFinished) { error = "关卡已结束"; return false; }
         {
             var type = newsType.ToLowerInvariant() switch
             {
@@ -478,8 +515,6 @@ public sealed class GameCore
             _regulator.OnNewsPublished(type.ToString());
             return true;
         }
-        error = "只能在收盘后或盘前发布消息";
-        return false;
     }
 
     /// <summary>升级水军网络(一次性投入)。</summary>
@@ -505,6 +540,7 @@ public sealed class GameCore
     public bool PublishSignal(string signalType, out string error)
     {
         error = "";
+        if (_infoGagTicks > 0) { error = "监管问询期间,禁止发布信号"; return false; }
         if (!IsLevelOver && !_loop.IsFinished)
         {
             var type = signalType.ToLowerInvariant() switch
@@ -694,10 +730,10 @@ public sealed class GameCore
                     _retail.Sentiment.NewsShock(false, 0.15m);
                     break;
                 case CardEffect.NewsRumor:
-                    PublishNews("rumor", out _);
+                    PublishNewsFromCard("rumor", out _);
                     break;
                 case CardEffect.NewsPump:
-                    PublishNews("pump", out _);
+                    PublishNewsFromCard("pump", out _);
                     break;
                 case CardEffect.SignalFakeSell:
                     PublishSignal("fakebigsell", out _);

@@ -40,6 +40,10 @@ public sealed class Regulator
     public decimal InfoHeat => Math.Min(100m, _infoHeat);
     /// <summary>综合监管风险 = max(交易操纵, 信息操纵)。任一爆表都导致失败。</summary>
     public decimal TotalHeat => Math.Max(Heat, InfoHeat);
+    /// <summary>信息惩罚升级事件:InfoHeat 首次跨过 Warning(60)/Investigation(80) 时各触发一次。
+    /// 衰减回落后再跨入同一级不重复触发(滞回),避免横跳重复处罚。</summary>
+    public event Action<PenaltyLevel>? InfoPenaltyEscalated;
+    private PenaltyLevel _lastInfoPenalty = PenaltyLevel.None;
     public PenaltyLevel CurrentPenalty => TotalHeat switch
     {
         >= 100 => PenaltyLevel.ForcedLiquidation,
@@ -152,6 +156,28 @@ public sealed class Regulator
         _recentEvents.Insert(0, $"[信息关注{_infoHeat:F0}% {penalty}] {reason}");
         if (_recentEvents.Count > 20) _recentEvents.RemoveAt(_recentEvents.Count - 1);
         _eventLog.Add(new RegulatorEvent((int)_tickCounter, _infoHeat, $"信息:{penalty}", reason));
+        // 信息惩罚阶梯:首次跨级触发(滞回,只在升级时通知)
+        var infoLvl = InfoPenaltyOf(_infoHeat);
+        if (infoLvl > _lastInfoPenalty)
+        {
+            _lastInfoPenalty = infoLvl;
+            InfoPenaltyEscalated?.Invoke(infoLvl);
+        }
+    }
+
+    private static PenaltyLevel InfoPenaltyOf(decimal infoHeat) => infoHeat switch
+    {
+        >= 80 => PenaltyLevel.Investigation,
+        >= 60 => PenaltyLevel.Warning,
+        _ => PenaltyLevel.None
+    };
+
+    /// <summary>记录外部监管动作(辟谣/处罚落地等,不加热值,仅供事件流/复盘)。</summary>
+    public void RecordExternalEvent(string reason)
+    {
+        _recentEvents.Insert(0, $"[监管动作] {reason}");
+        if (_recentEvents.Count > 20) _recentEvents.RemoveAt(_recentEvents.Count - 1);
+        _eventLog.Add(new RegulatorEvent((int)_tickCounter, _infoHeat, "监管动作", reason));
     }
 
     private void AddHeat(decimal amount, string reason)

@@ -92,8 +92,8 @@ public sealed class GameRichnessTests
 
         var end = snaps[^1];
         Assert.True(end.InfoHeat > start.InfoHeat, "信息战应推高信息操纵关注值");
-        Assert.True(end.HerdMood > start.HerdMood || end.Sentiment > start.Sentiment,
-            "舆论牌应能撬动散户情绪");
+        Assert.True(end.Confidence > start.Confidence || end.Sentiment > start.Sentiment,
+            "舆论牌应能撬动散户信心");
         Assert.True(end.RegulatorHeat < 80, "纯舆论不应直接引爆交易监管");
     }
 
