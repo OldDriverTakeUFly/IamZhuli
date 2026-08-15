@@ -35,7 +35,8 @@ public sealed class MarketPreplay
     {
         // 1. 创建临时loop(共享session)。每天少量tick(预演快速跑完,引导做市商锚定)
         int ticksPerDay = 10;
-        var tempLoop = new SimulationLoop(session.Engine, new SimulationClock(ticksPerDay, scenario.Days));
+        var tempLoop = new SimulationLoop(session.Engine, new SimulationClock(ticksPerDay, scenario.Days),
+            seed: seed ?? 42);   // 预演确定性:跨进程可复现
 
         // 2. 数据采集器(预演期间采集历史K线) + 筹码采集器(逐日筹码分布)
         var collector = new MarketDataCollector(tempLoop, scenario.StartPrice.Value);

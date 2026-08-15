@@ -27,15 +27,18 @@ public sealed class MarketScenario
     public Price EndPrice { get; }      // 历史终点=玩家进场价
     public int Days { get; }
     public decimal DailyVolatility { get; }
+    /// <summary>剧本种子(固定后跨进程可复现,测试必需)。</summary>
+    private readonly int? _seed;
 
     public MarketScenario(ScenarioType type, Price startPrice, Price endPrice,
-                          int days = 30, decimal dailyVolatility = 0.02m)
+                          int days = 30, decimal dailyVolatility = 0.02m, int? seed = null)
     {
         Type = type;
         StartPrice = startPrice;
         EndPrice = endPrice;
         Days = days;
         DailyVolatility = dailyVolatility;
+        _seed = seed;
     }
 
     /// <summary>剧本对应的初始情绪标签(预演后的预期情绪)。</summary>
@@ -51,7 +54,7 @@ public sealed class MarketScenario
     /// <summary>生成每天的目标价序列(预演引导用)。返回每天的 OHLCV。</summary>
     public List<DailyCandle> GenerateCandles(int? seed = null)
     {
-        var rng = new Random(seed ?? Environment.TickCount);
+        var rng = new Random(seed ?? _seed ?? Environment.TickCount);
         var candles = new List<DailyCandle>();
         decimal price = StartPrice.Value;
         decimal target = EndPrice.Value;

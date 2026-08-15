@@ -28,7 +28,7 @@ public sealed class SimulationLoop
     public bool IsDayClosed { get; private set; }
 
     private readonly List<IParticipant> _participants = new();
-    private readonly Random _rng = new();
+    private readonly Random _rng;
 
     /// <summary>注册一个参与者(散户群体、AI 主力等)。每 tick 会被驱动 Act。</summary>
     public void AddParticipant(IParticipant participant) => _participants.Add(participant);
@@ -46,10 +46,11 @@ public sealed class SimulationLoop
 
     private Price? _lastEmittedPrice;
 
-    public SimulationLoop(MatchingEngine engine, SimulationClock? clock = null)
+    public SimulationLoop(MatchingEngine engine, SimulationClock? clock = null, int? seed = null)
     {
         Clock = clock ?? new SimulationClock();
         Session = new TradingSession(engine);
+        _rng = new Random(seed ?? Environment.TickCount);
     }
 
     /// <summary>开始关卡:进入第 1 日开盘。</summary>

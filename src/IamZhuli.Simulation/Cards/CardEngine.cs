@@ -23,7 +23,8 @@ public sealed class CardEngine
     private readonly Random _rng;
     private int _tickInTurn;                    // 当前回合内已过的tick
     private int _cardIdSeq;
-    private readonly List<CardEffect> _recentPlays = new();  // 近期出牌(连招检测)
+    private readonly List<CardEffect> _recentPlays = new();  // 近期出牌(展示用)
+    private readonly List<CardEffect> _turnPlays = new();    // 本回合出牌(连招检测,回合切换清空)
     private int _lastComboTick = -100;          // 上次连招触发的tick
 
     /// <summary>当前阶段(Play=出牌冻结,Resolve=执行中)。</summary>
@@ -42,6 +43,8 @@ public sealed class CardEngine
     public bool IsLayingLow { get; private set; }
     /// <summary>上次触发的连招(供前端展示)。</summary>
     public string? LastCombo { get; private set; }
+    /// <summary>本回合触发的连招名(同回合按序打出连招序列才触发;揭牌时消费加成后清空)。</summary>
+    public string? ActiveCombo { get; private set; }
 
     /// <summary>本回合收集的订单意图(玩家+AI+散户),揭牌时统一撮合。</summary>
     public List<OrderIntent> PendingIntents { get; } = new();
@@ -109,6 +112,8 @@ public sealed class CardEngine
         Hand.Clear();
         _drawPile.Clear();
         _discardPile.Clear();
+        _turnPlays.Clear();
+        ActiveCombo = null;
         // 准备抽牌堆:自配牌组 or 全牌库
         if (HasCustomDeck)
         {
@@ -151,6 +156,7 @@ public sealed class CardEngine
         // 记录出牌(连招检测)
         _recentPlays.Add(def.Effect);
         if (_recentPlays.Count > 10) _recentPlays.RemoveAt(0);
+        _turnPlays.Add(def.Effect);
 
         // 蛰伏冷却标记
         if (def.Effect == CardEffect.LayLow) IsLayingLow = true;
@@ -159,7 +165,44 @@ public sealed class CardEngine
         if (def.DurationTicks > 0)
             PendingEffects.Add(new PendingEffect(def.Effect, def.DurationTicks, def.EffectValue, 1, 0));
 
+        // 连招检测(同回合按序)——完美出货:分批出货量翻倍
+        DetectTurnCombo();
+        if (ActiveCombo == "完美出货" && def.DurationTicks > 0 && PendingEffects.Count > 0)
+        {
+            var last = PendingEffects[^1];
+            PendingEffects[^1] = last with { EffectValue = last.EffectValue * 2 };
+        }
+
         return true;
+    }
+
+    /// <summary>检测本回合连招:回合内出牌序列末尾匹配连招序列即触发。</summary>
+    private void DetectTurnCombo()
+    {
+        foreach (var combo in Combos)
+        {
+            if (_turnPlays.Count < combo.RequiredSequence.Length) continue;
+            int start = _turnPlays.Count - combo.RequiredSequence.Length;
+            bool match = true;
+            for (int i = 0; i < combo.RequiredSequence.Length; i++)
+            {
+                if (_turnPlays[start + i] != combo.RequiredSequence[i]) { match = false; break; }
+            }
+            if (match)
+            {
+                ActiveCombo = combo.Name;
+                LastCombo = combo.Name;
+                return;
+            }
+        }
+    }
+
+    /// <summary>消费本回合连招(揭牌加成用完后清空,下回合重新检测)。</summary>
+    public string? ConsumeTurnCombo()
+    {
+        var combo = ActiveCombo;
+        ActiveCombo = null;
+        return combo;
     }
 
     /// <summary>玩家结束回合 → 进入执行阶段。</summary>
@@ -201,6 +244,8 @@ public sealed class CardEngine
         Energy = Math.Min(MaxEnergy, Energy + EnergyPerTurn);
         CardsPlayedThisTurn = 0;
         IsLayingLow = false;
+        _turnPlays.Clear();
+        ActiveCombo = null;
         Phase = CardPhase.Play;
         // 补满手牌
         while (Hand.Count < HandSize) DrawCard();

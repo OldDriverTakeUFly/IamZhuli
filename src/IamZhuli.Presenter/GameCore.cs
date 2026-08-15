@@ -108,15 +108,18 @@ public sealed class GameCore
             FloatShares = new Quantity(level.FloatShares)
         };
         var engine = new MatchingEngine(rules);
-        _loop = new SimulationLoop(engine, new SimulationClock(level.TicksPerDay, level.TotalDays));
+        var levelSeed = StableHash(level.Id);
+        _loop = new SimulationLoop(engine, new SimulationClock(level.TicksPerDay, level.TotalDays),
+            seed: levelSeed ^ 0x5EED);   // 全局确定性:参与者Act噪声/预演引导共用此随机流
         _loop.Session.InitShortablePool(level.FloatShares);   // 初始化可融券池(流通盘20%)
         _player = _loop.Session.GetOrCreateAccount(Player, level.PlayerCash);
         if (level.PlayerInitialHolding > 0) _player.Position.Seed(new Quantity(level.PlayerInitialHolding), intrinsic);
 
         // —— 预演:让市场参与者跑完历史K线,状态真实涌现 ——
-        _scenario = new MarketScenario(level.Scenario, new Price(intrinsic.Value * 1.2m), intrinsic);
+        _scenario = new MarketScenario(level.Scenario, new Price(intrinsic.Value * 1.2m), intrinsic,
+            seed: levelSeed);   // 剧本K线路径确定性(跨进程可复现)
         var preplay = new MarketPreplay();
-        var preplayResult = preplay.Run(_loop.Session, _loop, _scenario, seed: level.Id.GetHashCode());
+        var preplayResult = preplay.Run(_loop.Session, _loop, _scenario, seed: StableHash(level.Id));
 
         // 机构B(做市+风险控制+操盘三合一)
         _institutionB = new InstitutionB(_loop.Session, new ParticipantId("机构B"), intrinsic,
@@ -190,8 +193,20 @@ public sealed class GameCore
         _loop.Start();
         IsPreMarket = true;   // 进入盘前准备态,等玩家研究完点"开始操盘"
         // 卡牌引擎初始化(开始操盘时启动第一回合)
-        if (CardMode) { _cardEngine = new CardEngine(seed: level.Id.GetHashCode() + 7); _lastAuction = null; }
+        if (CardMode) { _cardEngine = new CardEngine(seed: StableHash(level.Id) + 7); _lastAuction = null; }
         IsInitialized = true;
+    }
+
+    /// <summary>跨进程稳定的字符串哈希(FNV-1a)。string.GetHashCode() 每次进程随机化,
+    /// 会导致预演/牌序每次运行不同,测试无法复现。</summary>
+    private static int StableHash(string s)
+    {
+        unchecked
+        {
+            uint h = 2166136261;
+            foreach (char c in s) { h ^= c; h *= 16777619; }
+            return (int)h;
+        }
     }
 
     /// <summary>玩家结束盘前研究,正式开始交易(退出盘前态)。</summary>
@@ -531,6 +546,32 @@ public sealed class GameCore
         if (_institutionB != null)
             _cardEngine.PendingIntents.AddRange(_institutionB.ProduceIntents(session));
 
+        // 1.5 连招加成(同回合按序打出触发,揭牌时消费)
+        string? combo = _cardEngine.ConsumeTurnCombo();
+        if (combo == "诱多陷阱")
+        {
+            // 市价买量翻倍 + 散户群体热度上升(墙+急拉的假突破引来跟风盘)
+            for (int i = 0; i < _cardEngine.PendingIntents.Count; i++)
+            {
+                var it = _cardEngine.PendingIntents[i];
+                if (it.Participant.Equals(Player) && it.Side == Side.Buy && it.Type == OrderType.Market)
+                    _cardEngine.PendingIntents[i] = it with { Qty = it.Qty * 2 };
+            }
+            _retail.Sentiment.ApplyNewsEffect(0, 0.15m, 0);
+        }
+        else if (combo == "砸盘收割")
+        {
+            // 市价卖量翻倍 + 散户信心下挫(假大宗铺垫后的真砸盘引发恐慌)
+            for (int i = 0; i < _cardEngine.PendingIntents.Count; i++)
+            {
+                var it = _cardEngine.PendingIntents[i];
+                if (it.Participant.Equals(Player) && it.Side == Side.Sell && it.Type == OrderType.Market)
+                    _cardEngine.PendingIntents[i] = it with { Qty = it.Qty * 2 };
+            }
+            _retail.Sentiment.ApplyNewsEffect(-0.15m, 0, 0);
+        }
+        // 完美出货:分批出货量翻倍已在 PlayCard 注册时生效
+
         // 2. 清场:清空订单簿,释放上一回合挂单的冻结资金/预扣券池
         session.ClearBookAndRefund();
 
@@ -542,12 +583,13 @@ public sealed class GameCore
                 new Price(intent.Price), new Quantity(intent.Qty), IsShort: intent.IsShort));
         }
 
-        // 4. 市价意图转为对手价限价单挂入(无对手价时按涨跌停价,符合集合竞价市价单语义)
+        // 4. 市价意图按集合竞价市价单语义挂入:买=涨停价/卖=跌停价的限价单,
+        //    参与竞价定价后按统一竞价价成交(无价格上限的市价单,而非被动挂对手价)
         foreach (var intent in _cardEngine.PendingIntents.Where(i => i.Type == OrderType.Market))
         {
             decimal price = intent.Side == Side.Buy
-                ? (engine.View.BestAsk?.Value ?? engine.Rules.UpperLimit.Value)
-                : (engine.View.BestBid?.Value ?? engine.Rules.LowerLimit.Value);
+                ? engine.Rules.UpperLimit.Value
+                : engine.Rules.LowerLimit.Value;
             session.TryRestForAuction(new OrderRequest(
                 intent.Participant, intent.Side, OrderType.Limit,
                 new Price(price), new Quantity(intent.Qty), IsShort: intent.IsShort));
