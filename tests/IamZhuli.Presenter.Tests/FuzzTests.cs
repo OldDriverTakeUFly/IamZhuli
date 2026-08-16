@@ -18,40 +18,6 @@ public sealed class FuzzTests
     private static readonly string[] AllCards = IamZhuli.Simulation.Cards.CardDefinition.Library
         .Select(c => c.Name).ToArray();
 
-    // ── 不变量:每步必守 ──
-
-    private void CheckInvariants(MarketSnapshotDto s, string tag)
-    {
-        var a = s.Account;
-        Assert.False(double.IsNaN((double)a.TotalEquity) || double.IsInfinity((double)a.TotalEquity),
-            $"{tag} 权益非有限值");
-        Assert.True(a.Cash >= 0, $"{tag} 现金为负: {a.Cash}");
-        Assert.True(a.AvailableCash >= 0, $"{tag} 可用现金为负: {a.AvailableCash}");
-        Assert.True(a.Cash - a.AvailableCash >= 0, $"{tag} 冻结为负: {a.Cash - a.AvailableCash}");
-        Assert.True(a.MarginFrozen >= 0, $"{tag} 保证金为负: {a.MarginFrozen}");
-        Assert.True(a.PositionTotal >= 0 && a.PositionAvailable >= 0 && a.PositionT1Locked >= 0,
-            $"{tag} 持仓为负");
-        Assert.True(a.PositionAvailable + a.PositionT1Locked <= a.PositionTotal + 1,
-            $"{tag} 可卖+锁定 超过 总持仓");
-        Assert.True(a.ShortQty >= 0, $"{tag} 空头为负: {a.ShortQty}");
-        if (s.LastPrice is { } p)
-            Assert.True(p >= s.LowerLimit - 0.001m && p <= s.UpperLimit + 0.001m,
-                $"{tag} 价格越界: {p} 不在 [{s.LowerLimit},{s.UpperLimit}]");
-        Assert.True(s.ShortablePool >= 0 && s.ShortablePool <= s.TotalShortable,
-            $"{tag} 券池越界: {s.ShortablePool}/{s.TotalShortable}");
-        Assert.True(s.RegulatorHeat >= 0 && s.RegulatorHeat <= 100, $"{tag} 交易热越界: {s.RegulatorHeat}");
-        Assert.True(s.InfoHeat >= 0 && s.InfoHeat <= 100, $"{tag} 信息热越界: {s.InfoHeat}");
-        if (s.CardState is { } cs)
-        {
-            Assert.True(cs.Energy >= 0 && cs.Energy <= 10, $"{tag} 能量越界: {cs.Energy}");
-            Assert.True(cs.Hand.Count <= 5, $"{tag} 手牌超限: {cs.Hand.Count}");
-            Assert.True(cs.CardsPlayed <= cs.MaxCardsPerTurn, $"{tag} 本回合出牌超限");
-        }
-        foreach (var ra in s.OpenOrders)
-            Assert.True(ra.RemainingQty >= 0 && ra.FilledQty + ra.RemainingQty == ra.TotalQty,
-                $"{tag} 挂单数量不自洽");
-    }
-
     // ── 卡牌模式:随机牌组+随机出牌+随机盘后操作 ──
 
     [Theory]
@@ -79,7 +45,7 @@ public sealed class FuzzTests
         Assert.True(core.SetDeck(deck, out _));
         core.BeginTrading();
 
-        CheckInvariants(core.BuildSnapshot(), $"[{level}#{seed} 开局]");
+        Invariants.Check(core.BuildSnapshot(), $"[{level}#{seed} 开局]");
 
         int turns = 0;
         while (turns++ < 28 && !core.Loop.IsFinished && !core.BuildSnapshot().IsLevelOver)
@@ -99,7 +65,7 @@ public sealed class FuzzTests
 
             // Resolve 推进到下一回合(含跨日),每回合校验
             var s2 = Harness.NextTurn(core);
-            CheckInvariants(s2, $"[{level}#{seed} T{turns}]");
+            Invariants.Check(s2, $"[{level}#{seed} T{turns}]");
 
             // 日切时随机盘后操作
             if (core.Loop.IsDayClosed && !core.Loop.IsFinished)
@@ -108,7 +74,7 @@ public sealed class FuzzTests
                 if (rng.Next(4) == 0) core.UpgradeWaterArmy(out _);
                 if (rng.Next(4) == 0) core.ToggleWaterArmy(out _);
                 if (rng.Next(3) == 0) core.PublishSignal("dragonlist", out _);
-                CheckInvariants(core.BuildSnapshot(), $"[{level}#{seed} T{turns} 盘后]");
+                Invariants.Check(core.BuildSnapshot(), $"[{level}#{seed} T{turns} 盘后]");
             }
         }
         _out.WriteLine($"[{level}#{seed}] {turns}回合完成, 权益 {core.BuildSnapshot().Account.TotalEquity / 10000:F0}万");
@@ -132,7 +98,7 @@ public sealed class FuzzTests
         var core = new GameCore(seed: seed * 131 + 3) { CardMode = false };
         core.LoadLevelById(level);
         core.BeginTrading();
-        CheckInvariants(core.BuildSnapshot(), $"[{level}#{seed} 开局]");
+        Invariants.Check(core.BuildSnapshot(), $"[{level}#{seed} 开局]");
 
         int steps = 0, actions = 0;
         while (steps++ < 1600 && !core.Loop.IsFinished)
@@ -161,7 +127,7 @@ public sealed class FuzzTests
 
             core.Step();
             if (steps % 40 == 0)
-                CheckInvariants(core.BuildSnapshot(), $"[{level}#{seed} step{steps}]");
+                Invariants.Check(core.BuildSnapshot(), $"[{level}#{seed} step{steps}]");
         }
         _out.WriteLine($"[{level}#{seed}] {steps}步/{actions}次操作, 权益 {core.BuildSnapshot().Account.TotalEquity / 10000:F0}万, 券池 {core.BuildSnapshot().ShortablePool}/{core.BuildSnapshot().TotalShortable}");
     }
