@@ -52,6 +52,9 @@ public sealed class AIStateMachine
 
     public void Reset() { State = AIState.Observe; TicksInState = 0; }
 
+    /// <summary>测试钩子:直接设置状态(绕过转移条件,供 AI 状态矩阵对局测试)。</summary>
+    internal void ForceState(AIState state) { State = state; TicksInState = 0; }
+
     /// <summary>评估并切换状态。返回决策(含新状态和理由)。</summary>
     public AIDecision Transition(AIContext ctx)
     {

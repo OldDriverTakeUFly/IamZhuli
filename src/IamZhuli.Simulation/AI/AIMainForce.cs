@@ -29,6 +29,10 @@ public sealed class AIMainForce : IParticipant
     public AIState CurrentState => _brain.State;
     public Account Account => _account;
 
+    /// <summary>测试钩子:强制状态机状态。出牌阶段强制→EndCardTurn 产意图即生效;
+    /// Resolve 期间 Act 会按市场重新转移,不影响真实对局。</summary>
+    internal void ForceStateForTest(AIState state) => _brain.ForceState(state);
+
     public AIMainForce(TradingSession session, ParticipantId id, Price intrinsicValue,
                        decimal cash, int initialHolding, Price initialCost,
                        double sensitivity = 0.5, StrategyProfile profile = StrategyProfile.Balanced,

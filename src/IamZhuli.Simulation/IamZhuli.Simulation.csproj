@@ -13,4 +13,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="IamZhuli.Presenter.Tests" />
+  </ItemGroup>
+
 </Project>

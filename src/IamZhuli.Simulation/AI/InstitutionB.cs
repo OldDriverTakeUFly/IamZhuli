@@ -32,6 +32,9 @@ public sealed class InstitutionB : IParticipant
     public Account Account => _account;
     public RiskLevel CurrentRiskLevel { get; private set; } = RiskLevel.Low;
 
+    /// <summary>测试钩子:强制风险档位(出牌阶段强制,EndCardTurn 产意图即用)。</summary>
+    internal void ForceRiskLevelForTest(RiskLevel level) => CurrentRiskLevel = level;
+
     public InstitutionB(TradingSession session, ParticipantId id, Price fairValue,
                         decimal cash, int initialHolding,
                         int baseDepthPerLevel = 300, int levels = 5, int? seed = null)

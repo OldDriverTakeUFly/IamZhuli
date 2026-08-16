@@ -69,6 +69,10 @@ public sealed class GameCore
     public AuctionResultDto? LastAuction => _lastAuction;
     /// <summary>交易会话(下单/撤单/查询的直接入口)。</summary>
     public TradingSession Session => _loop.Session;
+    /// <summary>AI 主力实例(测试矩阵强制状态用)。</summary>
+    public AIMainForce? AI => _ai;
+    /// <summary>机构B实例(测试矩阵强制档位用)。</summary>
+    public InstitutionB? Institution => _institutionB;
     /// <summary>模拟主循环(时钟/暂停/日切)。</summary>
     public SimulationLoop Loop => _loop;
 
