@@ -98,6 +98,69 @@ public class CardAuctionTests
         Assert.False(ok, "无持仓的卖出意图应作废");
     }
 
+    [Fact]
+    public void RestForAuction_CumulativeSells_CannotExceedPosition()
+    {
+        // 同场拍卖两张卖单:各自校验时必须看到累计占用(fuzz 抓到的超卖竞态回归)
+        var (engine, session) = Setup();
+        var seller = session.GetOrCreateAccount(Seller, 500_000m);
+        seller.Position.Seed(new Quantity(100), new Price(10m));   // 可卖100手
+
+        // 第一张卖80手:挂入(占用80)
+        bool ok1 = session.TryRestForAuction(new OrderRequest(
+            Seller, Side.Sell, OrderType.Limit, new Price(10.03m), new Quantity(80)));
+        Assert.True(ok1);
+        // 第二张卖80手:100-80=20可用 → 校验失败作废(修复前会挂入,结算时超卖崩溃)
+        bool ok2 = session.TryRestForAuction(new OrderRequest(
+            Seller, Side.Sell, OrderType.Limit, new Price(10.04m), new Quantity(80)));
+        Assert.False(ok2, "第二张卖单应看到在簿占用,累计超卖必须拦截");
+
+        // 第三张卖20手:恰好用完,允许
+        bool ok3 = session.TryRestForAuction(new OrderRequest(
+            Seller, Side.Sell, OrderType.Limit, new Price(10.05m), new Quantity(20)));
+        Assert.True(ok3);
+
+        // 清场释放占用后,大额卖单重新可挂
+        session.ClearBookAndRefund();
+        bool ok4 = session.TryRestForAuction(new OrderRequest(
+            Seller, Side.Sell, OrderType.Limit, new Price(10.05m), new Quantity(100)));
+        Assert.True(ok4, "清簿后占用应归零");
+    }
+
+    [Fact]
+    public void RestForAuction_CumulativeCovers_CannotExceedShort()
+    {
+        // 同场拍卖两张平仓单:修复前各按全量空头校验,双双成交导致券池超发(fuzz#1101 回归)
+        var (engine, session) = Setup();
+        var shorter = session.GetOrCreateAccount(Shorter, 10_000_000m);
+        var buyer = session.GetOrCreateAccount(Buyer, 1_000_000m);
+
+        // 先经拍卖真实建立50手空头(挂单→撮合→结算)
+        Assert.True(session.TryRestForAuction(new OrderRequest(
+            Shorter, Side.Sell, OrderType.Limit, new Price(10.50m), new Quantity(50), IsShort: true)));
+        Assert.True(session.TryRestForAuction(new OrderRequest(
+            Buyer, Side.Buy, OrderType.Limit, new Price(10.50m), new Quantity(50))));
+        var auction = engine.CallAuction();
+        Assert.True(auction.HasValue);
+        session.SettleAuctionTrades(engine.SweepAtPrice(auction!.Value.Price));
+        Assert.Equal(50, shorter.Position.ShortQty.Value);
+
+        // 第一张平仓50手:挂入(占用50)
+        bool ok1 = session.TryRestForAuction(new OrderRequest(
+            Shorter, Side.Buy, OrderType.Limit, new Price(10.50m), new Quantity(50), IsShort: true));
+        Assert.True(ok1);
+        // 第二张平仓50手:空头已被第一张占用 → 拦截(修复前挂入,结算时空头清零后仍归还券池→超发)
+        bool ok2 = session.TryRestForAuction(new OrderRequest(
+            Shorter, Side.Buy, OrderType.Limit, new Price(10.51m), new Quantity(50), IsShort: true));
+        Assert.False(ok2, "第二张平仓单应看到挂簿占用,累计超空头必须拦截");
+
+        // 清场后占用归零,可重新平仓
+        session.ClearBookAndRefund();
+        bool ok3 = session.TryRestForAuction(new OrderRequest(
+            Shorter, Side.Buy, OrderType.Limit, new Price(10.50m), new Quantity(50), IsShort: true));
+        Assert.True(ok3, "清簿后平仓占用应归零");
+    }
+
     // ══════════════════════════════════════
     // 拍卖撮合端到端(现金守恒)
     // ══════════════════════════════════════

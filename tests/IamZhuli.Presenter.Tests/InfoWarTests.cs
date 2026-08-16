@@ -110,19 +110,22 @@ public sealed class InfoWarTests
         // 舆论吹起来的信心,辟谣时被证伪反转(信心显著回落)
         var core = Harness.NewGame("accumulate", "假大宗买入", "制造传闻");
         decimal peakConfidence = 0;
-        MarketSnapshotDto? afterDebunk = null;
 
-        var snaps = Harness.RunTurns(core, 7, c =>
+        var snaps = Harness.RunTurns(core, 10, c =>
             Harness.PlayByPriority(c, "假大宗买入", "制造传闻"));
         foreach (var s in snaps)
-        {
             peakConfidence = Math.Max(peakConfidence, s.Confidence);
-            if (s.LatestRegulatorEvent.Contains("辟谣") || s.LatestRegulatorEvent.Contains("警示"))
-                afterDebunk ??= s;
-        }
-        _out.WriteLine($"信心峰值 {peakConfidence} → 辟谣后 {afterDebunk?.Confidence}");
-        Assert.NotNull(afterDebunk);
-        Assert.True(afterDebunk!.Confidence < peakConfidence - 5,
-            $"辟谣应显著挫伤信心(峰值{peakConfidence}→{afterDebunk.Confidence})");
+
+        // 检测:复盘事件流里的监管动作(辟谣/警示永久留痕,不依赖最新一条)
+        var regEvents = core.GetReplayData().Events.Where(e => e.Source == "监管").ToList();
+        bool debunked = regEvents.Any(e => e.Detail.Contains("辟谣") || e.Detail.Contains("警示"));
+        int crossIdx = Enumerable.Range(0, snaps.Count).FirstOrDefault(i => snaps[i].InfoHeat >= 60, -1);
+        decimal afterMin = crossIdx >= 0 ? snaps.Skip(crossIdx).Min(s => s.Confidence) : 0;
+        _out.WriteLine($"信心峰值 {peakConfidence} → 跨线后最低 {afterMin} | 辟谣={debunked} 信息热峰值 {snaps.Max(s => s.InfoHeat)}");
+
+        Assert.True(crossIdx >= 0, "信息热应跨过警示线");
+        Assert.True(debunked, "跨线应触发辟谣(复盘事件留痕)");
+        Assert.True(afterMin < peakConfidence - 5,
+            $"辟谣应显著挫伤信心(峰值{peakConfidence}→{afterMin})");
     }
 }

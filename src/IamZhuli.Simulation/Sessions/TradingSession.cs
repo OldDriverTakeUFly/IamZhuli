@@ -25,6 +25,12 @@ public sealed class TradingSession
     private readonly Dictionary<ParticipantId, Account> _accounts = new();
     /// <summary>做空订单ID集合(maker结算时判断是否做空)。</summary>
     private readonly HashSet<OrderId> _shortOrders = new();
+    /// <summary>各参与者在簿卖单占用量(手):防多张卖单合计超卖(买单冻结的镜像)。
+    /// 挂簿登记,成交/撤单/清簿释放。</summary>
+    private readonly Dictionary<ParticipantId, int> _restingSells = new();
+    /// <summary>各参与者挂簿平仓买单占用量(手):防多张平仓单合计超空头(券池超发的根源)。
+    /// 挂簿登记,实际平仓/撤单/清簿释放。</summary>
+    private readonly Dictionary<ParticipantId, int> _pendingCovers = new();
     /// <summary>可融券池余量(手)。初始=流通盘×20%,做空时扣减,平仓时归还。先到先得。</summary>
     public int ShortablePool { get; private set; }
     /// <summary>可融券总量(用于显示比例)。</summary>
@@ -78,6 +84,16 @@ public sealed class TradingSession
         {
             _accounts[req.Participant].ReleaseBuyFreezeRemaining(order.Id, result.RemainingQty);
         }
+        // —— taker 卖单挂簿:登记在簿占用(防后续卖单合计超卖) ——
+        if (req.Side == Side.Sell && !req.IsShort && result.FinalStatus == OrderStatus.Active)
+        {
+            AddRestingSell(req.Participant, result.RemainingQty.Value);
+        }
+        // —— taker 平仓买单挂簿:登记占用(防后续平仓单合计超空头) ——
+        if (req.Side == Side.Buy && req.IsShort && result.FinalStatus == OrderStatus.Active)
+        {
+            _pendingCovers[req.Participant] = _pendingCovers.GetValueOrDefault(req.Participant) + result.RemainingQty.Value;
+        }
         // —— 做空卖单未成交(作废):归还预扣的券池 ——
         if (req.IsShort && req.Side == Side.Sell && result.FinalStatus != OrderStatus.Active)
         {
@@ -88,6 +104,37 @@ public sealed class TradingSession
         return result;
     }
 
+    // —— 在簿卖单占用(防多张卖单合计超卖;买单冻结的镜像) ——
+
+    private void AddRestingSell(ParticipantId p, int qty)
+        => _restingSells[p] = _restingSells.GetValueOrDefault(p) + qty;
+
+    private void ReleaseRestingSell(ParticipantId p, int qty)
+    {
+        int cur = _restingSells.GetValueOrDefault(p);
+        _restingSells[p] = Math.Max(0, cur - qty);
+    }
+
+    /// <summary>平仓成交结算:按实际平仓量还券/释放占用;幽灵超平部分(空头已不够)转多头持仓。
+    /// 正常路径 covered==qty;防御层保证任何情况券池不超发。</summary>
+    private void SettleCover(Account acc, ParticipantId pid, OrderId orderId, Quantity qty, Price price)
+    {
+        int covered = Math.Min(qty.Value, acc.Position.ShortQty.Value);
+        if (covered > 0)
+        {
+            acc.ShortCover(new Quantity(covered), price);
+            ShortablePool += covered;   // 只归还实际平仓量
+            int pend = _pendingCovers.GetValueOrDefault(pid);
+            _pendingCovers[pid] = Math.Max(0, pend - covered);
+        }
+        int excess = qty.Value - covered;
+        if (excess > 0)
+        {
+            // 超平部分:买入的股票转多头(现金照扣,持仓入多仓),不还券
+            acc.ApplyBuyFill(orderId, new Quantity(excess), price);
+        }
+    }
+
     /// <summary>校验并准备订单(可卖/空头持仓/券池预扣/保证金/买单冻结)。
     /// Submit 与 TryRestForAuction 共用。失败抛异常。</summary>
     private Order PrepareOrder(OrderRequest req)
@@ -95,12 +142,20 @@ public sealed class TradingSession
         if (!_accounts.TryGetValue(req.Participant, out var acc))
             throw new InvalidOperationException($"参与者 {req.Participant} 未注册账户。");
 
-        // —— 卖单:校验可卖(T+1) —— 做空卖单跳过持仓校验
-        if (req.Side == Side.Sell && !req.IsShort && !acc.CanSell(req.Quantity))
-            throw new InvalidOperationException("可卖持仓不足(含 T+1 锁定)。");
-        // —— 买回平仓:校验空头持仓 ——
-        if (req.Side == Side.Buy && req.IsShort && acc.Position.ShortQty.Value < req.Quantity.Value)
-            throw new InvalidOperationException("空头持仓不足,无法平仓。");
+        // —— 卖单:校验可卖(T+1,含在簿卖单占用) —— 做空卖单跳过持仓校验
+        if (req.Side == Side.Sell && !req.IsShort)
+        {
+            int resting = _restingSells.GetValueOrDefault(req.Participant);
+            if (!acc.CanSell(new Quantity(req.Quantity.Value + resting)))
+                throw new InvalidOperationException("可卖持仓不足(含 T+1 锁定)。");
+        }
+        // —— 买回平仓:校验空头持仓(含挂簿平仓占用,防多张平仓单合计超空头) ——
+        if (req.Side == Side.Buy && req.IsShort)
+        {
+            int pend = _pendingCovers.GetValueOrDefault(req.Participant);
+            if (acc.Position.ShortQty.Value < req.Quantity.Value + pend)
+                throw new InvalidOperationException("空头持仓不足,无法平仓。");
+        }
 
         // —— 做空卖单:预冻结保证金(按限价或对手价估算) + 券池余量检查 ——
         if (req.IsShort && req.Side == Side.Sell)
@@ -150,8 +205,7 @@ public sealed class TradingSession
             {
                 if (takerIsShort)
                 {
-                    taker.ShortCover(trade.Quantity, trade.Price);   // 买回平仓
-                    ShortablePool += trade.Quantity.Value;            // 平仓归还券池
+                    SettleCover(taker, trade.TakerId, trade.TakerOrderId, trade.Quantity, trade.Price);   // 买回平仓
                 }
                 else
                     taker.ApplyBuyFill(trade.TakerOrderId, trade.Quantity, trade.Price);
@@ -162,18 +216,23 @@ public sealed class TradingSession
                     // maker做空成交,券池已在PrepareOrder时预扣,不重复扣
                 }
                 else
+                {
                     maker.ApplySellFill(trade.Quantity, trade.Price);
+                    ReleaseRestingSell(trade.MakerId, trade.Quantity.Value);
+                }
             }
             else
             {
                 if (takerIsShort)
                     taker.ShortSell(trade.Quantity, trade.Price);    // 做空卖出(券池已预扣)
                 else
+                {
                     taker.ApplySellFill(trade.Quantity, trade.Price);
+                    ReleaseRestingSell(trade.TakerId, trade.Quantity.Value);
+                }
                 if (_shortOrders.Contains(trade.MakerOrderId))
                 {
-                    maker.ShortCover(trade.Quantity, trade.Price);
-                    ShortablePool += trade.Quantity.Value;            // maker平仓归还券池
+                    SettleCover(maker, trade.MakerId, trade.MakerOrderId, trade.Quantity, trade.Price);
                 }
                 else
                     maker.ApplyBuyFill(trade.MakerOrderId, trade.Quantity, trade.Price);
@@ -195,6 +254,12 @@ public sealed class TradingSession
         {
             var order = PrepareOrder(req);
             Engine.RestOrder(order);
+            // 挂簿卖单(非做空):登记占用——同场拍卖第二张卖单校验时才能看到累计
+            if (req.Side == Side.Sell && !req.IsShort)
+                AddRestingSell(req.Participant, req.Quantity.Value);
+            // 挂簿平仓买单:登记占用——同场拍卖第二张平仓单校验时才能看到累计
+            if (req.Side == Side.Buy && req.IsShort)
+                _pendingCovers[req.Participant] = _pendingCovers.GetValueOrDefault(req.Participant) + req.Quantity.Value;
             return true;
         }
         catch { return false; }   // 校验失败/非法价格:意图作废,不透支
@@ -203,7 +268,7 @@ public sealed class TradingSession
     /// <summary>集中撮合成交结算(与 Submit 同一路径,含券池归还/事件触发)。</summary>
     public void SettleAuctionTrades(IEnumerable<Trade> trades) => SettleTrades(trades);
 
-    /// <summary>清空订单簿并释放全部挂单资源:买单解冻现金、做空卖单归还券池预扣。
+    /// <summary>清空订单簿并释放全部挂单资源:买单解冻现金、做空卖单归还券池预扣、卖单占用清零。
     /// 回合开始清场(EndCardTurn)与日切隔夜清零(StartNextDay)共用。</summary>
     public int ClearBookAndRefund()
     {
@@ -222,10 +287,12 @@ public sealed class TradingSession
                 acc.ReleaseBuyFreezeRemaining(order.Id, order.RemainingQty);
         }
         _shortOrders.Clear();   // 兜底清理孤立标记
+        _restingSells.Clear();   // 簿已清空,在簿卖单占用随之归零
+        _pendingCovers.Clear();   // 挂簿平仓占用随之归零
         return refunded;
     }
 
-    /// <summary>撤销某参与者的指定订单,并释放买单剩余冻结。</summary>
+    /// <summary>撤销某参与者的指定订单,并释放买单剩余冻结/卖单占用。</summary>
     public bool Cancel(ParticipantId participant, OrderId orderId)
     {
         if (!Engine.Cancel(orderId, out var order) || order == null) return false;
@@ -235,6 +302,15 @@ public sealed class TradingSession
             ShortablePool += order.RemainingQty.Value;
         if (order.Participant.Equals(participant) && order.Side == Side.Buy && !wasShort)
             _accounts[participant].ReleaseBuyFreezeRemaining(orderId, order.RemainingQty);
+        // 普通卖单撤单:释放在簿占用
+        if (order.Side == Side.Sell && !wasShort)
+            ReleaseRestingSell(order.Participant, order.RemainingQty.Value);
+        // 平仓买单撤单:释放占用
+        if (order.Side == Side.Buy && wasShort)
+        {
+            int pend = _pendingCovers.GetValueOrDefault(order.Participant);
+            _pendingCovers[order.Participant] = Math.Max(0, pend - order.RemainingQty.Value);
+        }
         return true;
     }
 
@@ -242,7 +318,7 @@ public sealed class TradingSession
     public IEnumerable<Order> GetOpenOrders(ParticipantId participant)
         => Engine.OrdersFor(participant);
 
-    /// <summary>撤销某参与者的全部挂单,返回撤销数。释放买单冻结。</summary>
+    /// <summary>撤销某参与者的全部挂单,返回撤销数。释放买单冻结/卖单占用。</summary>
     public int CancelAll(ParticipantId participant)
     {
         int n = Engine.CancelAll(participant);
@@ -252,10 +328,10 @@ public sealed class TradingSession
         return n;
     }
 
-    /// <summary>撤销某参与者某方向(买/卖)的全部挂单,返回撤销数。释放买单冻结。</summary>
+    /// <summary>撤销某参与者某方向(买/卖)的全部挂单,返回撤销数。释放买单冻结/卖单占用。</summary>
     public int CancelAllBySide(ParticipantId participant, Side side)
     {
-        // 先收集要撤的买单(用于释放冻结),再调引擎批量撤
+        // 先收集要撤的订单(用于释放冻结/占用),再调引擎批量撤
         var buyOrdersToRelease = side == Side.Buy
             ? Engine.OrdersFor(participant).Where(o => o.Side == Side.Buy).ToList()
             : new List<Order>();
@@ -266,6 +342,9 @@ public sealed class TradingSession
             foreach (var o in buyOrdersToRelease)
                 acc.ReleaseBuyFreezeRemaining(o.Id, o.RemainingQty);
         }
+        // 释放被撤卖单的在簿占用(方向撤单清空该方向全部挂卖)
+        if (side == Side.Sell)
+            _restingSells[participant] = 0;
         return n;
     }
 

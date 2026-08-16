@@ -54,6 +54,12 @@ public sealed class GameCore
     /// <summary>是否启用卡牌模式(完全替换实时操作)。</summary>
     public bool CardMode { get; set; } = true;
 
+    /// <summary>种子覆盖(测试/复现用):null=按关卡ID稳定哈希。</summary>
+    private readonly int? _seedOverride;
+
+    /// <summary>seed: 覆盖关卡种子,让同一关卡产生不同市场路径(性质测试需要);默认按关卡ID确定。</summary>
+    public GameCore(int? seed = null) => _seedOverride = seed;
+
     public bool IsInitialized { get; private set; }
     public LevelResult? LastResult { get; private set; }
     public bool IsLevelOver { get; private set; }
@@ -111,7 +117,7 @@ public sealed class GameCore
             FloatShares = new Quantity(level.FloatShares)
         };
         var engine = new MatchingEngine(rules);
-        var levelSeed = StableHash(level.Id);
+        var levelSeed = _seedOverride ?? StableHash(level.Id);
         _loop = new SimulationLoop(engine, new SimulationClock(level.TicksPerDay, level.TotalDays),
             seed: levelSeed ^ 0x5EED);   // 全局确定性:参与者Act噪声/预演引导共用此随机流
         _loop.Session.InitShortablePool(level.FloatShares);   // 初始化可融券池(流通盘20%)
