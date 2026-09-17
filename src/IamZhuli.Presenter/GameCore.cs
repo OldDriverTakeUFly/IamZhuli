@@ -411,7 +411,8 @@ public sealed class GameCore
             MaxCardsPerTurn: 2,
             Hand: _cardEngine.Hand.Select(c => new CardInstanceDto(
                 c.UniqueId, c.Definition.Name, c.Definition.Category.ToString(),
-                c.Definition.EnergyCost, c.Definition.CashCost, c.Definition.Description)).ToList(),
+                c.Definition.EnergyCost, c.Definition.CashCost, c.Definition.Description,
+                c.Definition.Effect.ToString())).ToList(),
             LastCombo: _cardEngine.LastCombo,
             LastAuction: _lastAuction);
     }

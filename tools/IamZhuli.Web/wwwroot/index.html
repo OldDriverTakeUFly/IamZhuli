@@ -24,6 +24,11 @@
     .main .panel:nth-child(1) { order: 3; }   /* 盘口/成交(child1) */
     .main .panel:nth-child(4) { order: 4; }   /* 账户/目标(child4) */
     .header { flex-wrap: wrap; gap: 8px 16px; padding: 8px 12px; }
+    .card-item { min-height: 68px; font-size: 14px; }
+    .card-name { font-size: 15px; }
+    .card-desc { font-size: 12px; }
+    .card-exec { font-size: 12px; padding: 3px 8px; }
+    #endTurnBtn { font-size: 16px; padding: 10px 24px; }
   }
   .panel { background: #1a1d24; padding: 16px; overflow-y: auto; min-height: 0; }
   .panel h3 { font-size: 13px; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
@@ -60,6 +65,10 @@
   .orders-head .mini-btn { font-size: 11px; padding: 3px 8px; background: #3a3a3a; color: #ccc; border: 1px solid #555; border-radius: 3px; cursor: pointer; }
   .orders-head .mini-btn:hover { background: #4a3a2a; }
   .orders-list { font-family: monospace; font-size: 12px; max-height: 320px; overflow-y: auto; margin-top: 4px; }
+  /* 卡牌执行预览(规则推导价格) */
+  .card-exec { font-size: 11px; color: #4fc3f7; margin-top: 3px; background: #1c2530; border-radius: 3px; padding: 2px 6px; display: inline-block; }
+  .card-item { min-height: 58px; }
+  .card-item:active { filter: brightness(1.25); }
   .order-row { display: grid; grid-template-columns: 22px 1fr 50px 36px; gap: 4px; padding: 4px 6px; align-items: center; border-radius: 3px; cursor: pointer; }
   .order-row:hover { background: #23272f; }
   .order-row .o-side { font-weight: bold; }
@@ -193,7 +202,7 @@
       </div>
     </div>
     <h3 id="orderTitle">下单</h3>
-    <div class="order-form">
+    <div class="order-form" id="orderForm">
       <div class="row">
         <div class="seg" id="sideSeg">
           <button class="active" data-side="buy">买入</button>
@@ -583,10 +592,12 @@ function renderCards(snap) {
   if (!cs) {
     panel.style.display = 'none';
     orderTitle.style.display = 'block';
+    $('orderForm').style.display = 'block';
     return;
   }
   panel.style.display = 'block';
-  orderTitle.style.display = 'none';   // 卡牌模式隐藏下单区标题
+  orderTitle.style.display = 'none';   // 卡牌模式:操作全由卡牌决定,隐藏手动下单区
+  $('orderForm').style.display = 'none';
   // 回合/能量
   $('cardTurn').textContent = cs.turn + 1;
   $('cardEnergy').textContent = '●'.repeat(cs.energy) + '○'.repeat(Math.max(0, 10 - cs.energy));
@@ -599,16 +610,29 @@ function renderCards(snap) {
   } else {
     $('cardCombo').style.display = 'none';
   }
-  // 手牌
+  // 手牌(含规则推导的执行预览——价格由现价决定,与引擎执行规则一致)
+  const lp = snap.lastPrice, bid = snap.bestBid, shq = snap.account.shortQty;
   $('cardHand').innerHTML = cs.hand.map((c, i) => {
     const canPlay = cs.phase === 'Play' && cs.cardsPlayed < cs.maxCardsPerTurn && c.energyCost <= cs.energy;
     const cls = canPlay ? '' : 'disabled';
+    const fx2 = (v) => (Math.round(v * 100) / 100).toFixed(2);
+    let preview = '';
+    switch (c.effect) {
+      case 'LimitBuy':  preview = `▶ 限价挂单 @ ${fx2((bid ?? lp ?? 10) - 0.01)}`; break;
+      case 'LimitWall': preview = `▶ 双向墙 ${fx2((lp ?? 10) - 0.03)} / ${fx2((lp ?? 10) + 0.03)}`; break;
+      case 'MarketBuy': preview = '▶ 集合竞价扫买(按竞价价成交)'; break;
+      case 'MarketSell': preview = '▶ 集合竞价扫卖(按竞价价成交)'; break;
+      case 'ShortSell': preview = '▶ 集合竞价做空(按竞价价成交)'; break;
+      case 'ShortCover': preview = shq > 0 ? `▶ 市价买回 ${shq} 手平仓` : '▶ 无空头持仓'; break;
+      case 'ScheduledSell': preview = '▶ 揭牌后逐tick限价卖出'; break;
+    }
     return `<div class="card-item card-cat-${c.category} ${cls}" data-cardidx="${i}">
-      <div style="display:flex;justify-content:space-between;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
         <span class="card-name">${c.name}</span>
         <span class="card-cost">${c.energyCost > 0 ? '⚡'.repeat(c.energyCost) : '免费'} ${c.cashCost > 0 ? (c.cashCost/10000)+'w' : ''}</span>
       </div>
       <div class="card-desc">${c.description}</div>
+      ${preview ? `<div class="card-exec">${preview}</div>` : ''}
     </div>`;
   }).join('');
   // 揭牌结果(谁在什么价买卖多少,涉及你的行高亮)

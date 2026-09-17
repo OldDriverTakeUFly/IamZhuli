@@ -43,7 +43,7 @@ public record LevelInfoDto(string Id, string Name, string Briefing);
 
 // ── 卡牌 ──
 public record CardInstanceDto(int Id, string Name, string Category, int EnergyCost,
-    decimal CashCost, string Description);
+    decimal CashCost, string Description, string Effect);
 /// <summary>揭牌成交单笔(买方→卖方,含做空标记)。</summary>
 public record AuctionTradeDto(string Buyer, string Seller, decimal Price, int Qty,
     bool BuyerIsShort, bool SellerIsShort);
