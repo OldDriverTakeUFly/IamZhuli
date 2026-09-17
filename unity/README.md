@@ -52,6 +52,29 @@ IamZhuli.Simulation / Engine / Core (DLL:撮合/散户/AI/监管/复盘)
 - **自绘图表**: `Scripts/UI/TimeshareElement.cs`(generateVisualContent)
 - **场景生成**: `Assets/IamZhuli/Editor/SceneBuilder.cs`
 
+## 安卓端
+
+两条路,按手头环境选:
+
+### 路 A:手机浏览器(零安装,今天就能玩)
+
+Web 版已做移动适配(viewport + 单列堆叠:图表→手牌→盘口→账户)。同一 WiFi 下:
+
+```bash
+cd tools/IamZhuli.Web
+ASPNETCORE_URLS=http://0.0.0.0:5023 dotnet run
+# 手机浏览器打开 http://<电脑局域网IP>:5023 (查IP: hostname -I)
+```
+
+### 路 B:Unity APK(需要编辑器 + Android 模块)
+
+1. Unity Hub 安装编辑器时勾选 **Android Build Support**(含 SDK/NDK/JDK)
+2. 打开本工程 → 菜单 `我是主力 → 一键搭建场景`(若未建)
+3. 菜单 `我是主力 → 构建安卓APK` → 产物在 `unity/build/IamZhuli.apk`
+4. 手机开启 USB 调试:`adb install IamZhuli.apk`,或直接拷贝安装
+
+构建脚本:`Assets/IamZhuli/Editor/AndroidBuild.cs`(Development 模式,可调试)。
+
 ## DLL 更新
 
 逻辑层代码改动后:重新执行 `bash unity/build-dlls.sh`,回 Unity 等待自动重编译。

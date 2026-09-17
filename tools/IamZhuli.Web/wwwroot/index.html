@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>我是主力 · 网页版 POC</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,6 +14,17 @@
   .down { color: #26a69a; }
   .flat { color: #e0e0e0; }
   .main { display: grid; grid-template-columns: 280px 1fr 340px 280px; grid-template-rows: 1fr; gap: 1px; background: #333; height: calc(100vh - 56px); }
+
+  /* —— 移动端:单列堆叠(图表→出牌→盘口→账户),整页滚动 —— */
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
+    .main .panel { min-height: 0; max-height: none; }
+    #chartPanel { order: 1; height: 480px; }
+    .main .panel:nth-child(3) { order: 2; }   /* 下单/卡牌操作(child3) */
+    .main .panel:nth-child(1) { order: 3; }   /* 盘口/成交(child1) */
+    .main .panel:nth-child(4) { order: 4; }   /* 账户/目标(child4) */
+    .header { flex-wrap: wrap; gap: 8px 16px; padding: 8px 12px; }
+  }
   .panel { background: #1a1d24; padding: 16px; overflow-y: auto; min-height: 0; }
   .panel h3 { font-size: 13px; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
   /* 盘口 */
