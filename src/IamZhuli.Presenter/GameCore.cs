@@ -623,6 +623,16 @@ public sealed class GameCore
         // 1.7 架势变体:修改玩家操盘意图 + 情绪/监管副作用(揭牌时消费);欺诈架势产出假墙
         var decoys = ApplyStance(engine);
 
+        // 1.8 反手抢跑:AI已识破假墙(≥2次)且玩家仍延续该方向 → AI先下同向市价单,
+        //     买入场景推高竞价价(让被识破的操纵者买贵),卖出场景压低(让他卖便宜)
+        if (_ai is { FakeWallSeen: >= 2, LastFakeWallSide: { } fw })
+        {
+            bool pb = _cardEngine.PendingIntents.Any(x => x.Participant.Equals(Player) && x.Side == Side.Buy);
+            bool ps = _cardEngine.PendingIntents.Any(x => x.Participant.Equals(Player) && x.Side == Side.Sell && !x.IsShort);
+            if ((fw == Side.Buy && pb) || (fw == Side.Sell && ps))
+                _cardEngine.PendingIntents.Insert(0, new OrderIntent(_ai.Id, fw, OrderType.Market, 0, 800));   // 插队最前:竞价时间优先真正"抢先"
+        }
+
         // 2. 清场:清空订单簿,释放上一回合挂单的冻结资金/预扣券池
         session.ClearBookAndRefund();
 
@@ -646,11 +656,19 @@ public sealed class GameCore
                 new Price(price), new Quantity(intent.Qty), IsShort: intent.IsShort));
         }
 
-        // 4.5 盘口伪装:假墙挂入(绕过资产校验的纯盘面幻影,参与竞价定价)
+        // 4.5 盘口伪装:假墙挂入(绕过资产校验的纯盘面幻影,参与竞价定价)。
+        //     AI 识破升级:见过1次→墙效减半(市场对重复出现的墙打折扣),2次起→墙失效
         var decoyOrders = new List<IamZhuli.Engine.Order>();
         foreach (var d in decoys)
         {
-            var o = engine.CreateOrder(Player, d.Side, OrderType.Limit, new Price(d.Price), new Quantity(d.Qty));
+            int wallQty = _ai?.FakeWallSeen switch
+            {
+                >= 2 => 0,
+                >= 1 => d.Qty / 2,
+                _ => d.Qty,
+            };
+            if (wallQty <= 0) continue;   // 已被识破:墙上不了盘面
+            var o = engine.CreateOrder(Player, d.Side, OrderType.Limit, new Price(d.Price), new Quantity(wallQty));
             engine.RestOrder(o);
             decoyOrders.Add(o);
         }
@@ -662,6 +680,7 @@ public sealed class GameCore
             {
                 engine.Cancel(d.Id, out _);
                 _regulator.ApplyTradeHeat(4m, $"盘口伪装撤单: {d.RemainingQty}@{d.Price}");
+                _ai?.NoteFakeWall(d.Side, d.Price.Value, d.RemainingQty.Value);
             }
             engine.SetLastPrice(auction.Price);
             var trades = engine.SweepAtPrice(auction.Price);
@@ -682,6 +701,7 @@ public sealed class GameCore
             {
                 engine.Cancel(d.Id, out _);
                 _regulator.ApplyTradeHeat(4m, $"盘口伪装撤单: {d.RemainingQty}@{d.Price}");
+                _ai?.NoteFakeWall(d.Side, d.Price.Value, d.RemainingQty.Value);
             }
             _lastAuction = new AuctionResultDto(_cardEngine.Turn, 0m, 0, new());
         }

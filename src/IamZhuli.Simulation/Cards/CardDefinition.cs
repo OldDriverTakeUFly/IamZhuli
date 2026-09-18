@@ -86,7 +86,7 @@ public sealed record CardDefinition(
         // —— 架势牌(与操盘牌组合出变体;不占每回合出牌数,可同回合替换) ——
         new("激进架势", CardCategory.Stance, CardEffect.StanceAggressive, 1, 0, 0, 0, 0, 0, "本回合操盘牌数量翻倍,但监管关注+5"),
         new("隐蔽架势", CardCategory.Stance, CardEffect.StanceStealthy, 1, 0, 0, 0, 0, 0, "本回合操盘牌量×6折,监管关注-4,限价挂得更深"),
-        new("欺诈架势", CardCategory.Stance, CardEffect.StanceDeceptive, 1, 0, 0, 0, 0, 0, "反向情绪信号+盘口伪装假墙锚定竞价价,撮合前撤墙(撤单热度+4)"),
+        new("欺诈架势", CardCategory.Stance, CardEffect.StanceDeceptive, 1, 0, 0, 0, 0, 0, "反向情绪+假墙锚定竞价价;连续使用会被AI识破(墙效减半→失效→反手抢跑)"),
         new("防御架势", CardCategory.Stance, CardEffect.StanceDefensive, 1, 0, 0, 0, 0, 0, "本回合市价单转为对手价限价,不追价,冲击更小"),
     };
 }

@@ -1,3 +1,5 @@
+using IamZhuli.Engine;
+using IamZhuli.Core;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -205,5 +207,43 @@ public sealed class StanceTests
         // 撤墙后无残留:玩家挂单里不应有假墙价位的大单
         var snap = core.BuildSnapshot();
         Assert.True(snap.OpenOrders.All(o => o.TotalQty < 3000), "假墙不应残留为挂单");
+    }
+
+    [Fact]
+    public void DeceptiveWall_AIRecognition_Escalates_WallDegradesThenIgnored()
+    {
+        var core = new GameCore(seed: 6161);
+        core.LoadLevelById("accumulate");
+        core.SetDeck(new List<string> { "欺诈架势", "市价急拉", "限价吸筹" }, out _);
+        core.BeginTrading();
+        Harness.NextTurn(core);   // 攒能量(回合2起 1+3=4)
+
+        var auctionPrices = new List<decimal>();
+        bool frontRan = false;
+        for (int turn = 0; turn < 3 && !core.Loop.IsFinished; turn++)
+        {
+            Assert.True(Harness.Play(core, "欺诈架势"), Harness.LastPlayError);
+            Assert.True(Harness.Play(core, "市价急拉"), Harness.LastPlayError);
+            core.EndCardTurn();
+            var ra = core.LastAuction!;
+            auctionPrices.Add(ra.Volume > 0 ? ra.Price : 0);
+            // 识破后抢跑:AI在玩家买入方向抢先下买(拍卖里AI主力应作为买方出现)
+            if (turn >= 2 && ra.Trades.Any(x => x.Buyer == "AI主力" && x.Qty > 0))
+                frontRan = true;
+            Harness.NextTurn(core);
+        }
+
+        // 识别升级:2次撤墙被识破(第3次墙上不了盘面→计数停在2)
+        Assert.Equal(2, core.AI!.FakeWallSeen);
+        Assert.Equal(Side.Buy, core.AI.LastFakeWallSide);
+        // 事件流:恰好2次撤墙(全额3000 + 减半1500),第3回合无墙可撤
+        var cancels = core.GetReplayData().Events
+            .Where(e => e.Source == "监管" && e.Detail.Contains("盘口伪装撤单")).ToList();
+        _out.WriteLine($"撤墙事件: {cancels.Count} 次 → {string.Join(" | ", cancels.Select(c => c.Detail))}");
+        _out.WriteLine($"竞价价轨迹: {string.Join(" → ", auctionPrices)} | 抢跑出现={frontRan}");
+        Assert.Equal(2, cancels.Count);
+        Assert.Contains("3000", cancels[0].Detail);   // 第1次全额墙
+        Assert.Contains("1500", cancels[1].Detail);   // 第2次减半墙
+        Assert.True(frontRan, "识破后 AI 应反手抢跑(在玩家买入方向抢先买入)");
     }
 }

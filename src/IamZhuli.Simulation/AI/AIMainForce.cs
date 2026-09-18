@@ -33,6 +33,19 @@ public sealed class AIMainForce : IParticipant
     /// Resolve 期间 Act 会按市场重新转移,不影响真实对局。</summary>
     internal void ForceStateForTest(AIState state) => _brain.ForceState(state);
 
+    // —— 盘口伪装识别(欺诈架势假墙的对位进化) ——
+    /// <summary>累计识破的假墙次数(1次后墙效减半,2次起墙失效+AI反手抢跑)。</summary>
+    public int FakeWallSeen { get; private set; }
+    /// <summary>最近一次识破的假墙方向(抢跑方向的依据)。</summary>
+    public Side? LastFakeWallSide { get; private set; }
+
+    /// <summary>观察到一次假墙挂撤(EndCardTurn 撤墙时由 GameCore 调用)。</summary>
+    public void NoteFakeWall(Side side, decimal price, int qty)
+    {
+        FakeWallSeen++;
+        LastFakeWallSide = side;
+    }
+
     public AIMainForce(TradingSession session, ParticipantId id, Price intrinsicValue,
                        decimal cash, int initialHolding, Price initialCost,
                        double sensitivity = 0.5, StrategyProfile profile = StrategyProfile.Balanced,
