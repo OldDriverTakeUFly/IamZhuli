@@ -55,7 +55,8 @@ public record CardStateDto(int Turn, int Energy, string Phase,
     AuctionResultDto? LastAuction,
     string? ActiveStance,    // 当前架势(StanceAggressive等,null=无)
     string PhaseName,         // 交易日阶段:盘前竞价/盘中/收盘竞价
-    int MaxEnergy);           // 能量上限(前端渲染●○用)
+    int MaxEnergy,            // 能量上限(前端渲染●○用)
+    string? Intent);          // 操盘意图(Accumulate/Push/Wash/Distribute/Defend,null=未设定)
 
 // ── 关卡结算 ──
 public record LevelResultDto(bool IsVictory, int Stars, string CoachComment, string FailureReason,

@@ -317,6 +317,7 @@
         <h3 style="margin:0;">🎴 手牌</h3>
         <span style="font-size:11px;color:#888;">回合 <span id="cardTurn">1</span>/5 · 能量 <span id="cardEnergy">●●●</span> · <span id="cardPhase" style="font-weight:bold;">出牌中</span> <span id="cardStance" style="display:none;background:#372a4a;color:#ce93d8;border-radius:8px;padding:1px 8px;margin-left:4px;"></span></span>
       </div>
+      <div id="intentBar" style="display:none;flex-direction:row;gap:5px;margin-bottom:6px;overflow-x:auto;"></div>
       <div id="posBar" style="display:none;flex-direction:row;justify-content:space-between;background:rgba(255,255,255,.05);border-radius:10px;padding:6px 12px;margin-bottom:6px;font-size:12px;"></div>
       <div id="declareHint" style="display:none;background:#1c2a3a;border-left:3px solid #4fc3f7;border-radius:4px;padding:6px 10px;margin-bottom:6px;font-size:12px;color:#81d4fa;line-height:1.5;">
         📋 <b>申报段</b>：现在出牌 = 挂单申报（可撤），<b>不会立即成交</b>——申报单将在下一段「<span id="declareNext">盘前竞价</span>」统一撮合定价。
@@ -771,6 +772,16 @@ function renderCards(snap) {
   $('endTurnBtn').textContent = isDeclare ? '完成申报 ▶' : (pn === '收盘竞价' ? '锁定收盘 ▶' : '结束回合 ▶');
   $('cardPlayed').textContent = `已出 ${cs.cardsPlayed}/${cs.maxCardsPerTurn}`;
   $('cardPlayed').style.cssText = 'font-size:13px;font-weight:bold;color:' + (cs.cardsPlayed >= cs.maxCardsPerTurn ? '#ef5350' : '#e0e0e0');
+  // 操盘意图chips(战略层:跨段持续的基础盘方向)
+  const intents = [['accumulate','吸筹','低吸800'],['push','拉升','买800'],['wash','洗盘','双向夹'],['distribute','出货','挂卖800'],['defend','防御','小墙'],['none','—','停止']];
+  const ib = $('intentBar');
+  ib.style.display = 'flex';
+  const curIntent = (cs.intent || 'none').toLowerCase();
+  ib.innerHTML = intents.map(([id, name, tip]) =>
+    `<button class="intent-chip ${curIntent === id ? 'active' : ''}" data-intent="${id}" title="基础盘:${tip}">${name}</button>`).join('');
+  ib.querySelectorAll('.intent-chip').forEach(b => b.onclick = async () => {
+    await fetch('/api/intent?id=' + b.dataset.intent, { method: 'POST' });
+  });
   const stName = { StanceAggressive:'激进', StanceStealthy:'隐蔽', StanceDeceptive:'欺诈', StanceDefensive:'防御' };
   const stTxt = { StanceAggressive:'量×2 热度↑', StanceStealthy:'量×6折 热度↓', StanceDeceptive:'反向信号', StanceDefensive:'市价→限价' };
   if (cs.activeStance) {

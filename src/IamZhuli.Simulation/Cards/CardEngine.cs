@@ -3,6 +3,17 @@ using IamZhuli.Engine;
 
 namespace IamZhuli.Simulation.Cards;
 
+/// <summary>操盘意图(战略层):跨段持续的基础盘方向,免费且不占出牌数。</summary>
+public enum TurnIntent
+{
+    None,        // 未设定
+    Accumulate,  // 吸筹:买一下方挂800手(安静收集)
+    Push,        // 拉升:市价买800手
+    Wash,        // 洗盘:上压600+下托600(双向夹)
+    Distribute,  // 出货:卖一队尾挂800手
+    Defend,      // 防御:±0.03小墙各600
+}
+
 /// <summary>订单意图(回合出牌收集,揭牌时统一撮合)。</summary>
 public record OrderIntent(
     ParticipantId Participant, Side Side, OrderType Type,

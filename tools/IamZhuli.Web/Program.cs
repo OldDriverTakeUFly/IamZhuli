@@ -95,6 +95,12 @@ app.MapPost("/api/card/play", (GameSingleton game, int handIndex) =>
     return Results.Ok(new { ok, error });
 });
 
+app.MapPost("/api/intent", (GameSingleton game, string id) =>
+{
+    var ok = game.SetIntent(id, out var error);
+    return Results.Ok(new { ok, error });
+});
+
 app.MapPost("/api/card/endturn", (GameSingleton game) =>
 {
     game.EndCardTurn();

@@ -137,6 +137,9 @@ public sealed class GameSingleton
         finally { _gate.Release(); }
     }
 
+    // —— 操盘意图(战略层:与卡牌同区,Play阶段无锁竞争) ——
+    public bool SetIntent(string id, out string error) => _core.SetIntent(id, out error);
+
     // —— 卡牌模式(玩家操作;tick 在 Play 阶段冻结,不与 Step 竞争,直调即可) ——
 
     public bool PlayCard(int handIndex, out string error) => _core.PlayCard(handIndex, out error);

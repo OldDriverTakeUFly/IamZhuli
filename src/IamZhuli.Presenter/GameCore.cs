@@ -56,6 +56,60 @@ public sealed class GameCore
     /// <summary>是否启用卡牌模式(完全替换实时操作)。</summary>
     public bool CardMode { get; set; } = true;
 
+    /// <summary>操盘意图(战略层):跨段持续,每段免费产生基础盘;卡牌是战术强化。</summary>
+    public TurnIntent Intent { get; private set; } = TurnIntent.None;
+
+    /// <summary>设置操盘意图(前端chips;None=清除)。仅出牌阶段可改。</summary>
+    public bool SetIntent(string name, out string error)
+    {
+        error = "";
+        if (_cardEngine is not { Phase: CardPhase.Play }) { error = "仅出牌阶段可调整意图"; return false; }
+        Intent = name?.Trim().ToLowerInvariant() switch
+        {
+            "accumulate" or "吸筹" => TurnIntent.Accumulate,
+            "push" or "拉升" => TurnIntent.Push,
+            "wash" or "洗盘" => TurnIntent.Wash,
+            "distribute" or "出货" => TurnIntent.Distribute,
+            "defend" or "防御" => TurnIntent.Defend,
+            _ => TurnIntent.None,
+        };
+        return true;
+    }
+
+    /// <summary>意图基础盘:无论手牌如何,方向永远可执行(庄家剧本不由抽卡决定)。</summary>
+    private void AddIntentBaseline()
+    {
+        if (Intent == TurnIntent.None) return;
+        var view = _loop.Session.Engine.View;
+        decimal last = view.LastPrice?.Value ?? 10m;
+        decimal bid = view.BestBid?.Value ?? last;
+        decimal ask = view.BestAsk?.Value ?? last;
+        var rules = _loop.Session.Engine.Rules;
+        var intents = _cardEngine!.PendingIntents;
+        void Add(Side side, OrderType type, decimal price, int qty) =>
+            intents.Add(new OrderIntent(Player, side, type, price, qty));
+        switch (Intent)
+        {
+            case TurnIntent.Accumulate:
+                Add(Side.Buy, OrderType.Limit, Math.Max(rules.LowerLimit.Value, bid - 0.01m), 800);
+                break;
+            case TurnIntent.Push:
+                Add(Side.Buy, OrderType.Market, 0, 800);
+                break;
+            case TurnIntent.Wash:   // 上压下托,双向夹出浮筹
+                Add(Side.Sell, OrderType.Limit, Math.Min(rules.UpperLimit.Value, ask + 0.02m), 600);
+                Add(Side.Buy, OrderType.Limit, Math.Max(rules.LowerLimit.Value, bid - 0.04m), 600);
+                break;
+            case TurnIntent.Distribute:
+                Add(Side.Sell, OrderType.Limit, ask, 800);   // 挂卖一队尾,被动出货
+                break;
+            case TurnIntent.Defend:
+                Add(Side.Buy, OrderType.Limit, Math.Max(rules.LowerLimit.Value, bid - 0.03m), 600);
+                Add(Side.Sell, OrderType.Limit, Math.Min(rules.UpperLimit.Value, ask + 0.03m), 600);
+                break;
+        }
+    }
+
     /// <summary>种子覆盖(测试/复现用):null=按关卡ID稳定哈希。</summary>
     private readonly int? _seedOverride;
 
@@ -113,6 +167,7 @@ public sealed class GameCore
         IsLevelOver = false;
         _prevPriceForVolatility = null;
         _infoGagTicks = 0;
+        Intent = TurnIntent.None;   // 新关卡新剧本
 
         var intrinsic = new Price(level.IntrinsicValue);
         var rules = new MarketRules
@@ -444,7 +499,8 @@ public sealed class GameCore
             LastAuction: _lastAuction,
             ActiveStance: _cardEngine.ActiveStance == CardEffect.None ? null : _cardEngine.ActiveStance.ToString(),
             PhaseName: TurnPhaseName(_cardEngine.Turn),
-            MaxEnergy: 12);
+            MaxEnergy: 12,
+            Intent: Intent == TurnIntent.None ? null : Intent.ToString());
     }
 
     // ══════════════════════════════════════
@@ -629,6 +685,9 @@ public sealed class GameCore
             if (_institutionB != null)
                 _cardEngine.PendingIntents.AddRange(_institutionB.ProduceIntents(session));
         }
+
+        // 1.05 操盘意图基础盘(战略层:先于架势注入,架势/连招可放大它)
+        AddIntentBaseline();
 
         // 1.1 盘前锁单竞价(回合1):散户隔夜情绪化意向单——消息偏差/贪婪驱动的小额市价单,
         //     打通"盘后发消息→次日高开/低开"通道(散户是价格接受者,但集合竞价会排队表态)
