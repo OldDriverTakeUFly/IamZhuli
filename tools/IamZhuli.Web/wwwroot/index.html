@@ -112,6 +112,72 @@
   .conn-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
   .conn-dot.on { background: #26a69a; }
   .conn-dot.off { background: #ef5350; }
+
+  /* ═══════════ 手游圆润化 Reskin v1 ═══════════ */
+  :root { --r-lg: 16px; --r-md: 12px; --r-sm: 8px; }
+  body { background: radial-gradient(1200px 600px at 20% -10%, #1d2433 0%, #14171e 55%, #10131a 100%); }
+  /* 面板: 浮层卡片化(去硬边框,用柔影+大圆角) */
+  .panel { background: linear-gradient(180deg, #232a36 0%, #1c222c 100%); border-radius: var(--r-lg) !important;
+           box-shadow: 0 4px 20px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04); border: none !important; }
+  .main { gap: 8px; background: transparent !important; }
+  .header { background: rgba(26,31,42,.85) !important; backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,.06); }
+  /* 按钮: 胶囊+渐变+按压反馈 */
+  .btn, .btn-buy, .btn-sell, .btn-ctrl, .btn-primary, .mini-btn, .seg button {
+    border-radius: 999px !important; transition: transform .12s ease, filter .12s ease, box-shadow .2s; font-weight: 600; }
+  .btn:active, .btn-buy:active, .btn-sell:active, .btn-ctrl:active, .mini-btn:active, .seg button:active { transform: scale(.94); }
+  .btn-buy { background: linear-gradient(135deg, #ff6b6b, #ef5350) !important; box-shadow: 0 4px 14px rgba(239,83,80,.35); }
+  .btn-sell { background: linear-gradient(135deg, #2fc0ab, #26a69a) !important; box-shadow: 0 4px 14px rgba(38,166,154,.35); }
+  .btn-ctrl, .mini-btn { background: linear-gradient(180deg, #333c4c, #272f3c) !important; border: 1px solid rgba(255,255,255,.07); }
+  .seg button.active { background: linear-gradient(135deg, #f4d35e, #e8c44a) !important; color: #1a1d24 !important;
+                       box-shadow: 0 3px 10px rgba(232,196,74,.35); }
+  #endTurnBtn { box-shadow: 0 6px 18px rgba(239,83,80,.4); }
+  /* 卡牌: 大圆角+类别渐变+顶部色带+选中浮起 */
+  .card-item { border-radius: var(--r-md) !important; border: none !important; position: relative; overflow: hidden;
+               background: linear-gradient(180deg, #2a3140 0%, #222835 100%) !important;
+               box-shadow: 0 3px 12px rgba(0,0,0,.4); transition: transform .12s ease; }
+  .card-item::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .card-item:active { transform: scale(.96); }
+  .card-cat-Trading::before { background: linear-gradient(90deg, #ef5350, #ff8a65); }
+  .card-cat-Media::before   { background: linear-gradient(90deg, #e8c44a, #ffe082); }
+  .card-cat-Signal::before  { background: linear-gradient(90deg, #ab47bc, #ce93d8); }
+  .card-cat-Defense::before { background: linear-gradient(90deg, #42a5f5, #90caf9); }
+  .card-cat-Stance::before  { background: linear-gradient(90deg, #7e57c2, #b39ddb); }
+  .card-cat-Trading { background: linear-gradient(180deg, #33262b 0%, #241d22 100%) !important; }
+  .card-cat-Media   { background: linear-gradient(180deg, #322f22 0%, #242119 100%) !important; }
+  .card-cat-Signal  { background: linear-gradient(180deg, #2d2436 0%, #211b28 100%) !important; }
+  .card-cat-Stance  { background: linear-gradient(180deg, #292238 0%, #1e1a2a 100%) !important; }
+  .card-exec { border-radius: 999px !important; }
+  /* 提示/揭牌: 信息卡化 */
+  #declareHint { border-radius: var(--r-md) !important; border-left: 4px solid #4fc3f7 !important;
+                 background: linear-gradient(90deg, rgba(79,195,247,.12), rgba(79,195,247,.03)) !important; }
+  #revealPanel { border-top: none !important; }
+  .reveal-box { border-radius: var(--r-md); background: rgba(255,255,255,.03); padding: 8px !important; }
+  /* 图表/盘口容器 */
+  #chartPanel .chart, #priceWrap, #volWrap { border-radius: var(--r-md); overflow: hidden; }
+  .lastprice { border-radius: var(--r-sm); background: rgba(255,255,255,.05); }
+  .book-row, .trade-item { border-radius: var(--r-sm); }
+  .book-row:hover { background: rgba(255,255,255,.04); }
+  /* 关卡卡: 游戏卡牌风 */
+  .level-card { border-radius: var(--r-lg) !important; border: 1px solid rgba(255,255,255,.08) !important;
+                background: linear-gradient(180deg, #262e3d, #1c2330) !important;
+                box-shadow: 0 6px 18px rgba(0,0,0,.45); transition: transform .15s ease, box-shadow .15s; }
+  .level-card:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(0,0,0,.55); border-color: #e8c44a66 !important; }
+  .level-card:active { transform: scale(.97); }
+  /* 模态: 浮层圆角 */
+  #levelSelectModal > div, #deckBuilderModal > div, #resultModal > div { border-radius: var(--r-lg) !important; }
+  /* 段落标签(chip) */
+  #cardStance { border-radius: 999px; }
+  #cardPhase { border-radius: 999px; padding: 1px 8px; background: rgba(255,255,255,.06); }
+  /* 能量: 胶囊化 */
+  #cardEnergy { letter-spacing: 1px; background: rgba(255,255,255,.06); border-radius: 999px;
+                padding: 2px 10px; color: #ffe082; }
+  /* 图表容器: 深色底让圆角可见 */
+  #priceWrap, #volWrap { background: #141821; box-shadow: inset 0 1px 4px rgba(0,0,0,.4); }
+  /* 主按钮呼吸感(评审:内边距不足) */
+  #endTurnBtn { padding-left: 22px !important; padding-right: 22px !important; }
+  /* 空态/成交列表柔和 */
+  .orders-empty, .trade-list { border-radius: var(--r-sm); }
 </style>
 </head>
 <body>
