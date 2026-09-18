@@ -41,6 +41,8 @@ public sealed class CardEngine
     public List<PendingEffect> PendingEffects { get; } = new();
     /// <summary>蛰伏冷却标记(本回合不能出操盘牌)。</summary>
     public bool IsLayingLow { get; private set; }
+    /// <summary>当前架势(架势牌设置,揭牌时消费变体,回合切换清空)。</summary>
+    public CardEffect ActiveStance { get; set; } = CardEffect.None;
     /// <summary>上次触发的连招(供前端展示)。</summary>
     public string? LastCombo { get; private set; }
     /// <summary>本回合触发的连招名(同回合按序打出连招序列才触发;揭牌时消费加成后清空)。</summary>
@@ -114,6 +116,7 @@ public sealed class CardEngine
         _discardPile.Clear();
         _turnPlays.Clear();
         ActiveCombo = null;
+        ActiveStance = CardEffect.None;
         // 准备抽牌堆:自配牌组 or 全牌库
         if (HasCustomDeck)
         {
@@ -130,10 +133,13 @@ public sealed class CardEngine
         error = "";
         if (Phase != CardPhase.Play) { error = "当前不是出牌阶段"; return false; }
         if (handIndex < 0 || handIndex >= Hand.Count) { error = "无效的手牌索引"; return false; }
-        if (CardsPlayedThisTurn >= MaxCardsPerTurn) { error = $"本回合最多出{MaxCardsPerTurn}张牌"; return false; }
 
         var card = Hand[handIndex];
         var def = card.Definition;
+        bool isStance = def.Category == CardCategory.Stance;
+
+        // 出牌数上限:架势牌不占限额(先架势再双操盘是合法连招)
+        if (!isStance && CardsPlayedThisTurn >= MaxCardsPerTurn) { error = $"本回合最多出{MaxCardsPerTurn}张牌"; return false; }
 
         // 验证能量
         if (Energy < def.EnergyCost) { error = $"能量不足(需要{def.EnergyCost},剩余{Energy})"; return false; }
@@ -144,19 +150,20 @@ public sealed class CardEngine
         bool ok = effectExecutor(def, _cardIdSeq);
         if (!ok) { error = "效果执行失败(资金/持仓/券源不足)"; return false; }
 
-        // 扣能量
+        // 扣能量;架势牌设置当前架势且不占出牌数
         Energy -= def.EnergyCost;
-        CardsPlayedThisTurn++;
+        if (isStance) ActiveStance = def.Effect;
+        else CardsPlayedThisTurn++;
 
         // 从手牌移除,放入弃牌堆,抽新牌
         Hand.RemoveAt(handIndex);
         if (HasCustomDeck) _discardPile.Add(def);
         DrawCard();
 
-        // 记录出牌(连招检测)
+        // 记录出牌(连招检测;架势牌不进入序列,不打断连招)
         _recentPlays.Add(def.Effect);
         if (_recentPlays.Count > 10) _recentPlays.RemoveAt(0);
-        _turnPlays.Add(def.Effect);
+        if (!isStance) _turnPlays.Add(def.Effect);
 
         // 蛰伏冷却标记
         if (def.Effect == CardEffect.LayLow) IsLayingLow = true;
@@ -246,9 +253,15 @@ public sealed class CardEngine
         IsLayingLow = false;
         _turnPlays.Clear();
         ActiveCombo = null;
+        ActiveStance = CardEffect.None;
         Phase = CardPhase.Play;
-        // 补满手牌
-        while (Hand.Count < HandSize) DrawCard();
+        // 补满手牌(自配牌组总张数<手牌上限时抽无可抽,必须防死循环)
+        while (Hand.Count < HandSize)
+        {
+            int before = Hand.Count;
+            DrawCard();
+            if (Hand.Count == before) break;   // 小牌组耗尽:有多少拿多少
+        }
     }
 
     /// <summary>检测连招。返回触发的连招名(null=无)。</summary>
@@ -303,5 +316,6 @@ public sealed class CardEngine
         _tickInTurn = 0;
         PendingEffects.Clear();
         _recentPlays.Clear();
+        ActiveStance = CardEffect.None;
     }
 }

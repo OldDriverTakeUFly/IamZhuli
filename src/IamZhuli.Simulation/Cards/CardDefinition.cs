@@ -6,7 +6,8 @@ public enum CardCategory
     Trading,    // 操盘牌(直接下单)
     Media,      // 舆论牌(操纵情绪)
     Signal,     // 信号牌(误导散户)
-    Defense     // 防御牌(降低风险)
+    Defense,    // 防御牌(降低风险)
+    Stance      // 架势牌(与操盘牌组合出变体,不占出牌数)
     // Combo 连招牌不在手牌中,自动检测组合触发
 }
 
@@ -30,6 +31,10 @@ public enum CardEffect
     SignalDragonList,   // 上龙虎榜
     LayLow,             // 蛰伏冷却(监管-15,不能下单)
     CancelAll,          // 撤清所有挂单
+    StanceAggressive,   // 激进架势:操盘量×2,监管+5
+    StanceStealthy,     // 隐蔽架势:量×6折,监管-4,限价挂更深
+    StanceDeceptive,    // 欺诈架势:反向情绪信号误导散户,信息监管+4
+    StanceDefensive,    // 防御架势:市价转对手价限价,不追价
 }
 
 /// <summary>卡牌定义(模板)。每张牌的静态属性。</summary>
@@ -77,6 +82,12 @@ public sealed record CardDefinition(
         // —— 防御牌 ——
         new("蛰伏冷却", CardCategory.Defense, CardEffect.LayLow, 0, 0, -15, 0, 0, 0, "监管槽-15,但本回合不能再出操盘牌"),
         new("撤清挂单", CardCategory.Defense, CardEffect.CancelAll, 0, 0, -5, 0, 0, 0, "撤销所有挂单,监管槽-5"),
+
+        // —— 架势牌(与操盘牌组合出变体;不占每回合出牌数,可同回合替换) ——
+        new("激进架势", CardCategory.Stance, CardEffect.StanceAggressive, 1, 0, 0, 0, 0, 0, "本回合操盘牌数量翻倍,但监管关注+5"),
+        new("隐蔽架势", CardCategory.Stance, CardEffect.StanceStealthy, 1, 0, 0, 0, 0, 0, "本回合操盘牌量×6折,监管关注-4,限价挂得更深"),
+        new("欺诈架势", CardCategory.Stance, CardEffect.StanceDeceptive, 1, 0, 0, 0, 0, 0, "本回合操盘照常,但释放反向情绪信号误导散户(信息监管+4)"),
+        new("防御架势", CardCategory.Stance, CardEffect.StanceDefensive, 1, 0, 0, 0, 0, 0, "本回合市价单转为对手价限价,不追价,冲击更小"),
     };
 }
 

@@ -414,7 +414,8 @@ public sealed class GameCore
                 c.Definition.EnergyCost, c.Definition.CashCost, c.Definition.Description,
                 c.Definition.Effect.ToString())).ToList(),
             LastCombo: _cardEngine.LastCombo,
-            LastAuction: _lastAuction);
+            LastAuction: _lastAuction,
+            ActiveStance: _cardEngine.ActiveStance == CardEffect.None ? null : _cardEngine.ActiveStance.ToString());
     }
 
     // ══════════════════════════════════════
@@ -619,6 +620,9 @@ public sealed class GameCore
         }
         // 完美出货:分批出货量翻倍已在 PlayCard 注册时生效
 
+        // 1.7 架势变体:修改玩家操盘意图 + 情绪/监管副作用(揭牌时消费)
+        ApplyStance(engine);
+
         // 2. 清场:清空订单簿,释放上一回合挂单的冻结资金/预扣券池
         session.ClearBookAndRefund();
 
@@ -666,6 +670,65 @@ public sealed class GameCore
         // 6. 清空意图,进入执行阶段
         _cardEngine.PendingIntents.Clear();
         _cardEngine.EndTurn();
+    }
+
+    /// <summary>应用架势变体到玩家意图(激进×2/隐蔽×6折+深挂/防御市价转限价/欺诈情绪反转)。</summary>
+    private void ApplyStance(IamZhuli.Engine.MatchingEngine engine)
+    {
+        var stance = _cardEngine!.ActiveStance;
+        if (stance == CardEffect.None) return;
+        _cardEngine.ActiveStance = CardEffect.None;   // 消费
+
+        var view = engine.View;
+        var intents = _cardEngine.PendingIntents;
+        switch (stance)
+        {
+            case CardEffect.StanceAggressive:
+                for (int i = 0; i < intents.Count; i++)
+                {
+                    var it = intents[i];
+                    if (it.Participant.Equals(Player) && it.Side is Side.Buy or Side.Sell && !it.IsShort)
+                        intents[i] = it with { Qty = it.Qty * 2 };
+                }
+                _regulator.ApplyTradeHeat(5m, "激进架势:放大操作");
+                break;
+
+            case CardEffect.StanceStealthy:
+                for (int i = 0; i < intents.Count; i++)
+                {
+                    var it = intents[i];
+                    if (!it.Participant.Equals(Player) || it.IsShort) continue;
+                    var qty = Math.Max(100, it.Qty * 6 / 10);
+                    decimal price = it.Price;
+                    if (it.Side == Side.Buy && it.Type == OrderType.Limit)
+                        price -= 0.03m;   // 挂得更深,不暴露在买一
+                    intents[i] = it with { Qty = qty, Price = price };
+                }
+                _regulator.ApplyTradeHeat(-4m, "隐蔽架势:降温");
+                break;
+
+            case CardEffect.StanceDefensive:
+                for (int i = 0; i < intents.Count; i++)
+                {
+                    var it = intents[i];
+                    if (!it.Participant.Equals(Player) || it.Type != OrderType.Market) continue;
+                    // 市价→对手价限价:只吃一档,不追价
+                    decimal price = it.Side == Side.Buy
+                        ? (view.BestAsk?.Value ?? engine.Rules.UpperLimit.Value)
+                        : (view.BestBid?.Value ?? engine.Rules.LowerLimit.Value);
+                    intents[i] = it with { Type = OrderType.Limit, Price = price };
+                }
+                break;
+
+            case CardEffect.StanceDeceptive:
+                // 反向情绪信号:买入时装跌(散户抛售→更便宜的货),卖出时装涨(散户接盘→更好的价)
+                bool hasBuy = intents.Any(x => x.Participant.Equals(Player) && x.Side == Side.Buy);
+                bool hasSell = intents.Any(x => x.Participant.Equals(Player) && x.Side == Side.Sell && !x.IsShort);
+                if (hasBuy) _retail.Sentiment.ApplyNewsEffect(-0.08m, 0, -0.05m);
+                if (hasSell) _retail.Sentiment.ApplyNewsEffect(0.08m, 0, 0.05m);
+                _regulator.ApplyInfoHeat(4m, "欺诈架势:反向信号");
+                break;
+        }
     }
 
     /// <summary>参与者显示名(Player→你,其余用原始名)。</summary>

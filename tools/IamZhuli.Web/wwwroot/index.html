@@ -66,6 +66,7 @@
   .orders-head .mini-btn:hover { background: #4a3a2a; }
   .orders-list { font-family: monospace; font-size: 12px; max-height: 320px; overflow-y: auto; margin-top: 4px; }
   /* 卡牌执行预览(规则推导价格) */
+  .card-cat-Stance { border-color: #7e57c2; background: linear-gradient(135deg, #241f33, #1e222a); }
   .card-exec { font-size: 11px; color: #4fc3f7; margin-top: 3px; background: #1c2530; border-radius: 3px; padding: 2px 6px; display: inline-block; }
   .card-item { min-height: 58px; }
   .card-item:active { filter: brightness(1.25); }
@@ -184,7 +185,7 @@
     <div id="cardPanel" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <h3 style="margin:0;">🎴 手牌</h3>
-        <span style="font-size:11px;color:#888;">回合 <span id="cardTurn">1</span>/5 · 能量 <span id="cardEnergy">●●●</span> · <span id="cardPhase">出牌中</span></span>
+        <span style="font-size:11px;color:#888;">回合 <span id="cardTurn">1</span>/5 · 能量 <span id="cardEnergy">●●●</span> · <span id="cardPhase">出牌中</span> <span id="cardStance" style="display:none;background:#372a4a;color:#ce93d8;border-radius:8px;padding:1px 8px;margin-left:4px;"></span></span>
       </div>
       <div id="cardHand" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;"></div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -598,11 +599,17 @@ function renderCards(snap) {
   panel.style.display = 'block';
   orderTitle.style.display = 'none';   // 卡牌模式:操作全由卡牌决定,隐藏手动下单区
   $('orderForm').style.display = 'none';
-  // 回合/能量
+  // 回合/能量/架势
   $('cardTurn').textContent = cs.turn + 1;
   $('cardEnergy').textContent = '●'.repeat(cs.energy) + '○'.repeat(Math.max(0, 10 - cs.energy));
   $('cardPhase').textContent = cs.phase === 'Play' ? '出牌中⏸' : '执行中▶';
   $('cardPlayed').textContent = `已出 ${cs.cardsPlayed}/${cs.maxCardsPerTurn}`;
+  const stName = { StanceAggressive:'激进', StanceStealthy:'隐蔽', StanceDeceptive:'欺诈', StanceDefensive:'防御' };
+  const stTxt = { StanceAggressive:'量×2 热度↑', StanceStealthy:'量×6折 热度↓', StanceDeceptive:'反向信号', StanceDefensive:'市价→限价' };
+  if (cs.activeStance) {
+    $('cardStance').style.display = 'inline';
+    $('cardStance').textContent = `${stName[cs.activeStance] || '?'}架势: ${stTxt[cs.activeStance] || ''}`;
+  } else $('cardStance').style.display = 'none';
   // 连招提示
   if (cs.lastCombo) {
     $('cardCombo').style.display = 'inline';
@@ -612,12 +619,17 @@ function renderCards(snap) {
   }
   // 手牌(含规则推导的执行预览——价格由现价决定,与引擎执行规则一致)
   const lp = snap.lastPrice, bid = snap.bestBid, shq = snap.account.shortQty;
+  const st = cs.activeStance;
   $('cardHand').innerHTML = cs.hand.map((c, i) => {
-    const canPlay = cs.phase === 'Play' && cs.cardsPlayed < cs.maxCardsPerTurn && c.energyCost <= cs.energy;
+    const isStance = c.category === 'Stance';
+    // 架势牌不占出牌数:只校验能量与阶段
+    const canPlay = cs.phase === 'Play' && c.energyCost <= cs.energy && (isStance || cs.cardsPlayed < cs.maxCardsPerTurn);
     const cls = canPlay ? '' : 'disabled';
     const fx2 = (v) => (Math.round(v * 100) / 100).toFixed(2);
     let preview = '';
-    switch (c.effect) {
+    if (isStance) {
+      preview = `▶ 设为本回合架势(不占出牌数)${st ? ' · 替换当前' : ''}`;
+    } else switch (c.effect) {
       case 'LimitBuy':  preview = `▶ 限价挂单 @ ${fx2((bid ?? lp ?? 10) - 0.01)}`; break;
       case 'LimitWall': preview = `▶ 双向墙 ${fx2((lp ?? 10) - 0.03)} / ${fx2((lp ?? 10) + 0.03)}`; break;
       case 'MarketBuy': preview = '▶ 集合竞价扫买(按竞价价成交)'; break;
@@ -626,6 +638,7 @@ function renderCards(snap) {
       case 'ShortCover': preview = shq > 0 ? `▶ 市价买回 ${shq} 手平仓` : '▶ 无空头持仓'; break;
       case 'ScheduledSell': preview = '▶ 揭牌后逐tick限价卖出'; break;
     }
+    if (!isStance && st && preview) preview += ` ┃架势:${stTxt[st] || ''}`;
     return `<div class="card-item card-cat-${c.category} ${cls}" data-cardidx="${i}">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span class="card-name">${c.name}</span>

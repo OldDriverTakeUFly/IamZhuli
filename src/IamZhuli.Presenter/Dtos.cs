@@ -52,7 +52,8 @@ public record AuctionResultDto(int Turn, decimal Price, int Volume, List<Auction
 public record CardStateDto(int Turn, int Energy, string Phase,
     int CardsPlayed, int MaxCardsPerTurn,
     List<CardInstanceDto> Hand, string? LastCombo,
-    AuctionResultDto? LastAuction);
+    AuctionResultDto? LastAuction,
+    string? ActiveStance);   // 当前架势(StanceAggressive等,null=无)
 
 // ── 关卡结算 ──
 public record LevelResultDto(bool IsVictory, int Stars, string CoachComment, string FailureReason,

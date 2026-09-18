@@ -151,7 +151,7 @@ public sealed class Regulator
 
     private void AddInfoHeat(decimal amount, string reason)
     {
-        _infoHeat = Math.Min(100m, _infoHeat + amount);
+        _infoHeat = Math.Max(0m, Math.Min(100m, _infoHeat + amount));
         var penalty = CurrentPenalty;
         _recentEvents.Insert(0, $"[信息关注{_infoHeat:F0}% {penalty}] {reason}");
         if (_recentEvents.Count > 20) _recentEvents.RemoveAt(_recentEvents.Count - 1);
@@ -180,9 +180,15 @@ public sealed class Regulator
         _eventLog.Add(new RegulatorEvent((int)_tickCounter, _infoHeat, "监管动作", reason));
     }
 
+    /// <summary>外部系统调整交易关注值(架势变体/事件用;负值=降温,有0下限)。</summary>
+    public void ApplyTradeHeat(decimal amount, string reason) => AddHeat(amount, reason);
+
+    /// <summary>外部系统调整信息关注值。</summary>
+    public void ApplyInfoHeat(decimal amount, string reason) => AddInfoHeat(amount, reason);
+
     private void AddHeat(decimal amount, string reason)
     {
-        _heat = Math.Min(100m, _heat + amount);
+        _heat = Math.Max(0m, Math.Min(100m, _heat + amount));
         var penalty = CurrentPenalty;
         _recentEvents.Insert(0, $"[关注值{_heat:F0}% {penalty}] {reason}");
         if (_recentEvents.Count > 20) _recentEvents.RemoveAt(_recentEvents.Count - 1);
