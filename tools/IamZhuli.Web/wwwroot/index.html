@@ -192,7 +192,7 @@
     <div id="cardPanel" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <h3 style="margin:0;">🎴 手牌</h3>
-        <span style="font-size:11px;color:#888;">回合 <span id="cardTurn">1</span>/5 · 能量 <span id="cardEnergy">●●●</span> · <span id="cardPhase">出牌中</span> <span id="cardStance" style="display:none;background:#372a4a;color:#ce93d8;border-radius:8px;padding:1px 8px;margin-left:4px;"></span></span>
+        <span style="font-size:11px;color:#888;">回合 <span id="cardTurn">1</span>/5 · 能量 <span id="cardEnergy">●●●</span> · <span id="cardPhase" style="font-weight:bold;">出牌中</span> <span id="cardStance" style="display:none;background:#372a4a;color:#ce93d8;border-radius:8px;padding:1px 8px;margin-left:4px;"></span></span>
       </div>
       <div id="cardHand" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;"></div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -609,7 +609,10 @@ function renderCards(snap) {
   // 回合/能量/架势
   $('cardTurn').textContent = cs.turn + 1;
   $('cardEnergy').textContent = '●'.repeat(cs.energy) + '○'.repeat(Math.max(0, 10 - cs.energy));
-  $('cardPhase').textContent = cs.phase === 'Play' ? '出牌中⏸' : '执行中▶';
+  const pn = cs.phaseName || '盘中';
+  $('cardPhase').textContent = `${pn}·${cs.phase === 'Play' ? '出牌中⏸' : '执行中▶'}`;
+  // 收盘竞价高亮(尾盘锁价窗口,监管特护)
+  $('cardPhase').style.color = pn === '收盘竞价' ? '#ff9800' : '';
   $('cardPlayed').textContent = `已出 ${cs.cardsPlayed}/${cs.maxCardsPerTurn}`;
   const stName = { StanceAggressive:'激进', StanceStealthy:'隐蔽', StanceDeceptive:'欺诈', StanceDefensive:'防御' };
   const stTxt = { StanceAggressive:'量×2 热度↑', StanceStealthy:'量×6折 热度↓', StanceDeceptive:'反向信号', StanceDefensive:'市价→限价' };

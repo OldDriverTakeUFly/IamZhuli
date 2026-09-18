@@ -50,6 +50,8 @@ public sealed class GameCore
     private AuctionResultDto? _lastAuction;
     /// <summary>信息操纵封口剩余 tick(立案调查期间禁止发布消息/信号)。</summary>
     private int _infoGagTicks;
+    /// <summary>本日收盘竞价价(收盘静默的冻结价,日切时即收盘价)。</summary>
+    private decimal? _closeAuctionPrice;
 
     /// <summary>是否启用卡牌模式(完全替换实时操作)。</summary>
     public bool CardMode { get; set; } = true;
@@ -300,26 +302,36 @@ public sealed class GameCore
     {
         if (!IsInitialized) return BuildSnapshot();
         if (_loop.IsFinished || IsLevelOver) return null;
+        // 日切态(收盘后/盘后操作窗口):不推进,推快照
+        if (_loop.IsDayClosed) return BuildSnapshot();
         // 盘前态:不推进 tick,但仍推快照(让玩家看K线/盘口)
         if (IsPreMarket) return BuildSnapshot();
         // 卡牌模式:Play阶段冻结(等玩家出牌)
         if (CardMode && _cardEngine is { } ce && ce.Phase == CardPhase.Play)
             return BuildSnapshot();
-        _loop.Step();
+        // 收盘静默:收盘竞价的Resolve不再交易(价格冻结在竞价价),tick走完直接日切
+        bool closingSilence = CardMode && _cardEngine is { Turn: 4 } && _closeAuctionPrice.HasValue;
+        if (!closingSilence)
+            _loop.Step();
         // 卡牌模式:每tick推进卡牌引擎(延迟效果+回合计时)
         if (CardMode && _cardEngine is { } ce2 && ce2.Phase == CardPhase.Resolve)
         {
             bool turnEnded = ce2.OnTick(pe =>
             {
-                // 执行延迟效果(目前只有分批卖出)
-                if (pe.Effect == CardEffect.ScheduledSell)
+                // 执行延迟效果(目前只有分批卖出;收盘静默期不再下单)
+                if (pe.Effect == CardEffect.ScheduledSell && !closingSilence)
                 {
                     try { _loop.Session.Submit(new OrderRequest(Player, Side.Sell, OrderType.Limit,
                         _loop.Session.Engine.View.BestAsk ?? new Price(10m),
                         new Quantity(pe.EffectValue))); } catch { }
                 }
             });
-            if (turnEnded) ce2.StartNewTurn();   // 进入下一回合Play阶段
+            if (turnEnded)
+            {
+                _closeAuctionPrice = null;   // 静默结束
+                if (closingSilence) _loop.FinishDay();   // 收盘竞价完成:直接日切(收盘价=竞价价)
+                else ce2.StartNewTurn();   // 进入下一回合Play阶段
+            }
         }
         // 关卡时间结束 → 自动结算
         if (_loop.IsFinished && !IsLevelOver) EndLevel();
@@ -399,6 +411,14 @@ public sealed class GameCore
             CardState: GetCardState());
     }
 
+    /// <summary>回合→交易日阶段(一天5回合三段式:0=盘前竞价,1-3=盘中,4=收盘竞价)。</summary>
+    private static string TurnPhaseName(int turn) => turn switch
+    {
+        0 => "盘前竞价",
+        4 => "收盘竞价",
+        _ => "盘中",
+    };
+
     /// <summary>构建卡牌状态 DTO(卡牌模式才有值)。</summary>
     private CardStateDto? GetCardState()
     {
@@ -415,7 +435,8 @@ public sealed class GameCore
                 c.Definition.Effect.ToString())).ToList(),
             LastCombo: _cardEngine.LastCombo,
             LastAuction: _lastAuction,
-            ActiveStance: _cardEngine.ActiveStance == CardEffect.None ? null : _cardEngine.ActiveStance.ToString());
+            ActiveStance: _cardEngine.ActiveStance == CardEffect.None ? null : _cardEngine.ActiveStance.ToString(),
+            PhaseName: TurnPhaseName(_cardEngine.Turn));
     }
 
     // ══════════════════════════════════════
@@ -470,8 +491,9 @@ public sealed class GameCore
         _newsSystem.OnNewDay();
         _retail.Sentiment.DailyDecay();
         _waterArmy.OnNewDay(_player, _newsSystem);   // 扣维持费+自动注入Pump
-        _cardEngine?.OnNewDay();   // 卡牌引擎日切重置
-        _loop.StartNextDay();
+        _closeAuctionPrice = null;   // 新一天
+        _cardEngine?.OnNewDay();   // 卡牌引擎日切重置(回合归0=次日盘前竞价)
+        _loop.StartNextDay(runOpeningAuction: !CardMode);   // 卡牌模式:开盘价由回合0卡牌拍卖确立
     }
 
     // ══════════════════════════════════════
@@ -594,6 +616,23 @@ public sealed class GameCore
         if (_institutionB != null)
             _cardEngine.PendingIntents.AddRange(_institutionB.ProduceIntents(session));
 
+        // 1.1 盘前竞价(回合0):散户隔夜情绪化意向单——消息偏差/贪婪驱动的小额市价单,
+        //     打通"盘后发消息→次日高开/低开"通道(散户是价格接受者,但集合竞价会排队表态)
+        if (_cardEngine.Turn == 0)
+        {
+            var sent = _retail.Sentiment;
+            // 隔夜情绪=消息偏差(已衰减)+活跃新闻净方向(盘后发的消息,次日盘前散户排队表态)+贪婪偏移
+            decimal newsNet = _newsSystem.ActiveNews.Sum(n =>
+                n.Type is NewsType.Positive or NewsType.Pump ? 1 : -1);
+            decimal bias = sent.NewsBias + newsNet * 0.12m + (sent.Value - 0.5m) * 0.5m;
+            int retailQty = Math.Min(3000, (int)(Math.Abs(bias) * _retail.ActiveCount * 20));
+            if (retailQty >= 100)
+            {
+                var side = bias > 0 ? Side.Buy : Side.Sell;
+                _cardEngine.PendingIntents.Add(new OrderIntent(_retail.Id, side, OrderType.Market, 0, retailQty));
+            }
+        }
+
         // 1.5 连招加成(同回合按序打出触发,揭牌时消费)
         string? combo = _cardEngine.ConsumeTurnCombo();
         if (combo == "诱多陷阱")
@@ -674,6 +713,7 @@ public sealed class GameCore
         }
 
         // 5. 集合竞价定价(含假墙锚定) → 撤墙(虚假挂单热度) → 集中撮合(假墙永不成交)
+        decimal preAuctionPrice = engine.View.LastPrice?.Value ?? 0m;
         if (engine.CallAuction() is { } auction)
         {
             foreach (var d in decoyOrders)
@@ -685,6 +725,19 @@ public sealed class GameCore
             engine.SetLastPrice(auction.Price);
             var trades = engine.SweepAtPrice(auction.Price);
             session.SettleAuctionTrades(trades);
+
+            // 收盘竞价(Turn4):记录竞价价,进入收盘静默(Resolve不交易,日切时即收盘价)
+            if (_cardEngine.Turn == 4)
+                _closeAuctionPrice = auction.Price.Value;
+
+            // 收盘竞价特护(Turn4):竞价价大幅偏离前价=尾盘操纵特征(画日K锁收盘价),
+            // 监管重点监控,热度+6——高收益(收盘价锚定情绪/目标判定)与高风险并存
+            if (_cardEngine.Turn == 4 && preAuctionPrice > 0)
+            {
+                decimal move = Math.Abs(auction.Price.Value - preAuctionPrice) / preAuctionPrice;
+                if (move >= 0.02m)
+                    _regulator.ApplyTradeHeat(6m, $"尾盘异常波动: 收盘竞价{(auction.Price.Value > preAuctionPrice ? "拉升" : "砸落")}{move:P1}");
+            }
 
             // 记录揭牌结果(随快照推送,表现层展示"谁在什么价买卖多少")
             int turn = _cardEngine.Turn;

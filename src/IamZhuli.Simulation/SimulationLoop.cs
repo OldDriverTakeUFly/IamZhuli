@@ -86,11 +86,26 @@ public sealed class SimulationLoop
         // 日内连续流动,日终暂停让玩家喘息/看盘/做盘后操作
         if (!stillInDay)
         {
-            IsDayClosed = true;
-            IsPaused = true;   // 暂停,等玩家显式 StartNextDay
-            // 触发日终事件(T+1 解锁前):供筹码快照等采集当日最终态
-            OnDayFinalized?.Invoke(Clock.CurrentDay);
+            CloseDay();
         }
+    }
+
+    /// <summary>执行日切:进入已收盘+暂停,触发日终事件(筹码快照/K线固化)。</summary>
+    private void CloseDay()
+    {
+        IsDayClosed = true;
+        IsPaused = true;   // 暂停,等玩家显式 StartNextDay
+        // 触发日终事件(T+1 解锁前):供筹码快照等采集当日最终态
+        OnDayFinalized?.Invoke(Clock.CurrentDay);
+    }
+
+    /// <summary>收盘竞价后直接日切(静默快进):当日不再交易,价格冻结在收盘竞价价。
+    /// 供卡牌模式三段式使用(收盘竞价=当日最后一笔定价)。</summary>
+    public void FinishDay()
+    {
+        if (IsDayClosed || IsFinished) return;
+        Clock.ForceEndOfDay();
+        CloseDay();
     }
 
     /// <summary>推进到下一交易日的内部逻辑(自动跨日用)。</summary>
@@ -112,8 +127,9 @@ public sealed class SimulationLoop
     }
 
     /// <summary>开始下一交易日(玩家在日终暂停后显式触发)。
-    /// 流程:挂单清零 → 情绪延续(参与者OnNewDay) → T+1解锁 → 开盘集合竞价 → 连续竞价。</summary>
-    public void StartNextDay()
+    /// 流程:挂单清零 → 情绪延续(参与者OnNewDay) → T+1解锁 → 开盘集合竞价 → 连续竞价。
+    /// runOpeningAuction=false 供卡牌模式:开盘价由回合0的卡牌集中拍卖产生(三段式:盘前竞价)。</summary>
+    public void StartNextDay(bool runOpeningAuction = true)
     {
         if (!IsDayClosed || IsFinished) return;
         Clock.AdvanceDay();
@@ -129,17 +145,19 @@ public sealed class SimulationLoop
                 try { p.OnNewDay(); }
                 catch { }
             }
-            // 4. 让参与者重新挂单(集合竞价前的意愿单)——清零后盘口空,必须让参与者Act一次
+            // 4-5. 开盘意愿单+集合竞价(卡牌模式跳过:盘前竞价=回合0卡牌拍卖,开盘价由它确立)
             Clock.Open();
-            foreach (var p in _participants)
+            if (runOpeningAuction)
             {
-                try { p.Act(Session, Clock, _rng); }
-                catch { }
+                foreach (var p in _participants)
+                {
+                    try { p.Act(Session, Clock, _rng); }
+                    catch { }
+                    }
+                var auction = Session.Engine.CallAuction();
+                if (auction is { } result)
+                    Session.Engine.SetLastPrice(result.Price);   // 确立开盘价
             }
-            // 5. 开盘集合竞价:收集所有挂单,撮出开盘价
-            var auction = Session.Engine.CallAuction();
-            if (auction is { } result)
-                Session.Engine.SetLastPrice(result.Price);   // 确立开盘价
             // 6. 进入连续竞价
             IsDayClosed = false;
             IsPaused = false;

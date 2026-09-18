@@ -309,13 +309,26 @@ public sealed class CardEngine
         }
     }
 
-    /// <summary>日切重置:回合归零,清延迟效果。</summary>
+    /// <summary>日切重置:回合归零(次日盘前竞价),恢复能量/出牌数/Play阶段。
+    /// 收盘静默路径不经过 StartNewTurn,这里必须做完整重置。</summary>
     public void OnNewDay()
     {
         Turn = 0;
         _tickInTurn = 0;
         PendingEffects.Clear();
         _recentPlays.Clear();
+        _turnPlays.Clear();
+        ActiveCombo = null;
         ActiveStance = CardEffect.None;
+        CardsPlayedThisTurn = 0;
+        IsLayingLow = false;
+        Energy = Math.Min(MaxEnergy, Energy + EnergyPerTurn);
+        Phase = CardPhase.Play;
+        while (Hand.Count < HandSize)
+        {
+            int before = Hand.Count;
+            DrawCard();
+            if (Hand.Count == before) break;
+        }
     }
 }

@@ -81,4 +81,11 @@ public sealed class SimulationClock
     }
 
     public override string ToString() => $"第{CurrentDay}/{TotalDays}日 tick{CurrentTickOfDay}/{TicksPerDay} {Phase}";
+
+    /// <summary>强制当日收盘(跳到日终tick,进入Closed)。供收盘竞价后的静默快进。</summary>
+    public void ForceEndOfDay()
+    {
+        CurrentTickOfDay = TicksPerDay;
+        Phase = SessionPhase.Closed;
+    }
 }
