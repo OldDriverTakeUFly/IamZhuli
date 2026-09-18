@@ -24,11 +24,18 @@
     .main .panel:nth-child(1) { order: 3; }   /* 盘口/成交(child1) */
     .main .panel:nth-child(4) { order: 4; }   /* 账户/目标(child4) */
     .header { flex-wrap: wrap; gap: 8px 16px; padding: 8px 12px; }
-    .card-item { min-height: 68px; font-size: 14px; }
+    /* 手牌横向滑动一行:纵向省~250px,核心循环(看盘→出牌)单屏可达 */
+    #cardHand { flex-direction: row !important; overflow-x: auto; gap: 6px !important;
+                padding-bottom: 6px; scroll-snap-type: x proximity; }
+    .card-item { flex: 0 0 62vw; min-width: 62vw; min-height: 92px; scroll-snap-align: center; font-size: 14px; }
     .card-name { font-size: 15px; }
     .card-desc { font-size: 12px; }
     .card-exec { font-size: 12px; padding: 3px 8px; }
     #endTurnBtn { font-size: 16px; padding: 10px 24px; }
+    /* 日K模式的筹码侧栏还宽给烛台(筹码峰在桌面端显示;后续可做点按浮层) */
+    #chipSidebar { display: none !important; }
+    #chartPanel { height: min(58vh, 520px); }
+    #revealTrades { max-height: 110px; }
   }
   .panel { background: #1a1d24; padding: 16px; overflow-y: auto; min-height: 0; }
   .panel h3 { font-size: 13px; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
@@ -1386,9 +1393,10 @@ function resizeCharts() {
   // 价格区(priceArea)高度 = priceH,内部日K和筹码侧栏共享
   pa.style.height = priceH + 'px';
   vw.style.height = (volH - 4) + 'px';
-  // 日K宽度 = priceArea 宽度 - 筹码侧栏(日K模式显示侧栏时占140+gap)
+  // 日K宽度 = priceArea 宽度 - 筹码侧栏(仅当实际可见才占宽;手机端CSS隐藏)
   const showChip = chartMode === 'daily';
-  const chipW = showChip ? 141 : 0;   // 140 + gap 1
+  const chipVisible = $('chipSidebar') && getComputedStyle($('chipSidebar')).display !== 'none';
+  const chipW = showChip && chipVisible ? 141 : 0;   // 140 + gap 1
   const chartW = pa.clientWidth - chipW;
   pc.applyOptions({ width: Math.max(100, chartW), height: priceH });
   vc.applyOptions({ width: Math.max(100, panelW - 32), height: volH - 4 });
@@ -1406,8 +1414,14 @@ function resizeCharts() {
     pc.timeScale().setVisibleLogicalRange({ from: 0, to: tpd - 1 });
     vc.timeScale().setVisibleLogicalRange({ from: 0, to: tpd - 1 });
   } else {
-    pc.timeScale().fitContent();
-    vc.timeScale().fitContent();
+    // 日K显式充满: 按(candles数, 容器宽)算 barSpacing,烛台均布整个绘图区,
+    // 消除 fitContent 的右侧留白(fitContent 会留 rightOffset 空白)
+    const n = Math.max(2, (window._lastSnap && window._lastSnap.dailyCandles ? window._lastSnap.dailyCandles.length : 60));
+    const dailyBar = Math.max(2, (chartW - 50) / n);
+    pc.applyOptions({ timeScale: { rightOffset: 0, barSpacing: dailyBar, fixLeftEdge: true } });
+    vc.applyOptions({ timeScale: { rightOffset: 0, barSpacing: dailyBar, fixLeftEdge: true } });
+    pc.timeScale().setVisibleLogicalRange({ from: 0, to: n - 1 });
+    vc.timeScale().setVisibleLogicalRange({ from: 0, to: n - 1 });
     renderChipPeak();   // 日K模式同步筹码峰
   }
 }
