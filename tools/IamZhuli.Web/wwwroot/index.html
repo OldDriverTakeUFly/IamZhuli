@@ -712,9 +712,9 @@ function renderMiniBook(snap) {
   const b1 = snap.bids && snap.bids[0];
   const lp = snap.lastPrice;
   mb.innerHTML = `
-    <div style="color:#26a69a;text-align:right;">卖 ${a1 ? a1.price.toFixed(2) : '--'} <span style="color:#667">${a1 ? a1.qty : ''}</span></div>
+    <div style="color:#26a69a;text-align:right;">卖 ${a1 ? a1.price.toFixed(2) : (b1 ? '—' : '<span style=\'color:#5a6a7a\'>静默</span>')} <span style="color:#667">${a1 ? a1.qty : ''}</span></div>
     <div style="font-size:15px;font-weight:800;color:${lp >= snap.previousClose ? '#ef5350' : '#26a69a'};text-align:center;border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);padding:1px 0;">${lp != null ? lp.toFixed(2) : '--'}</div>
-    <div style="color:#ef5350;">买 ${b1 ? b1.price.toFixed(2) : '--'} <span style="color:#667">${b1 ? b1.qty : ''}</span></div>`;
+    <div style="color:#ef5350;">买 ${b1 ? b1.price.toFixed(2) : (a1 ? '—' : '<span style=\'color:#5a6a7a\'>静默</span>')} <span style="color:#667">${b1 ? b1.qty : ''}</span></div>`;
 }
 function renderPosBar(snap) {
   // 持仓摘要条(交易页手牌上方): 权益/持仓/浮盈/现金
@@ -820,7 +820,7 @@ function renderCards(snap) {
     const cls = canPlay ? '' : 'disabled';
     const cost = c.energyCost > 0 ? '⚡'.repeat(Math.min(c.energyCost, 5)) : '免费';
     let preview = '';
-    if (isStance) preview = `▶ 设为本回合架势`;
+    if (isStance) preview = `▶ 设为架势 · 不占2张出牌数`;
     else switch (c.effect) {
       case 'LimitBuy':  preview = `▶ 限价 @ ${fx2((bid ?? lp ?? 10) - 0.01)}`; break;
       case 'LimitWall': preview = `▶ 双向墙 ${fx2((lp ?? 10) - 0.03)}/${fx2((lp ?? 10) + 0.03)}`; break;
@@ -850,8 +850,9 @@ function renderCardsTail(cs, snap) {
     $('revealPrice').textContent = ra.volume > 0 ? ra.price.toFixed(2) : '无交叉';
     $('revealVol').textContent = ra.volume;
     $('revealTrades').innerHTML = ra.trades.map(t => {
-      const b = t.buyer + (t.buyerIsShort ? '<span style="color:#ab47bc">·平仓</span>' : '');
-      const s = t.seller + (t.sellerIsShort ? '<span style="color:#ab47bc">·做空</span>' : '');
+      const me = (n) => n === '你' ? '<span class="me-badge">你</span>' : n;
+      const b = me(t.buyer) + (t.buyerIsShort ? '<span style="color:#ab47bc">·平仓</span>' : '');
+      const s = me(t.seller) + (t.sellerIsShort ? '<span style="color:#ab47bc">·做空</span>' : '');
       const mine = (t.buyer === '你' || t.seller === '你') ? 'background:#2a2e38;' : '';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 4px;border-radius:3px;font-size:12px;gap:6px;${mine}">
         <span style="color:#ef5350;flex:1;">${b}</span>
@@ -861,6 +862,17 @@ function renderCardsTail(cs, snap) {
     }).join('');
   } else {
     $('revealPanel').style.display = 'none';
+  }
+  // M2: 交易tab未读红点(渲染统一管理,每帧收敛:他页+新揭牌→亮,交易页→消+记seen)
+  const aukKey = ra && ra.volume > 0 ? `${snap.currentDay}-${ra.turn}-${ra.volume}` : null;
+  const tradeTab = document.querySelector('.tab-btn[data-tab=trade]');
+  if (tradeTab) {
+    if (document.body.dataset.page === 'trade') {
+      tradeTab.classList.remove('has-dot');
+      if (aukKey) window._seenAuction = aukKey;
+    } else if (aukKey && window._seenAuction !== aukKey) {
+      tradeTab.classList.add('has-dot');
+    }
   }
 }
 // 出牌点击(事件委托:不随DOM重建丢失,hover不被打断)
