@@ -618,7 +618,8 @@ function renderCards(snap) {
   $('orderForm').style.display = 'none';
   // 回合/能量/架势
   $('cardTurn').textContent = cs.turn + 1;
-  $('cardEnergy').textContent = '●'.repeat(cs.energy) + '○'.repeat(Math.max(0, 10 - cs.energy)) + `(${cs.energy}/10)`;
+  const emax = cs.maxEnergy || 12;
+  $('cardEnergy').textContent = '●'.repeat(cs.energy) + '○'.repeat(Math.max(0, emax - cs.energy)) + `(${cs.energy}/${emax})`;
   const pn = cs.phaseName || '盘中';
   const isDeclare = pn === '盘前申报' || pn === '尾盘申报';
   $('cardPhase').textContent = `${pn}·${cs.phase === 'Play' ? '出牌中⏸' : '执行中▶'}`;

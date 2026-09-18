@@ -345,7 +345,7 @@ namespace IamZhuli.Unity
             }
             _cardPanel.style.display = DisplayStyle.Flex;
             _turnLabel.text = $"回合 {cs.Turn + 1}/5";
-            _energyLabel.text = "能量 " + new string('●', cs.Energy) + new string('○', System.Math.Max(0, 10 - cs.Energy));
+            _energyLabel.text = "能量 " + new string('●', cs.Energy) + new string('○', System.Math.Max(0, cs.MaxEnergy - cs.Energy));
             _cardPhaseLabel.text = cs.Phase == "Play" ? "出牌中⏸" : "执行中▶";
 
             _handContainer.Clear();

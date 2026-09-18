@@ -27,8 +27,8 @@ public sealed class CardEngine
     public static int TotalTicksPerDay => TurnDurations.Sum();
     /// <summary>当前段时长。</summary>
     public int CurrentTurnTicks => TurnDurations[Math.Min(Turn, TurnsPerDay - 1)];
-    private const int MaxEnergy = 10;          // 能量上限
-    private const int EnergyPerTurn = 3;       // 每回合恢复3点能量
+    private const int MaxEnergy = 12;          // 能量上限(允许攒一次暴力拉升+架势+急拉的爆发)
+    private const int EnergyPerTurn = 4;       // 每段恢复4点(日收入48,覆盖全程2张中等牌的节奏)
 
     private readonly Random _rng;
     private int _tickInTurn;                    // 当前回合内已过的tick

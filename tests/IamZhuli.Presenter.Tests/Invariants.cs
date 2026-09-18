@@ -30,7 +30,7 @@ internal static class Invariants
         Assert.True(s.InfoHeat >= 0 && s.InfoHeat <= 100, $"{tag} 信息热越界: {s.InfoHeat}");
         if (s.CardState is { } cs)
         {
-            Assert.True(cs.Energy >= 0 && cs.Energy <= 10, $"{tag} 能量越界: {cs.Energy}");
+            Assert.True(cs.Energy >= 0 && cs.Energy <= 12, $"{tag} 能量越界: {cs.Energy}");
             Assert.True(cs.Hand.Count <= 5, $"{tag} 手牌超限: {cs.Hand.Count}");
             Assert.True(cs.CardsPlayed <= cs.MaxCardsPerTurn, $"{tag} 本回合出牌超限");
         }

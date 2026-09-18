@@ -56,7 +56,7 @@ public sealed record CardDefinition(
     private static List<CardDefinition> BuildLibrary() => new()
     {
         // —— 操盘牌 ——
-        new("限价吸筹", CardCategory.Trading, CardEffect.LimitBuy, 1, 0, 0, 0, 500, 0, "限价买入500手,挂在买一下方"),
+        new("限价吸筹", CardCategory.Trading, CardEffect.LimitBuy, 0, 0, 0, 0, 500, 0, "免费:限价买入500手挂买一下方(基础工具,永不锁死)"),
         new("限价加仓", CardCategory.Trading, CardEffect.LimitBuy, 2, 0, 0, 0, 1500, 0, "限价买入1500手"),
         new("市价急拉", CardCategory.Trading, CardEffect.MarketBuy, 3, 0, 5, 0, 2000, 0, "市价买入2000手,急速拉升"),
         new("暴力拉升", CardCategory.Trading, CardEffect.MarketBuy, 5, 0, 10, 0, 5000, 0, "市价买入5000手,不计成本推高"),

@@ -38,7 +38,7 @@ check('F10', '券池=流通盘20%(40000/200000)', s.totalShortable === 40000 && 
   `总量${s.totalShortable} 余${s.shorablePool ?? s.shorablePool === 0 ? s.shorablePool : '?'}`);
 
 // F05 能量起始3
-check('F05a', '起始能量3', s.cardState.energy === 3, `实际${s.cardState.energy}`);
+check('F05a', '起始能量4(v2)', s.cardState.energy === 4, `实际${s.cardState.energy}`);
 
 // F03 申报段不撮合
 await api('/api/card/endturn');

@@ -443,7 +443,8 @@ public sealed class GameCore
             LastCombo: _cardEngine.LastCombo,
             LastAuction: _lastAuction,
             ActiveStance: _cardEngine.ActiveStance == CardEffect.None ? null : _cardEngine.ActiveStance.ToString(),
-            PhaseName: TurnPhaseName(_cardEngine.Turn));
+            PhaseName: TurnPhaseName(_cardEngine.Turn),
+            MaxEnergy: 12);
     }
 
     // ══════════════════════════════════════
