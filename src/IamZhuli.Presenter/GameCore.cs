@@ -1015,9 +1015,10 @@ public sealed class GameCore
             snapshots, trades, events, chips, candles);
     }
 
-    /// <summary>获取 AI 主力最近的内心独白(调试/复盘用;盘中 AI 持仓仍不可见)。</summary>
+    /// <summary>获取 AI 主力最近的内心独白(调试/复盘用;盘中 AI 持仓仍不可见)。
+    /// 未加载关卡时返回空列表(Agent冷启动盲玩踩到的NRE)。</summary>
     public List<AIDto> GetAIThoughts(int count = 20)
-        => _ai.Thoughts
+        => _ai?.Thoughts
             .TakeLast(count)
             .Select(t => new AIDto(t.Day, t.TickOfDay, t.State.ToString(),
                                    t.DetectedIntent.ToString(), t.Confidence, t.Reason))

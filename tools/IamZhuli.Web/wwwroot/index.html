@@ -32,6 +32,12 @@
     .card-desc { font-size: 12px; }
     .card-exec { font-size: 12px; padding: 3px 8px; }
     #endTurnBtn { font-size: 16px; padding: 10px 24px; }
+    /* 触控目标加大(Agent布局审计:17/46低于44px标准) */
+    .seg button { min-height: 40px; min-width: 56px; font-size: 14px; }
+    .mini-btn { min-height: 36px; min-width: 52px; }
+    .btn-ctrl { min-height: 40px; }
+    #endTurnBtn { min-height: 44px; }
+    #cardHand { margin-top: 4px; }
     /* 日K模式的筹码侧栏还宽给烛台(筹码峰在桌面端显示;后续可做点按浮层) */
     #chipSidebar { display: none !important; }
     #chartPanel { height: min(58vh, 520px); }
@@ -1076,7 +1082,12 @@ function renderHeader(snap) {
     _deckBuilderShown = true;
     showDeckBuilder();
   }
-  if (!snap.isPreMarket) _deckBuilderShown = false;
+  if (!snap.isPreMarket) {
+    _deckBuilderShown = false;
+    // 开局后组牌模态必须关闭(外部API开局/跳过组牌时,模态残留会遮蔽全部操作)
+    const dm = $('deckBuilderModal');
+    if (dm && dm.style.display !== 'none') dm.style.display = 'none';
+  }
   // 盘前态自动切到日K模式,让玩家研究历史K线和筹码(只切一次,避免循环)
   if (snap.isPreMarket && chartMode !== 'daily' && !_preMarketSwitched) {
     _preMarketSwitched = true;
