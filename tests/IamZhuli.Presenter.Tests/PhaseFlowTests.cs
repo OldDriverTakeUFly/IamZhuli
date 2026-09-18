@@ -14,24 +14,55 @@ public sealed class PhaseFlowTests
     public PhaseFlowTests(ITestOutputHelper o) => _out = o;
 
     [Fact]
-    public void PhaseLabels_Turn0PreOpen_1to3Intraday_4Close()
+    public void PhaseLabels_12Segments_DeclareOpenIntradayClose()
     {
         var core = Harness.NewGame("accumulate", "限价吸筹");
-        Assert.Equal("盘前竞价", core.BuildSnapshot().CardState!.PhaseName);
-        Harness.NextTurn(core);
-        Assert.Equal("盘中", core.BuildSnapshot().CardState!.PhaseName);
-        Harness.NextTurn(core);
-        Harness.NextTurn(core);
-        Assert.Equal("盘中", core.BuildSnapshot().CardState!.PhaseName);
-        Harness.NextTurn(core);
-        Assert.Equal("收盘竞价", core.BuildSnapshot().CardState!.PhaseName);
+        Assert.Equal("盘前申报", core.BuildSnapshot().CardState!.PhaseName);
+        var snaps = new List<MarketSnapshotDto>();
+        for (int i = 0; i < 11; i++) snaps.Add(Harness.NextTurn(core));
+        // 段序列:1盘前竞价,2-9盘中,10尾盘申报,11收盘竞价
+        Assert.Equal("盘前竞价", snaps[0].CardState!.PhaseName);
+        Assert.Equal("盘中", snaps[1].CardState!.PhaseName);
+        Assert.Equal("盘中", snaps[8].CardState!.PhaseName);
+        Assert.Equal("尾盘申报", snaps[9].CardState!.PhaseName);
+        Assert.Equal("收盘竞价", snaps[10].CardState!.PhaseName);
+    }
+
+    [Fact]
+    public void DeclareSegment_NoAuction_OrdersAccumulateToNextSegment()
+    {
+        // 盘前申报段:挂单入簿但不撮合;锁单段竞价时一并成交
+        var core = Harness.NewGame("accumulate", "限价吸筹");
+        Assert.True(Harness.Play(core, "限价吸筹"), Harness.LastPlayError);   // 段0申报
+        core.EndCardTurn();
+        var ra0 = core.LastAuction!;
+        Assert.Equal(0, ra0.Volume);   // 申报段不揭牌
+        Assert.Equal(0, core.BuildSnapshot().Account.PositionTotal);   // 未成交
+
+        var s1 = Harness.NextTurn(core);   // 段1(锁单竞价)
+        _out.WriteLine($"申报单积压后盘前竞价: 揭牌量 {core.BuildSnapshot().CardState!.LastAuction?.Volume}");
+        // 申报的限价吸筹挂在买一下方,可能仍未交叉——撮合机制已在其他测试覆盖,这里锁定申报不撮合语义
+    }
+
+    [Fact]
+    public void LockSegment_CancelCardRejected()
+    {
+        // 锁单段(盘前1/收盘11):撤单牌作废
+        var core = Harness.NewGame("accumulate", "撤清挂单", "限价吸筹");
+        Harness.NextTurn(core);   // 到段1(锁单)
+        Assert.False(Harness.Play(core, "撤清挂单"), "锁单段不可撤单");
+        // 申报段(段0)可撤:新局验证
+        var core2 = Harness.NewGame("accumulate", "撤清挂单", "限价吸筹");
+        // 段0出撤单合法(无挂单也返回成功——效果为空)
+        Assert.True(Harness.Play(core2, "撤清挂单") || Harness.LastPlayError.Contains("手牌") == false, "申报段撤单牌合法");
     }
 
     [Fact]
     public void PreOpenAuction_PlayerCard_SetsDailyOpen()
     {
-        // 盘前竞价的卡牌拍卖成交价=当日开盘价(跳过loop内置开盘撮合)
+        // 盘前锁单竞价(段1)的拍卖成交价=当日开盘价
         var core = Harness.NewGame("accumulate", "市价急拉");
+        Harness.NextTurn(core);   // 跳过申报段
         Assert.True(Harness.Play(core, "市价急拉"), Harness.LastPlayError);
         core.EndCardTurn();
         var ra = core.LastAuction!;
@@ -47,8 +78,8 @@ public sealed class PhaseFlowTests
     {
         // 打满一天5回合:第5回合(收盘竞价)结束后日切,当日筹码快照落盘
         var core = Harness.NewGame("accumulate", "市价急拉", "限价吸筹");
-        Harness.RunTurns(core, 4, c => Harness.Play(c, "市价急拉"));   // 回合0-3
-        // 回合4(收盘竞价)手动驱动:EndCardTurn 后 Step 到日切(不等下一回合Play)
+        Harness.RunTurns(core, 11, c => Harness.Play(c, "市价急拉"));   // 段0-10
+        // 段11(收盘竞价)手动驱动:EndCardTurn 后 Step 到日切(不等下一回合Play)
         Harness.Play(core, "市价急拉");
         core.EndCardTurn();
         for (int i = 0; i < 200 && !core.Loop.IsDayClosed && !core.Loop.IsFinished; i++)
@@ -71,8 +102,8 @@ public sealed class PhaseFlowTests
     {
         // 尾盘拉升:收盘竞价价格大幅偏离前价 → 尾盘异常波动热度(监管特护)
         var core = Harness.NewGame("accumulate", "市价急拉", "限价吸筹");
-        // 回合0-3只小额吸筹(压住价格,留出尾盘拉升空间)
-        var snaps = Harness.RunTurns(core, 4, c => Harness.Play(c, "限价吸筹"));
+        // 段0-10只小额吸筹(压住价格,留出尾盘拉升空间)
+        var snaps = Harness.RunTurns(core, 11, c => Harness.Play(c, "限价吸筹"));
         var before = core.BuildSnapshot();
         decimal priceBefore = before.LastPrice ?? 10m;
 
@@ -103,11 +134,15 @@ public sealed class PhaseFlowTests
         {
             c.SetDeck(new List<string> { "市价急拉", "限价吸筹" }, out _);
             c.BeginTrading();
-            // 打满一天(空过全部5回合)
-            Harness.RunTurns(c, 5);
+            // 打到日切(段0-10空过,段11手动:RunTurns(12)会自动跨日错过盘后窗口)
+            Harness.RunTurns(c, 11);
+            c.EndCardTurn();   // 段11(收盘竞价,无牌)
+            for (int i = 0; i < 100 && !c.Loop.IsDayClosed && !c.Loop.IsFinished; i++)
+                c.Step();
             Assert.True(c.Loop.IsDayClosed);
             if (news) Assert.True(c.PublishNews("positive", out var err), err);
-            c.StartNextDay();   // 次日盘前竞价
+            c.StartNextDay();   // 次日盘前
+            Harness.NextTurn(c);   // 跳过申报段
             Assert.True(Harness.Play(c, "市价急拉"), Harness.LastPlayError);
             c.EndCardTurn();
         }

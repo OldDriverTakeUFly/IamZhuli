@@ -16,6 +16,7 @@ public sealed class AuctionShowdownTests
     public void PlayerMarketBuy_AuctionFills_AndLiftsPrice()
     {
         var core = Harness.NewGame("accumulate", "市价急拉");
+        Harness.NextTurn(core);   // 跳过盘前申报段(申报不撮合)
         decimal priceBefore = core.BuildSnapshot().LastPrice ?? 10m;
 
         Assert.True(Harness.Play(core, "市价急拉"), Harness.LastPlayError);
@@ -35,6 +36,7 @@ public sealed class AuctionShowdownTests
     public void Auction_Counterparties_AreAIAndInstitution()
     {
         var core = Harness.NewGame("accumulate", "市价急拉");
+        Harness.NextTurn(core);   // 跳过申报段
         Assert.True(Harness.Play(core, "市价急拉"), Harness.LastPlayError);
         core.EndCardTurn();
         var ra = core.LastAuction!;
@@ -58,10 +60,11 @@ public sealed class AuctionShowdownTests
         var day1 = snaps[^1];
         Assert.True(day1.Account.PositionTotal > 0, "首日吸筹应建仓");
 
-        // 推到次日(T+1可卖)
+        // 推到次日(T+1可卖);跨日后停在申报段,再进一步到锁单段才能出牌撮合
         MarketSnapshotDto day2 = day1;
         while (day2.CurrentDay == day1.CurrentDay && !core.Loop.IsFinished)
             day2 = Harness.NextTurn(core);
+        day2 = Harness.NextTurn(core);   // 段0申报 → 段1锁单
         decimal priceBefore = day2.LastPrice ?? 10m;
         int avail = day2.Account.PositionAvailable;
         Assert.True(avail > 0, "次日应有可卖持仓");
@@ -85,8 +88,9 @@ public sealed class AuctionShowdownTests
     {
         // 玩家全程不出牌:机构B报价、AI主力自主行动、散户交易——市场不该死寂
         var core = Harness.NewGame("accumulate", "限价吸筹");   // 有牌但不出
+        Harness.NextTurn(core);   // 丢弃段1快照(首场撮合前,申报语义盘口为空)
         var snaps = new List<MarketSnapshotDto>();
-        for (int t = 0; t < 3; t++) snaps.Add(Harness.NextTurn(core));
+        for (int t = 0; t < 3; t++) snaps.Add(Harness.NextTurn(core));   // 段2-4
 
         foreach (var s in snaps)
         {
@@ -120,6 +124,7 @@ public sealed class AuctionShowdownTests
     {
         // 连续拉升应带动散户情绪与活跃度(跟风盘)——"主力点火,散户抬轿"
         var core = Harness.NewGame("accumulate", "市价急拉", "限价加仓");
+        Harness.NextTurn(core);   // 跳过申报段
         var start = core.BuildSnapshot();
         decimal sentiment0 = start.Sentiment;
         int active0 = start.RetailActiveCount;

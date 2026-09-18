@@ -72,18 +72,25 @@ public sealed class SimulationLoop
             catch { /* 单参与者异常不影响整体推进 */ }
         }
 
+        StepClockOnly();
+    }
+
+    /// <summary>只走时钟+事件,不驱动参与者交易(静默段用:申报段/收盘静默段,
+    /// 时间照流但无连续成交)。监管衰减/消息tick/日切判定照常。</summary>
+    public void StepClockOnly()
+    {
+        if (IsFinished || IsPaused) return;
+
         Price? before = Session.Engine.LastPrice;
 
         // 推进时钟
         bool stillInDay = Clock.AdvanceTick();
 
-        // 发出成交事件(撮合在玩家下单时即时发生,这里收集当 tick 成交——M2 简化为即时撮合模型)
         EmitTradeAndPriceEvents(before);
 
         OnTick?.Invoke(Clock.TotalTicksElapsed);
 
         // 日切:tick 跑完后进入"已收盘"并暂停(等待玩家开始下一日)
-        // 日内连续流动,日终暂停让玩家喘息/看盘/做盘后操作
         if (!stillInDay)
         {
             CloseDay();

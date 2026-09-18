@@ -93,8 +93,8 @@ public sealed class InfoWarTests
         Assert.False(ok2);
         Assert.Contains("禁止", sigError);
 
-        // 推进一整天以上(封口=150tick=5回合,NextTurn每次30tick)
-        for (int t = 0; t < 7 && !core.Loop.IsFinished; t++)
+        // 推进一整天以上(封口=200tick=12段,NextTurn平均约17tick/段)
+        for (int t = 0; t < 14 && !core.Loop.IsFinished; t++)
             Harness.NextTurn(core);
         var after = core.BuildSnapshot();
         _out.WriteLine($"次日 监管: {after.LatestRegulatorEvent}");

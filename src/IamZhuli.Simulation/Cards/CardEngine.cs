@@ -15,8 +15,18 @@ public record OrderIntent(
 public sealed class CardEngine
 {
     private const int HandSize = 5;           // 手牌上限
-    private const int TurnTicks = 30;          // 每回合30tick
     private const int MaxCardsPerTurn = 2;     // 每回合最多出2张牌
+
+    // ── 12段交易日:盘前申报10/盘前锁单竞价10/盘中8×20/尾盘申报12/收盘竞价8 ──
+    // 盘前段1(可挂可撤,9:15-9:20模拟)+段2(锁单,9:20-9:25模拟);
+    // 尾盘申报(14:57)+收盘竞价锁收盘价。总和=200tick/天,须与Clock对齐。
+    public static readonly int[] TurnDurations = { 10, 10, 20, 20, 20, 20, 20, 20, 20, 20, 12, 8 };
+    /// <summary>一天总段数。</summary>
+    public static int TurnsPerDay => TurnDurations.Length;
+    /// <summary>一天总tick(各段时长之和)。</summary>
+    public static int TotalTicksPerDay => TurnDurations.Sum();
+    /// <summary>当前段时长。</summary>
+    public int CurrentTurnTicks => TurnDurations[Math.Min(Turn, TurnsPerDay - 1)];
     private const int MaxEnergy = 10;          // 能量上限
     private const int EnergyPerTurn = 3;       // 每回合恢复3点能量
 
@@ -240,14 +250,14 @@ public sealed class CardEngine
         }
 
         _tickInTurn++;
-        return _tickInTurn >= TurnTicks;   // 回合结束
+        return _tickInTurn >= CurrentTurnTicks;   // 回合结束
     }
 
     /// <summary>开始新回合:恢复能量、清状态、进入Play阶段。</summary>
     public void StartNewTurn()
     {
         Turn++;
-        if (Turn > 4) Turn = 0;   // 跨日重置(一天5回合)
+        if (Turn > TurnsPerDay - 1) Turn = 0;   // 跨日重置
         Energy = Math.Min(MaxEnergy, Energy + EnergyPerTurn);
         CardsPlayedThisTurn = 0;
         IsLayingLow = false;
@@ -280,7 +290,7 @@ public sealed class CardEngine
             if (match)
             {
                 LastCombo = combo.Name;
-                _lastComboTick = Turn * TurnTicks + _tickInTurn;
+                _lastComboTick = Turn * 20 + _tickInTurn;   // 近似刻度(仅展示用)
                 return combo.Name;
             }
         }

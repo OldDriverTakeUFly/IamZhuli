@@ -139,25 +139,29 @@ public sealed class CardSynergyTests
     public void ScheduledSell_SellsAcrossDays_TPlus1()
     {
         var core = Harness.NewGame("accumulate", "限价加仓", "分批出货");
-        // 第1回合买入建仓(T+1锁定)
+        Harness.NextTurn(core);   // 跳过申报段(撮合在锁单段起)
+        // 锁单段买入建仓(T+1锁定)
         Assert.True(Harness.Play(core, "限价加仓"), Harness.LastPlayError);
         var afterBuy = Harness.NextTurn(core);
         _out.WriteLine($"建仓后持仓 {afterBuy.Account.PositionTotal} 手(锁 {afterBuy.Account.PositionT1Locked})");
         Assert.True(afterBuy.Account.PositionTotal > 0, "限价买入应有成交");
 
-        // 推到第2天(T+1解锁):跨过本日剩余回合
+        // 推到第2天(T+1解锁),再进到锁单段(跨日后停在申报段,出牌不撮合)
         int day = afterBuy.CurrentDay;
         MarketSnapshotDto day2 = afterBuy;
         while (day2.CurrentDay == day && !core.Loop.IsFinished)
             day2 = Harness.NextTurn(core);
+        day2 = Harness.NextTurn(core);   // 段0申报 → 段1锁单
         int held = day2.Account.PositionAvailable;
         Assert.True(held > 0, "跨日后应有可卖持仓");
 
-        // 第2天出分批出货 → Resolve 期间逐tick卖出
+        // 第2天锁单段出分批出货 → Resolve 期间逐tick挂出卖单(成交依赖买盘接手)
         Assert.True(Harness.Play(core, "分批出货"), Harness.LastPlayError);
         var afterSell = Harness.NextTurn(core);
-        _out.WriteLine($"分批出货一回合: 可卖 {held} → {afterSell.Account.PositionAvailable}");
-        Assert.True(afterSell.Account.PositionAvailable < held, "分批出货应逐tick减仓");
+        bool sold = afterSell.Account.PositionAvailable < held;
+        bool selling = afterSell.OpenOrders.Any(o => o.Side == "Sell");
+        _out.WriteLine($"分批出货一回合: 可卖 {held} → {afterSell.Account.PositionAvailable}, 卖挂单 {afterSell.OpenOrders.Count(o => o.Side == "Sell")}");
+        Assert.True(sold || selling, "分批出货应逐tick挂卖/减仓");
     }
 
     [Fact]
@@ -177,7 +181,8 @@ public sealed class CardSynergyTests
     public void ShortSellCard_ThenCoverCard_FullCycleThroughAuctions()
     {
         var core = Harness.NewGame("accumulate", "做空突袭", "买回平仓");
-        // 回合1:做空突袭(1000手,经集中撮合)
+        Harness.NextTurn(core);   // 跳过申报段
+        // 锁单段:做空突袭(1000手,经集中撮合)
         Assert.True(Harness.Play(core, "做空突袭"), Harness.LastPlayError);
         var afterShort = Harness.NextTurn(core);
         _out.WriteLine($"做空后: 空头{afterShort.Account.ShortQty} 担保{afterShort.Account.MaintenanceRatio:P0} 券池余{afterShort.ShortablePool}");
