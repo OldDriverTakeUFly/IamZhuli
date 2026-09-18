@@ -15,7 +15,24 @@
   .flat { color: #e0e0e0; }
   .main { display: grid; grid-template-columns: 280px 1fr 340px 280px; grid-template-rows: 1fr; gap: 1px; background: #333; height: calc(100vh - 56px); }
 
-  /* —— 移动端:单列堆叠(图表→出牌→盘口→账户),整页滚动 —— */
+  @media (max-width: 900px) {
+  /* —— 多页式: 手机三页Tab(交易=图表+手牌 / 数据=盘口成交AI / 账户=明细盘后) —— */
+  #tabBar { display: flex !important; }
+  body { padding-bottom: 64px !important; }
+  .tab-btn { flex: 1; border: none; background: transparent; color: #8a93a6; font-size: 13px;
+             border-radius: 999px; padding: 9px 0; font-weight: 600; transition: all .15s; }
+  .tab-btn.active { background: linear-gradient(135deg, #f4d35e, #e8c44a); color: #171a21;
+                    box-shadow: 0 4px 12px rgba(232,196,74,.3); }
+  body:not([data-page="trade"]) .main > .panel[data-pg="trade"] { display: none !important; }
+  body:not([data-page="data"]) .main > .panel[data-pg="data"] { display: none !important; }
+  body:not([data-page="account"]) .main > .panel[data-pg="account"] { display: none !important; }
+  body[data-page="trade"] #miniBook { display: block !important; }
+  body[data-page="trade"] #posBar { display: flex !important; }
+  /* 交易页顺序: 图表→手牌(挂单/时间控制在手牌panel内顺延) */
+  #chartPanel { order: 1; }
+  .main > .panel[data-pg="trade"]:not(#chartPanel) { order: 2; }
+  }
+  /* —— 移动端:单列堆叠,整页滚动 —— */
   @media (max-width: 900px) {
     .main { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
     .main .panel { min-height: 0; max-height: none; }
@@ -180,7 +197,7 @@
   .orders-empty, .trade-list { border-radius: var(--r-sm); }
 </style>
 </head>
-<body>
+<body data-page="trade">
 <div class="header">
   <span class="symbol">鼎鼎集团</span>
   <span class="price flat" id="hPrice">--</span>
@@ -210,7 +227,7 @@
 
 <div class="main">
   <!-- 盘口 + 成交 + AI动向(信息观察区) -->
-  <div class="panel">
+  <div class="panel" data-pg="data">
     <h3>盘口五档</h3>
     <div id="asks"></div>
     <div class="lastprice flat" id="lastPrice">--</div>
@@ -227,7 +244,8 @@
 
   <!-- 图表 -->
   <!-- 中间:图表区。高度由 JS resizeCharts 主动计算赋值,不依赖 flex 链(避免塌缩) -->
-  <div class="panel" id="chartPanel" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+  <div class="panel" data-pg="trade" id="chartPanel" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+    <div id="miniBook" style="display:none;position:absolute;top:44px;right:8px;z-index:5;background:rgba(18,22,30,.82);backdrop-filter:blur(6px);border-radius:10px;padding:6px 10px;font-size:11px;line-height:1.7;pointer-events:none;"></div>
     <div class="seg" id="chartSeg" style="margin-bottom:8px;flex:0 0 auto;">
       <button class="active" data-chart="timeshare">分时</button>
       <button data-chart="daily">日K线</button>
@@ -260,13 +278,14 @@
   </div>
 
   <!-- 下单 + 控制 -->
-  <div class="panel">
+  <div class="panel" data-pg="trade">
     <!-- 卡牌手牌区(卡牌模式显示) -->
     <div id="cardPanel" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <h3 style="margin:0;">🎴 手牌</h3>
         <span style="font-size:11px;color:#888;">回合 <span id="cardTurn">1</span>/5 · 能量 <span id="cardEnergy">●●●</span> · <span id="cardPhase" style="font-weight:bold;">出牌中</span> <span id="cardStance" style="display:none;background:#372a4a;color:#ce93d8;border-radius:8px;padding:1px 8px;margin-left:4px;"></span></span>
       </div>
+      <div id="posBar" style="display:none;flex-direction:row;justify-content:space-between;background:rgba(255,255,255,.05);border-radius:10px;padding:6px 12px;margin-bottom:6px;font-size:12px;"></div>
       <div id="declareHint" style="display:none;background:#1c2a3a;border-left:3px solid #4fc3f7;border-radius:4px;padding:6px 10px;margin-bottom:6px;font-size:12px;color:#81d4fa;line-height:1.5;">
         📋 <b>申报段</b>：现在出牌 = 挂单申报（可撤），<b>不会立即成交</b>——申报单将在下一段「<span id="declareNext">盘前竞价</span>」统一撮合定价。
       </div>
@@ -378,7 +397,7 @@
   </div>
 
   <!-- 账户 -->
-  <div class="panel">
+  <div class="panel" data-pg="account">
     <h3>账户</h3>
     <div class="acc-row"><span class="lbl">总权益</span><span class="val" id="equity">--</span></div>
     <div class="acc-row"><span class="lbl">总现金</span><span class="val" id="cash">--</span></div>
@@ -653,6 +672,29 @@ $('waterArmyToggleBtn').onclick = async () => {
 };
 
 // —— 渲染盘口 ——
+function renderMiniBook(snap) {
+  // 迷你盘口(交易页图表右上): 卖一/现价/买一
+  const mb = $('miniBook'); if (!mb) return;
+  const a1 = snap.asks && snap.asks[snap.asks.length - 1];
+  const b1 = snap.bids && snap.bids[0];
+  const lp = snap.lastPrice;
+  mb.innerHTML = `
+    <div style="color:#26a69a;text-align:right;">卖 ${a1 ? a1.price.toFixed(2) : '--'} <span style="color:#667">${a1 ? a1.qty : ''}</span></div>
+    <div style="font-size:15px;font-weight:800;color:${lp >= snap.previousClose ? '#ef5350' : '#26a69a'};text-align:center;border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);padding:1px 0;">${lp != null ? lp.toFixed(2) : '--'}</div>
+    <div style="color:#ef5350;">买 ${b1 ? b1.price.toFixed(2) : '--'} <span style="color:#667">${b1 ? b1.qty : ''}</span></div>`;
+}
+function renderPosBar(snap) {
+  // 持仓摘要条(交易页手牌上方): 权益/持仓/浮盈/现金
+  const pb = $('posBar'); if (!pb) return;
+  const a = snap.account;
+  const fp = a.floatingProfit;
+  const fpColor = fp >= 0 ? '#ef5350' : '#26a69a';
+  pb.innerHTML = `
+    <span>权益 <b style="color:#e8c44a">${(a.totalEquity / 10000).toFixed(0)}万</b></span>
+    <span>持仓 <b>${a.positionTotal}</b>手${a.shortQty > 0 ? ` <b style="color:#ab47bc">空${a.shortQty}</b>` : ''}</span>
+    <span>浮盈 <b style="color:${fpColor}">${fp >= 0 ? '+' : ''}${(fp / 10000).toFixed(1)}万</b></span>
+    <span>现金 <b>${(a.availableCash / 10000).toFixed(0)}万</b></span>`;
+}
 function renderBook(snap) {
   const asksHtml = snap.asks.map((lv, i) => {
     const n = snap.asks.length - i;
@@ -1640,7 +1682,7 @@ function updateCharts(snap) {
 const conn = new signalR.HubConnectionBuilder().withUrl('/gamehub').withAutomaticReconnect().build();
 conn.on('snapshot', snap => {
   // 每个 render 独立 try-catch,防止某个函数异常拖垮整个页面
-  const fns = [renderBook, renderAccount, renderHeader, updateCharts, renderRegulator, renderObjectives, renderOrders, renderCards];
+  const fns = [renderBook, renderMiniBook, renderPosBar, renderAccount, renderHeader, updateCharts, renderRegulator, renderObjectives, renderOrders, renderCards];
   for (const fn of fns) {
     try { fn(snap); } catch(e) { console.error(fn.name, e); }
   }
@@ -1654,6 +1696,21 @@ conn.start().then(() => {
   $('connTxt').textContent = '连接失败: ' + e;
 });
 conn.onclose(() => { $('connDot').className = 'conn-dot off'; $('connTxt').textContent = '已断开'; });
+</script>
+<nav id="tabBar" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(20,24,32,.92);backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,.07);padding:6px 10px calc(6px + env(safe-area-inset-bottom));flex-direction:row;gap:6px;">
+  <button class="tab-btn active" data-tab="trade">📈 交易</button>
+  <button class="tab-btn" data-tab="data">📊 数据</button>
+  <button class="tab-btn" data-tab="account">💼 账户</button>
+</nav>
+<script>
+  // 多页式: 手机Tab切换(桌面CSS隐藏tabBar,不受影响)
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.body.dataset.page = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      window.scrollTo(0, 0);
+    });
+  });
 </script>
 </body>
 </html>
