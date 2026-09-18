@@ -73,6 +73,14 @@ public sealed class GameCore
             "defend" or "防御" => TurnIntent.Defend,
             _ => TurnIntent.None,
         };
+        // 牌随势走: 抽牌偏置 + 手牌方向保底(立即生效,不等下段)
+        _cardEngine!.DrawBias = Intent switch
+        {
+            TurnIntent.Accumulate or TurnIntent.Push => Side.Buy,
+            TurnIntent.Distribute or TurnIntent.Wash => Side.Sell,
+            _ => null,
+        };
+        _cardEngine.EnsureDirectionFloor();
         return true;
     }
 

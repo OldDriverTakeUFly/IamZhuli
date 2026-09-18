@@ -64,6 +64,29 @@ public sealed class CardEngine
     public bool IsLayingLow { get; private set; }
     /// <summary>当前架势(架势牌设置,揭牌时消费变体,回合切换清空)。</summary>
     public CardEffect ActiveStance { get; set; } = CardEffect.None;
+
+    // —— 牌随势走: 意图偏置抽牌 + 方向保底(默认牌库模式;自配牌组尊重玩家选择) ——
+    /// <summary>抽牌偏置方向(由 GameCore 按操盘意图同步;null=无偏置)。</summary>
+    public Side? DrawBias { get; set; }
+
+    /// <summary>牌是否属于指定方向(买=吸筹/拉升/平仓;卖=砸盘/出货/做空)。</summary>
+    public static bool IsDirectionCard(CardDefinition c, Side side) => side switch
+    {
+        Side.Buy => c.Effect is CardEffect.LimitBuy or CardEffect.MarketBuy or CardEffect.ShortCover,
+        Side.Sell => c.Effect is CardEffect.MarketSell or CardEffect.ScheduledSell or CardEffect.ShortSell,
+        _ => false,
+    };
+
+    /// <summary>方向保底: 手牌无偏置方向牌时强制补入一张(设意图时立即生效,不等下段抽牌)。</summary>
+    public void EnsureDirectionFloor()
+    {
+        if (DrawBias is not { } side) return;
+        if (HasCustomDeck) return;                     // 自配牌组尊重组牌
+        if (Hand.Any(c => IsDirectionCard(c.Definition, side))) return;
+        var pool = CardDefinition.Library.Where(c => IsDirectionCard(c, side)).ToList();
+        if (pool.Count == 0 || Hand.Count == 0) return;
+        Hand[^1] = new CardInstance(++_cardIdSeq, pool[_rng.Next(pool.Count)]);   // 替换最后一张
+    }
     /// <summary>上次触发的连招(供前端展示)。</summary>
     public string? LastCombo { get; private set; }
     /// <summary>本回合触发的连招名(同回合按序打出连招序列才触发;揭牌时消费加成后清空)。</summary>
@@ -145,6 +168,7 @@ public sealed class CardEngine
             Shuffle();
         }
         for (int i = 0; i < HandSize; i++) DrawCard();
+        EnsureDirectionFloor();
         Phase = CardPhase.Play;
     }
 
@@ -283,6 +307,7 @@ public sealed class CardEngine
             DrawCard();
             if (Hand.Count == before) break;   // 小牌组耗尽:有多少拿多少
         }
+        EnsureDirectionFloor();
     }
 
     /// <summary>检测连招。返回触发的连招名(null=无)。</summary>
@@ -324,8 +349,27 @@ public sealed class CardEngine
         }
         else
         {
-            // 无自配牌组:全牌库随机(原行为)
-            var def = CardDefinition.Library[_rng.Next(CardDefinition.Library.Count)];
+            // 无自配牌组:全牌库加权随机——意图方向牌权重×3(牌随势走)
+            var lib = CardDefinition.Library;
+            CardDefinition def = lib[0];
+            if (DrawBias is { } bias)
+            {
+                int total = 0;
+                Span<int> w = stackalloc int[lib.Count];
+                for (int i = 0; i < lib.Count; i++)
+                {
+                    w[i] = IsDirectionCard(lib[i], bias) ? 3 : 1;
+                    total += w[i];
+                }
+                int pick = _rng.Next(total);
+                for (int i = 0; i < lib.Count; i++)
+                {
+                    pick -= w[i];
+                    if (pick < 0) { def = lib[i]; break; }
+                }
+                def ??= lib[^1];
+            }
+            else def = lib[_rng.Next(lib.Count)];
             Hand.Add(new CardInstance(++_cardIdSeq, def));
         }
     }

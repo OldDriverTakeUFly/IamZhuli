@@ -91,4 +91,47 @@ public sealed class IntentTests
         _out.WriteLine($"意图吸筹: 普通 {buyA}手 vs +激进 {buyB}手 (基础盘800→1600)");
         Assert.True(buyB >= buyA, "激进应放大基础盘(≥普通)");
     }
+
+    [Fact]
+    public void DirectionFloor_AlwaysGuarantees_IntentAlignedCard()
+    {
+        // 跨20个种子: 设吸筹意图后手牌必含买方向牌(保底立即生效,不等抽牌)
+        for (int seed = 0; seed < 20; seed++)
+        {
+            var core = new GameCore(seed: 7000 + seed);
+            core.LoadLevelById("accumulate");   // 默认牌库(无自配)
+            core.BeginTrading();
+            core.SetIntent("accumulate", out _);
+            var hand = core.BuildSnapshot().CardState!.Hand;
+            bool hasBuy = hand.Any(c => c.Effect is "LimitBuy" or "MarketBuy" or "ShortCover");
+            Assert.True(hasBuy, $"seed{seed}: 手牌无买方向牌 [{string.Join(",", hand.Select(h => h.Name))}]");
+        }
+    }
+
+    [Fact]
+    public void DirectionFloor_RespectsCustomDeck()
+    {
+        // 自配全做空牌组 + 吸筹意图: 不强制注入(组牌是玩家的选择)
+        var core = Harness.NewGame("accumulate", "做空突袭", "大额做空");
+        core.SetIntent("accumulate", out _);
+        var hand = core.BuildSnapshot().CardState!.Hand;
+        Assert.True(hand.All(c => c.Name is "做空突袭" or "大额做空"), "自配牌组不受保底干预");
+    }
+
+    [Fact]
+    public void BiasedDraw_SkewsHandToward_Intent()
+    {
+        // 统计性: 10个种子各跑3段,吸筹意图下买方向牌占比应显著高于无意图(权重×3)
+        int withIntent = 0, without = 0, totalCards = 0;
+        for (int seed = 0; seed < 10; seed++)
+        {
+            var a = new GameCore(seed: 8100 + seed); a.LoadLevelById("accumulate"); a.BeginTrading(); a.SetIntent("accumulate", out _);
+            var b = new GameCore(seed: 8100 + seed); b.LoadLevelById("accumulate"); b.BeginTrading();
+            for (int seg = 0; seg < 3; seg++) { Harness.NextTurn(a); Harness.NextTurn(b); }
+            foreach (var h in a.BuildSnapshot().CardState!.Hand) { totalCards++; if (h.Effect is "LimitBuy" or "MarketBuy" or "ShortCover") withIntent++; }
+            foreach (var h in b.BuildSnapshot().CardState!.Hand) { totalCards++; if (h.Effect is "LimitBuy" or "MarketBuy" or "ShortCover") without++; }
+        }
+        _out.WriteLine($"买方向牌占比: 有意图 {withIntent}/50 vs 无意图 {without}/50");
+        Assert.True(withIntent > without, $"偏置应提高买方向占比({withIntent} vs {without})");
+    }
 }
