@@ -155,4 +155,55 @@ public sealed class StanceTests
         _out.WriteLine($"竞价价: 普通 {priceBase} vs 防御 {priceDef}");
         Assert.True(priceDef <= priceBase + 0.001m, "防御架势不应追价(≤普通市价的竞价价)");
     }
+
+    [Fact]
+    public void Deceptive_DecoyWall_AnchorsAuctionPrice_Down_ForBuys()
+    {
+        // 买入+欺诈:下方3000手假买墙参与竞价定价 → 竞价价被拉低(同种子配对,唯一差异是架势)
+        var base_ = PairedGame(); base_.LoadLevelById("accumulate");
+        var dec = PairedGame(); dec.LoadLevelById("accumulate");
+        foreach (var (c, useStance) in new[] { (base_, false), (dec, true) })
+        {
+            c.SetDeck(new List<string> { "欺诈架势", "市价急拉", "限价吸筹" }, out _);
+            c.BeginTrading();
+            Harness.NextTurn(c);
+            if (useStance) Assert.True(Harness.Play(c, "欺诈架势"));
+            Assert.True(Harness.Play(c, "市价急拉"));
+            c.EndCardTurn();
+        }
+        var raB = base_.LastAuction!;
+        var raD = dec.LastAuction!;
+        _out.WriteLine($"竞价价: 普通 {raB.Price} vs 欺诈 {raD.Price} | 量 {raB.Volume} vs {raD.Volume}");
+        Assert.True(raD.Volume > 0, "欺诈对局应有成交");
+        Assert.True(raD.Price <= raB.Price, $"假买墙应拉低竞价价({raD.Price} vs {raB.Price})");
+        // 撤墙热度:欺诈局交易热更高(假墙+4,其他路径同种子一致)
+        Harness.NextTurn(base_);
+        Harness.NextTurn(dec);
+        decimal hB = base_.BuildSnapshot().RegulatorHeat;
+        decimal hD = dec.BuildSnapshot().RegulatorHeat;
+        _out.WriteLine($"交易热: 普通 {hB} vs 欺诈 {hD}");
+        Assert.True(hD > hB, "撤墙应推高交易监管(虚假挂单)");
+    }
+
+    [Fact]
+    public void Deceptive_DecoyWall_NeverExecutes()
+    {
+        // 假墙撮合前撤除:不会成交(权益变化只来自真实意图),不会残留挂单
+        var core = new GameCore(seed: 5150);
+        core.LoadLevelById("accumulate");
+        core.SetDeck(new List<string> { "欺诈架势", "市价急拉", "限价吸筹" }, out _);
+        core.BeginTrading();
+        Harness.NextTurn(core);
+        Assert.True(Harness.Play(core, "欺诈架势"));
+        Assert.True(Harness.Play(core, "市价急拉"));
+        core.EndCardTurn();
+
+        var ra = core.LastAuction!;
+        // 假墙价格(现价-0.05附近)不应出现在玩家的成交对手记录里以墙价成交的异常巨量:
+        // 假墙若被扫到,单笔成交量会≥3000手墙量级
+        Assert.True(ra.Trades.All(x => x.Qty < 3000), "假墙永不成交(撮合前已撤)");
+        // 撤墙后无残留:玩家挂单里不应有假墙价位的大单
+        var snap = core.BuildSnapshot();
+        Assert.True(snap.OpenOrders.All(o => o.TotalQty < 3000), "假墙不应残留为挂单");
+    }
 }

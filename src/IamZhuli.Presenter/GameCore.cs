@@ -620,8 +620,8 @@ public sealed class GameCore
         }
         // 完美出货:分批出货量翻倍已在 PlayCard 注册时生效
 
-        // 1.7 架势变体:修改玩家操盘意图 + 情绪/监管副作用(揭牌时消费)
-        ApplyStance(engine);
+        // 1.7 架势变体:修改玩家操盘意图 + 情绪/监管副作用(揭牌时消费);欺诈架势产出假墙
+        var decoys = ApplyStance(engine);
 
         // 2. 清场:清空订单簿,释放上一回合挂单的冻结资金/预扣券池
         session.ClearBookAndRefund();
@@ -646,9 +646,23 @@ public sealed class GameCore
                 new Price(price), new Quantity(intent.Qty), IsShort: intent.IsShort));
         }
 
-        // 5. 集合竞价定价 → 集中撮合(成交价统一为竞价价)→ 统一结算
+        // 4.5 盘口伪装:假墙挂入(绕过资产校验的纯盘面幻影,参与竞价定价)
+        var decoyOrders = new List<IamZhuli.Engine.Order>();
+        foreach (var d in decoys)
+        {
+            var o = engine.CreateOrder(Player, d.Side, OrderType.Limit, new Price(d.Price), new Quantity(d.Qty));
+            engine.RestOrder(o);
+            decoyOrders.Add(o);
+        }
+
+        // 5. 集合竞价定价(含假墙锚定) → 撤墙(虚假挂单热度) → 集中撮合(假墙永不成交)
         if (engine.CallAuction() is { } auction)
         {
+            foreach (var d in decoyOrders)
+            {
+                engine.Cancel(d.Id, out _);
+                _regulator.ApplyTradeHeat(4m, $"盘口伪装撤单: {d.RemainingQty}@{d.Price}");
+            }
             engine.SetLastPrice(auction.Price);
             var trades = engine.SweepAtPrice(auction.Price);
             session.SettleAuctionTrades(trades);
@@ -664,6 +678,11 @@ public sealed class GameCore
         }
         else
         {
+            foreach (var d in decoyOrders)
+            {
+                engine.Cancel(d.Id, out _);
+                _regulator.ApplyTradeHeat(4m, $"盘口伪装撤单: {d.RemainingQty}@{d.Price}");
+            }
             _lastAuction = new AuctionResultDto(_cardEngine.Turn, 0m, 0, new());
         }
 
@@ -672,11 +691,16 @@ public sealed class GameCore
         _cardEngine.EndTurn();
     }
 
-    /// <summary>应用架势变体到玩家意图(激进×2/隐蔽×6折+深挂/防御市价转限价/欺诈情绪反转)。</summary>
-    private void ApplyStance(IamZhuli.Engine.MatchingEngine engine)
+    /// <summary>假墙规格(盘口伪装:参与竞价定价,撮合前撤除,永不成交)。</summary>
+    private readonly record struct DecoyOrder(Side Side, decimal Price, int Qty);
+
+    /// <summary>应用架势变体到玩家意图(激进×2/隐蔽×6折+深挂/防御市价转限价/欺诈情绪反转+盘口伪装)。
+    /// 返回欺诈架势要挂的假墙(由 EndCardTurn 在清场后挂入)。</summary>
+    private List<DecoyOrder> ApplyStance(IamZhuli.Engine.MatchingEngine engine)
     {
+        var decoys = new List<DecoyOrder>();
         var stance = _cardEngine!.ActiveStance;
-        if (stance == CardEffect.None) return;
+        if (stance == CardEffect.None) return decoys;
         _cardEngine.ActiveStance = CardEffect.None;   // 消费
 
         var view = engine.View;
@@ -727,8 +751,14 @@ public sealed class GameCore
                 if (hasBuy) _retail.Sentiment.ApplyNewsEffect(-0.08m, 0, -0.05m);
                 if (hasSell) _retail.Sentiment.ApplyNewsEffect(0.08m, 0, 0.05m);
                 _regulator.ApplyInfoHeat(4m, "欺诈架势:反向信号");
+                // 盘口伪装:同侧假墙挂在更远处,参与竞价定价把成交价锚定到有利方向
+                // (买入→下方假买墙拉低竞价价;卖出→上方假卖墙抬高竞价价),撮合前撤墙
+                decimal anchor = view.LastPrice?.Value ?? 10m;
+                if (hasBuy) decoys.Add(new DecoyOrder(Side.Buy, Math.Round(anchor - 0.05m, 2), 3000));
+                if (hasSell) decoys.Add(new DecoyOrder(Side.Sell, Math.Round(anchor + 0.05m, 2), 3000));
                 break;
         }
+        return decoys;
     }
 
     /// <summary>参与者显示名(Player→你,其余用原始名)。</summary>
