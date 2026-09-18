@@ -206,7 +206,7 @@
     margin-left: -42px; display: flex; flex-direction: column; padding: 8px 7px;
     border-radius: 12px; position: relative; overflow: hidden;
     box-shadow: 0 3px 10px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
-    transition: transform .18s cubic-bezier(.2,.8,.3,1.2), margin .18s, box-shadow .18s;
+    transition: transform .16s ease-out, box-shadow .16s;
     font-size: 12px;
   }
   #cardHand .pcard:first-child { margin-left: 0; }
@@ -221,12 +221,12 @@
   .pc-desc { margin-top: auto; font-size: 10px; color: #97a3b5; line-height: 1.35;
              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .pcard.disabled { filter: grayscale(.7) brightness(.55); }
-  /* hover: 上浮+放大+邻居让位(打牌感) */
+  /* hover: 上浮+放大(防抖:抬升后放大牌仍完整罩住原牌区域,鼠标永不脱离hover区;
+     不用margin让位——重排会引发hover往复抖动) */
   #cardHand .pcard:hover {
-    transform: translateY(-22px) scale(1.26); z-index: 30;
+    transform: translateY(-14px) scale(1.26); z-index: 30;
     box-shadow: 0 14px 30px rgba(0,0,0,.6), 0 0 0 2px rgba(232,196,74,.45);
   }
-  #cardHand .pcard:hover + .pcard { margin-left: -6px; }
 </style>
 </head>
 <body data-page="trade">
@@ -787,6 +787,21 @@ function renderCards(snap) {
   // 手牌(含规则推导的执行预览——价格由现价决定,与引擎执行规则一致)
   const lp = snap.lastPrice, bid = snap.bestBid, shq = snap.account.shortQty;
   const st = cs.activeStance;
+  // 手牌DOM防抖: 仅在牌集合/可出状态/阶段变化时重建(hover不被400ms快照重建打断——抖动主因)
+  const handKey = cs.hand.map(c => c.id).join(',') + '|' + cs.phase + '|' + cs.cardsPlayed + '|' + cs.energy + '|' + (cs.activeStance || '');
+  const canPlayNow = cs.hand.map(c => cs.phase === 'Play' && c.energyCost <= cs.energy && (c.category === 'Stance' || cs.cardsPlayed < cs.maxCardsPerTurn) ? 1 : 0).join('');
+  const fullKey = handKey + '|' + canPlayNow;
+  if (window._handKey === fullKey) {
+    // 不重建: 原地刷新预览文本与禁用态
+    document.querySelectorAll('#cardHand .pcard').forEach(el => {
+      const i = +el.dataset.cardidx; const c = cs.hand[i]; if (!c) return;
+      el.classList.toggle('disabled', canPlayNow[i] === '0');
+      const exec = el.querySelector('.pc-exec');
+      if (exec && exec.dataset.raw) exec.textContent = exec.dataset.raw;
+    });
+    return renderCardsTail(cs, snap);
+  }
+  window._handKey = fullKey;
   $('cardHand').innerHTML = cs.hand.map((c, i) => {
     const isStance = c.category === 'Stance';
     const fx2 = (v) => (Math.round(v * 100) / 100).toFixed(2);
@@ -808,10 +823,14 @@ function renderCards(snap) {
     return `<div class="card-item pcard card-cat-${c.category} ${cls}" data-cardidx="${i}">
       <div class="pc-cost">${cost}${c.cashCost > 0 ? `<span class="pc-cash">${(c.cashCost / 10000)}w</span>` : ''}</div>
       <div class="pc-name">${c.name}</div>
-      ${preview ? `<div class="pc-exec">${preview}</div>` : ''}
+      ${preview ? `<div class="pc-exec" data-raw="${preview}">${preview}</div>` : ''}
       <div class="pc-desc">${c.description}</div>
     </div>`;
   }).join('');
+  bindHandCards();
+  renderCardsTail(cs, snap);
+}
+function renderCardsTail(cs, snap) {
   // 揭牌结果(谁在什么价买卖多少,涉及你的行高亮)
   const ra = cs.lastAuction;
   if (ra) {
@@ -832,20 +851,25 @@ function renderCards(snap) {
   } else {
     $('revealPanel').style.display = 'none';
   }
-  // 出牌点击
-  document.querySelectorAll('.card-item:not(.disabled)').forEach(el => {
-    el.onclick = async () => {
-      const idx = parseInt(el.dataset.cardidx);
-      const r = await (await fetch('/api/card/play?handIndex=' + idx, { method: 'POST' })).json();
-      const pnNow = (window._lastSnap?.cardState?.phaseName) || '盘中';
-      const okMsg = pnNow === '盘前申报' ? '✓ 已申报 → 盘前竞价统一撮合'
-        : pnNow === '尾盘申报' ? '✓ 已申报 → 收盘竞价锁价'
-        : pnNow === '盘前竞价' ? '✓ 已出牌 → 本段竞价定开盘价'
-        : pnNow === '收盘竞价' ? '✓ 已出牌 → 本段竞价定收盘价'
-        : '✓ 已出牌';
-      $('cardMsg').textContent = r.ok ? okMsg : '✗ ' + r.error;
-      $('cardMsg').style.color = r.ok ? (pnNow.includes('申报') ? '#81d4fa' : '#26a69a') : '#ef5350';
-    };
+}
+// 出牌点击(事件委托:不随DOM重建丢失,hover不被打断)
+function bindHandCards() {
+  const hand = $('cardHand');
+  if (hand._bound) return;
+  hand._bound = true;
+  hand.addEventListener('click', async (e) => {
+    const el = e.target.closest('.card-item:not(.disabled)');
+    if (!el) return;
+    const idx = parseInt(el.dataset.cardidx);
+    const r = await (await fetch('/api/card/play?handIndex=' + idx, { method: 'POST' })).json();
+    const pnNow = (window._lastSnap?.cardState?.phaseName) || '盘中';
+    const okMsg = pnNow === '盘前申报' ? '✓ 已申报 → 盘前竞价统一撮合'
+      : pnNow === '尾盘申报' ? '✓ 已申报 → 收盘竞价锁价'
+      : pnNow === '盘前竞价' ? '✓ 已出牌 → 本段竞价定开盘价'
+      : pnNow === '收盘竞价' ? '✓ 已出牌 → 本段竞价定收盘价'
+      : '✓ 已出牌';
+    $('cardMsg').textContent = r.ok ? okMsg : '✗ ' + r.error;
+    $('cardMsg').style.color = r.ok ? (pnNow.includes('申报') ? '#81d4fa' : '#26a69a') : '#ef5350';
   });
 }
 // 结束回合
