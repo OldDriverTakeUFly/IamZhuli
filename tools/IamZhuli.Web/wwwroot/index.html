@@ -23,7 +23,8 @@
     .main .panel:nth-child(3) { order: 2; }   /* 下单/卡牌操作(child3) */
     .main .panel:nth-child(1) { order: 3; }   /* 盘口/成交(child1) */
     .main .panel:nth-child(4) { order: 4; }   /* 账户/目标(child4) */
-    .header { flex-wrap: wrap; gap: 8px 16px; padding: 8px 12px; }
+    .header { flex-wrap: wrap; gap: 8px 16px; padding: 8px 12px;
+              position: sticky; top: 0; z-index: 20; }   /* QA-3: 滚动后价格必须可见 */
     /* 手牌横向滑动一行:纵向省~250px,核心循环(看盘→出牌)单屏可达 */
     #cardHand { flex-direction: row !important; overflow-x: auto; gap: 6px !important;
                 padding-bottom: 6px; scroll-snap-type: x proximity; }
