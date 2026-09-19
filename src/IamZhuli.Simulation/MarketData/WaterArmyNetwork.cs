@@ -11,6 +11,10 @@ public sealed class WaterArmyNetwork
 {
     /// <summary>网络等级 0-5(0=无网络)。</summary>
     public int Level { get; private set; }
+
+    /// <summary>存档恢复:回填网络等级/运营态/累计天数。</summary>
+    internal void Restore(int level, bool active, int activeDays)
+    { Level = level; IsActive = active; ActiveDays = activeDays; }
     /// <summary>是否在运营中(每天扣维持费+注入Pump)。</summary>
     public bool IsActive { get; private set; }
     /// <summary>已运营天数。</summary>

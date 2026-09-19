@@ -95,6 +95,12 @@ app.MapPost("/api/card/play", (GameSingleton game, int handIndex) =>
     return Results.Ok(new { ok, error });
 });
 
+app.MapPost("/api/save/{slot}", async (GameSingleton game, string slot) =>
+    Results.Ok(new { ok = await game.SaveToSlotAsync(slot) }));
+app.MapPost("/api/load/{slot}", async (GameSingleton game, string slot) =>
+    Results.Ok(new { ok = await game.LoadFromSlotAsync(slot) }));
+app.MapGet("/api/saves", (GameSingleton game) => Results.Ok(game.ListSaves()));
+
 app.MapPost("/api/intent", (GameSingleton game, string id) =>
 {
     var ok = game.SetIntent(id, out var error);

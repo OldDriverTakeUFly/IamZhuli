@@ -374,6 +374,23 @@ public sealed class CardEngine
         }
     }
 
+    /// <summary>存档恢复:整体回填牌组状态(手牌/抽牌堆/弃牌堆/能量/意图偏置)。</summary>
+    internal void RestoreState(List<CardDefinition> hand, Queue<CardDefinition> draw, List<CardDefinition> discard,
+                               int energy, int turn, CardPhase phase)
+    {
+        Hand.Clear(); hand.ForEach(c => Hand.Add(new CardInstance(++_cardIdSeq, c)));
+        _drawPile = new Queue<CardDefinition>(draw);
+        _discardPile = new List<CardDefinition>(discard);
+        Energy = energy; Turn = turn; Phase = phase;
+        CardsPlayedThisTurn = 0; IsLayingLow = false;
+        _turnPlays.Clear(); ActiveCombo = null; ActiveStance = CardEffect.None;
+        PendingEffects.Clear();
+    }
+
+    /// <summary>内部牌堆快照(存档导出用)。</summary>
+    internal (List<CardDefinition> hand, Queue<CardDefinition> draw, List<CardDefinition> discard) PilesSnapshot()
+        => (Hand.Select(h => h.Definition).ToList(), new Queue<CardDefinition>(_drawPile), _discardPile.ToList());
+
     /// <summary>日切重置:回合归零(次日盘前竞价),恢复能量/出牌数/Play阶段。
     /// 收盘静默路径不经过 StartNewTurn,这里必须做完整重置。</summary>
     public void OnNewDay()

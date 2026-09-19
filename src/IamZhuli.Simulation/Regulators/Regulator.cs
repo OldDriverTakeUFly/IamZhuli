@@ -180,6 +180,13 @@ public sealed class Regulator
         _eventLog.Add(new RegulatorEvent((int)_tickCounter, _infoHeat, "监管动作", reason));
     }
 
+    /// <summary>存档恢复:直接回填双通道关注值。</summary>
+    internal void RestoreHeats(decimal heat, decimal infoHeat)
+    {
+        _heat = Math.Clamp(heat, 0m, 100m);
+        _infoHeat = Math.Clamp(infoHeat, 0m, 100m);
+    }
+
     /// <summary>外部系统调整交易关注值(架势变体/事件用;负值=降温,有0下限)。</summary>
     public void ApplyTradeHeat(decimal amount, string reason) => AddHeat(amount, reason);
 

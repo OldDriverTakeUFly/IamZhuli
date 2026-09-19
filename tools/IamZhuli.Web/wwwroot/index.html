@@ -425,7 +425,11 @@
         </div>
         <div id="newsStatus" style="font-size:10px;color:#666;margin-top:3px;"></div>
       </div>
-      <button class="btn btn-ctrl" id="nextDayBtn" style="width:auto;margin-top:8px;padding:6px 16px;display:block;margin-left:auto;margin-right:auto;">▶ 开始下一交易日</button>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px;">
+      <button class="btn mini-btn" id="saveBtn" style="min-height:36px;">💾 保存进度</button>
+      <button class="btn mini-btn" id="loadBtn" style="min-height:36px;">📂 读档</button>
+    </div>
+    <button class="btn btn-ctrl" id="nextDayBtn" style="width:auto;margin-top:8px;padding:6px 16px;display:block;margin-left:auto;margin-right:auto;">▶ 开始下一交易日</button>
     </div>
   </div>
 
@@ -675,6 +679,14 @@ $('ordersList').addEventListener('click', async e => {
 $('pauseBtn').onclick = () => fetch('/api/pause', { method: 'POST' });
 $('resumeBtn').onclick = () => fetch('/api/resume', { method: 'POST' });
 $('skipDayBtn').onclick = () => fetch('/api/skipday', { method: 'POST' });
+$('saveBtn').onclick = async () => {
+  const r = await (await fetch('/api/save/slot1', { method: 'POST' })).json();
+  $('dayMsg') && ($('dayMsg').textContent = r.ok ? '✓ 已保存' : '✗ 仅日切边界可存档');
+};
+$('loadBtn').onclick = async () => {
+  const r = await (await fetch('/api/load/slot1', { method: 'POST' })).json();
+  if (r.ok) location.reload(); else alert('读档失败或无存档');
+};
 $('nextDayBtn').onclick = () => { _chipDay = 0; fetch('/api/nextday', { method: 'POST' }); };
 // 盘后消息发布
 document.querySelectorAll('.news-btn').forEach(btn => {

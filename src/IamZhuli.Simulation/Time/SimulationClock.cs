@@ -82,6 +82,14 @@ public sealed class SimulationClock
 
     public override string ToString() => $"第{CurrentDay}/{TotalDays}日 tick{CurrentTickOfDay}/{TicksPerDay} {Phase}";
 
+    /// <summary>存档恢复:跳到指定日的开盘起点(tick0,Phase=Morning)。</summary>
+    internal void ForceDayStart(int day)
+    {
+        CurrentDay = day;
+        CurrentTickOfDay = 0;
+        Phase = SessionPhase.Morning;
+    }
+
     /// <summary>强制当日收盘(跳到日终tick,进入Closed)。供收盘竞价后的静默快进。</summary>
     public void ForceEndOfDay()
     {

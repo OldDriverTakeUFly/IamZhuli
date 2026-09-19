@@ -1028,6 +1028,92 @@ public sealed class GameCore
         catch { return false; }
     }
 
+
+    // ══════════════════════════════════════
+    // 存档(日切检查点):导出纯数据,宿主决定存储;导入=确定性重建+状态回填
+    // ══════════════════════════════════════
+
+    /// <summary>能否存档(仅日切边界:盘前/日切暂停/当日段0起点——此时订单簿为空,状态可完整捕获)。</summary>
+    public bool CanSave => IsPreMarket || _loop.IsDayClosed ||
+        (_loop.Clock.CurrentTickOfDay == 0 && _cardEngine is { Turn: 0, Phase: CardPhase.Play });
+
+    /// <summary>导出存档(须在 CanSave 状态调用,否则抛异常——盘中订单簿/意图无法完整捕获)。</summary>
+    public SaveData ExportSave()
+    {
+        if (!CanSave) throw new InvalidOperationException("仅日切边界可存档(盘前/收盘后/段0起点)");
+        var (hand, draw, discard) = _cardEngine!.PilesSnapshot();
+        return new SaveData
+        {
+            LevelId = _level.Id,
+            Day = IsPreMarket ? _loop.Clock.CurrentDay : _loop.Clock.CurrentDay + (_loop.IsDayClosed ? 1 : 0),
+            LastPrice = _loop.Session.Engine.LastPrice?.Value ?? _collector.PreviousClose,
+            PreviousClose = _collector.PreviousClose,
+            Player = Acct(_player), Ai = Acct(_ai.Account), Institution = Acct(_institutionB.Account),
+            AiState = _ai.CurrentState.ToString(),
+            InstRiskLevel = _institutionB.CurrentRiskLevel.ToString(),
+            Cards = new CardEngineSave(hand.Select(c => c.Name).ToList(),
+                draw.Select(c => c.Name).ToList(), discard.Select(c => c.Name).ToList(),
+                _cardEngine.Energy, _cardEngine.Turn, _cardEngine.HasCustomDeck),
+            Intent = Intent == TurnIntent.None ? null : Intent.ToString(),
+            Heat = _regulator.Heat, InfoHeat = _regulator.InfoHeat,
+            ShortablePool = _loop.Session.ShortablePool, TotalShortable = _loop.Session.TotalShortable,
+            Sentiment = new SentimentSave(_retail.Sentiment.Value, _retail.Sentiment.TargetSnapshot,
+                _retail.Sentiment.Confidence, _retail.Sentiment.HerdMood, _retail.Sentiment.NewsBias),
+            WaterArmy = new WaterArmySave(_waterArmy.Level, _waterArmy.IsActive, _waterArmy.ActiveDays),
+            News = _newsSystem.ActiveNews.Select(n => new SavedNewsDto(n.Type.ToString(), n.Headline, n.Impact, n.DurationTicks)).ToList(),
+            Candles = _collector.DailyCandles.Select(c => new CandleDto(c.Day, c.Open, c.High, c.Low, c.Close, c.Volume)).ToList(),
+        };
+    }
+
+    private static AccountSave Acct(Account a) => new(a.Cash, a.Position.Available.Value,
+        a.Position.T1Locked.Value, a.Position.AverageCost.Value, a.Position.ShortQty.Value,
+        a.Position.ShortCost.Value, a.MarginFrozen, a.TotalBoughtQty, a.TotalSoldQty);
+
+    /// <summary>从存档恢复:确定性重建(同种子预演)→状态回填→跳到存档日开盘。返回是否成功。</summary>
+    public bool LoadFromSave(SaveData s)
+    {
+        try
+        {
+            // 1. 确定性重建(预演/参与者与原局一致)
+            LoadLevelById(s.LevelId);
+            // 2. 时钟跳到存档日
+            _loop.Clock.ForceDayStart(s.Day);
+            // 3. 价格基准
+            _loop.Session.Engine.SetLastPrice(new Price(s.LastPrice));
+            _loop.Session.Engine.Rules.PreviousClose = new Price(s.PreviousClose);
+            _collector.RestoreHistory(s.Candles.Select(c => new DailyCandle(
+                c.Day, c.Open, c.High, c.Low, c.Close, c.Volume)).ToList(), s.PreviousClose, s.LastPrice);
+            // 4. 账户(玩家/AI/机构)
+            Restore(_player, s.Player); Restore(_ai.Account, s.Ai); Restore(_institutionB.Account, s.Institution);
+            // 5. AI状态/机构档位
+            _ai.ForceStateForTest(Enum.Parse<AIState>(s.AiState));
+            _institutionB.ForceRiskLevelForTest(Enum.Parse<RiskLevel>(s.InstRiskLevel));
+            // 6. 卡牌引擎(牌组以牌名还原)
+            var lib = Simulation.Cards.CardDefinition.Library;
+            _cardEngine!.RestoreState(
+                s.Cards.Hand.Select(n => lib.First(c => c.Name == n)).ToList(),
+                new Queue<Simulation.Cards.CardDefinition>(s.Cards.Draw.Select(n => lib.First(c => c.Name == n))),
+                s.Cards.Discard.Select(n => lib.First(c => c.Name == n)).ToList(),
+                s.Cards.Energy, s.Cards.Turn, Simulation.Cards.CardPhase.Play);
+            // 7. 监管/券池/情绪/水军/消息/意图
+            _regulator.RestoreHeats(s.Heat, s.InfoHeat);
+            _loop.Session.RestoreShortable(s.ShortablePool, s.TotalShortable);
+            _retail.Sentiment.Restore(s.Sentiment.Value, s.Sentiment.Target, s.Sentiment.Confidence, s.Sentiment.Herd, s.Sentiment.Bias);
+            _waterArmy.Restore(s.WaterArmy.Level, s.WaterArmy.Active, s.WaterArmy.ActiveDays);
+            _newsSystem.RestoreActive(s.News.Select(n => new NewsItem(
+                0, Enum.Parse<NewsType>(n.Type), n.Headline, n.Impact, n.RemainingTicks)));
+            if (s.Intent is { } it) SetIntent(it, out _);
+            // 8. 开盘态(与 BeginTrading 等效但跳过卡牌Init)
+            IsPreMarket = false;
+            _loop.Resume();
+            return true;
+        }
+        catch { return false; }
+    }
+
+    private static void Restore(Account a, AccountSave s)
+        => a.Restore(s.Cash, s.Available, s.T1Locked, s.AvgCost, s.ShortQty, s.ShortCost, s.Margin, s.Bought, s.Sold);
+
     // ══════════════════════════════════════
     // 复盘与查询
     // ══════════════════════════════════════

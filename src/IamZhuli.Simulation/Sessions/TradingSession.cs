@@ -354,6 +354,9 @@ public sealed class TradingSession
         foreach (var acc in _accounts.Values) acc.OnNewTradingDay();
     }
 
+    /// <summary>存档恢复:回填券池。</summary>
+    internal void RestoreShortable(int pool, int total) { ShortablePool = pool; TotalShortable = total; }
+
     /// <summary>判断某订单是否为做空单(揭牌展示用)。</summary>
     public bool IsShortOrder(OrderId orderId) => _shortOrders.Contains(orderId);
 

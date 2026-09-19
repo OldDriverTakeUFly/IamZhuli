@@ -137,6 +137,17 @@ public sealed class Account
         return Cash + longValue - shortDebt;
     }
 
+    /// <summary>存档恢复:整体回填账户与持仓。</summary>
+    internal void Restore(decimal cash, int available, int t1, decimal avgCost, int shortQty, decimal shortCost,
+                          decimal margin, int bought, int sold)
+    {
+        Cash = cash;
+        Position.Restore(available, t1, avgCost, shortQty, shortCost);
+        MarginFrozen = margin;
+        TotalBoughtQty = bought; TotalSoldQty = sold;
+        FrozenCash = 0; _buyFreezes.Clear();
+    }
+
     public override string ToString()
         => $"现金{Cash / 10000:F2}万(可用{AvailableCash / 10000:F2}万) 持仓{Position}";
 }

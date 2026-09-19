@@ -89,6 +89,13 @@ public sealed class MarketSentiment
         NewsBias *= 0.3m;                                 // 消息偏差大幅衰减(隔夜效应递减)
     }
 
+    /// <summary>存档恢复:回填五维情绪。</summary>
+    internal void Restore(decimal value, decimal target, decimal confidence, decimal herd, decimal newsBias)
+    { Value = value; _target = target; Confidence = confidence; HerdMood = herd; NewsBias = newsBias; }
+
+    /// <summary>内部目标情绪(存档导出用)。</summary>
+    internal decimal TargetSnapshot => _target;
+
     /// <summary>重置(关卡重新开始时)。</summary>
     public void Reset() { Value = 0.5m; _target = 0.5m; _recentReturn = 0; _volatility = 0; Confidence = 0.5m; HerdMood = 0.3m; NewsBias = 0; }
 }

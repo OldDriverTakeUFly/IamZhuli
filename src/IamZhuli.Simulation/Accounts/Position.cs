@@ -50,6 +50,16 @@ public sealed class Position
 
     public Position() { }
 
+    /// <summary>存档恢复:整体回填持仓状态。</summary>
+    internal void Restore(int available, int t1, decimal avgCost, int shortQty, decimal shortCost)
+    {
+        Available = new Quantity(Math.Max(0, available));
+        T1Locked = new Quantity(t1);
+        AverageCost = new Price(avgCost);
+        ShortQty = new Quantity(shortQty);
+        ShortCost = new Price(shortCost);
+    }
+
     /// <summary>买入成交:增加锁定筹码,更新加权成本。</summary>
     public void ApplyBuy(Quantity qty, Price price)
     {

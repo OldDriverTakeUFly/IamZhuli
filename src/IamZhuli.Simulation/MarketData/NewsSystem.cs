@@ -31,6 +31,10 @@ public sealed class NewsSystem
     private int _tickCounter;
 
     public IReadOnlyList<NewsItem> ActiveNews => _activeNews;
+
+    /// <summary>存档恢复:回填生效中消息。</summary>
+    internal void RestoreActive(IEnumerable<NewsItem> items)
+    { _activeNews.Clear(); _activeNews.AddRange(items); }
     public IReadOnlyList<NewsItem> History => _history;
     /// <summary>当前消息面净偏差(供前端展示)。</summary>
     public decimal CurrentBias => _sentiment.NewsBias;

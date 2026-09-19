@@ -35,6 +35,16 @@ public sealed class MarketDataCollector
 
     public List<TimesharePoint> TodayTimeshare { get; } = new();
     public List<DailyCandle> DailyCandles { get; } = new();
+
+    /// <summary>存档恢复:回填历史K线/昨收/最新价(当日聚合留空,开盘后重建)。</summary>
+    internal void RestoreHistory(List<DailyCandle> candles, decimal previousClose, decimal lastPrice)
+    {
+        DailyCandles.Clear(); DailyCandles.AddRange(candles);
+        PreviousClose = previousClose;
+        _lastPrice = lastPrice;
+        _todayOpen = null; _todayHigh = decimal.MinValue; _todayLow = decimal.MaxValue;
+        _todayVolume = 0; _todayFinalized = false; TodayTimeshare.Clear();
+    }
     public List<MacdPoint> MacdSeries { get; } = new();
     public decimal PreviousClose { get; private set; }
 

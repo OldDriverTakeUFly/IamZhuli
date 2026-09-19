@@ -158,6 +158,46 @@ public sealed class GameSingleton
 
     public bool PublishSignal(string signalType, out string error) => _core.PublishSignal(signalType, out error);
 
+    // —— 存档(日切检查点;服务器文件存储,单机版可换本地) ——
+    public async Task<bool> SaveToSlotAsync(string slot)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            var save = _core.ExportSave();
+            Directory.CreateDirectory(SavesDir);
+            await File.WriteAllTextAsync(Path.Combine(SavesDir, $"{slot}.json"),
+                System.Text.Json.JsonSerializer.Serialize(save));
+            return true;
+        }
+        catch { return false; }
+        finally { _gate.Release(); }
+    }
+
+    public async Task<bool> LoadFromSlotAsync(string slot)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            var path = Path.Combine(SavesDir, $"{slot}.json");
+            if (!File.Exists(path)) return false;
+            var save = System.Text.Json.JsonSerializer.Deserialize<SaveData>(await File.ReadAllTextAsync(path));
+            return save != null && _core.LoadFromSave(save);
+        }
+        catch { return false; }
+        finally { _gate.Release(); }
+    }
+
+    public object ListSaves() => new
+    {
+        saves = Directory.Exists(SavesDir)
+            ? Directory.GetFiles(SavesDir, "*.json").Select(f => new {
+                slot = Path.GetFileNameWithoutExtension(f), mtime = File.GetLastWriteTime(f) })
+            : Enumerable.Empty<object>(),
+    };
+
+    private static string SavesDir => Path.Combine(AppContext.BaseDirectory, "saves");
+
     // —— 查询 ——
 
     public ScoreSettlement SettleScore() => _core.SettleScore();
