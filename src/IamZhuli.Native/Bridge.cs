@@ -33,12 +33,12 @@ internal static unsafe class Bridge
     [UnmanagedCallersOnly(EntryPoint = "ig_load_level")]
     public static int LoadLevel(byte* utf8Id)
     {
-        _core!.LoadLevelById(ReadUtf8(utf8Id));
-        return 0;
+        try { _core!.LoadLevelById(ReadUtf8(utf8Id)); return 0; }
+        catch { return -1; }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "ig_begin")]
-    public static int Begin() { _core!.BeginTrading(); return 0; }
+    public static int Begin() { try { _core!.BeginTrading(); return 0; } catch { return -1; } }
 
     /// <summary>推进一步;关卡结束返回null。返回快照JSON(Dart复制后ig_free)。</summary>
     [UnmanagedCallersOnly(EntryPoint = "ig_step")]
