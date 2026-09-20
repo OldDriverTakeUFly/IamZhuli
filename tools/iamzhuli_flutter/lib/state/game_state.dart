@@ -1,70 +1,65 @@
-// 全局状态(借PlanForge模式:单ChangeNotifier拉取式刷新,数据量小够用)
+// 全局状态(借PlanForge模式:单ChangeNotifier拉取式刷新)
 library;
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../engine/bindings.dart';
+import '../engine/game_client.dart';
 
 class GameState extends ChangeNotifier {
-  final GameEngine engine;
+  final GameClient engine;
   GameState(this.engine);
 
   Map<String, dynamic> snap = {};
   Timer? _timer;
   bool _autoRun = false;
+  String lastMsg = '';
 
   Map<String, dynamic>? get cs => snap['cardState'] as Map<String, dynamic>?;
   Map<String, dynamic>? get acct => snap['account'] as Map<String, dynamic>?;
   bool get inPlay => (cs?['phase'] as String?) == 'Play';
+  bool get autoRun => _autoRun;
 
-  void startNewGame(String levelId, {int seed = 4242}) {
-    engine.init(seed);
-    engine.loadLevel(levelId);
-    engine.begin();
-    refresh();
+  Future<void> startNewGame(String levelId) async {
+    await engine.loadLevel(levelId);
+    await engine.begin();
+    await refresh();
   }
 
-  void refresh() {
-    snap = engine.snapshot();
+  Future<void> refresh() async {
+    snap = await engine.snapshot();
     notifyListeners();
   }
 
-  /// 自动tick(非冻结态推进;Play冻结时仅刷新供UI渲染)。
   void toggleAuto() {
     _autoRun = !_autoRun;
     if (_autoRun) {
-      _timer = Timer.periodic(const Duration(milliseconds: 400), (_) => tick());
+      _timer = Timer.periodic(const Duration(milliseconds: 600), (_) => tick());
     } else {
       _timer?.cancel();
     }
     notifyListeners();
   }
 
-  bool get autoRun => _autoRun;
-
-  void tick() {
-    if (snap.isEmpty) return;
-    final next = engine.step();
-    snap = next ?? engine.snapshot();
-    notifyListeners();
+  Future<void> tick() async {
+    try {
+      final next = await engine.step();
+      if (next != null) snap = next;
+      notifyListeners();
+    } catch (_) {/* 网络闪断忽略 */}
   }
 
-  void playCard(int i) {
-    final r = engine.playCard(i);
+  Future<void> playCard(int i) async {
+    final r = await engine.playCard(i);
     lastMsg = r['ok'] == true ? '✓ 已出牌' : '✗ ${r['error']}';
-    refresh();
+    await refresh();
   }
 
-  void endTurn() {
-    final ra = engine.endTurn();
-    final vol = ra['volume'] ?? 0;
-    lastMsg = vol > 0 ? '🏛 揭牌: ${ra["price"]} × $vol手' : '🏛 无交叉';
-    refresh();
+  Future<void> endTurn() async {
+    await engine.endTurn();
+    await refresh();
   }
 
-  void setIntent(String id) {
-    engine.setIntent(id);
-    refresh();
+  Future<void> setIntent(String id) async {
+    await engine.setIntent(id);
+    await refresh();
   }
-
-  String lastMsg = '';
 }
