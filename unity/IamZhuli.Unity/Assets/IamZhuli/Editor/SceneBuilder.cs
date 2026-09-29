@@ -27,12 +27,26 @@ namespace IamZhuli.Unity.EditorTools
             var panel = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelPath);
             if (panel == null)
             {
+                // Unity 6 包内资源路径已变,UnityDefaultRuntimeTheme 不再可寻——
+                // 自生成等价 tss(内容与 Unity 自动生成的完全一致)
+                var themePath = "Assets/IamZhuli/UI/UnityDefaultRuntimeTheme.tss";
+                var theme = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(themePath);
+                if (theme == null)
+                {
+                    File.WriteAllText(themePath, "@import url(\"unity-theme://default\");\n");
+                    AssetDatabase.ImportAsset(themePath);
+                    theme = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(themePath);
+                }
                 panel = ScriptableObject.CreateInstance<PanelSettings>();
-                var theme = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(
-                    "Packages/com.unity.ui/PackageResources/StyleSheets/Default/UnityDefaultRuntimeTheme.tss");
                 if (theme != null) panel.themeStyleSheet = theme;
-                else Debug.LogWarning("未找到默认运行时主题,PanelSettings 主题为空(UI 可能无样式)");
+                else Debug.LogWarning("未能生成默认运行时主题,PanelSettings 主题为空(UI 可能无样式)");
                 AssetDatabase.CreateAsset(panel, PanelPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                // 取已导入落盘的实例再接线,避免场景保存时引用解析为空(fileID:0);
+                // 极端时序下导入未完成则保留内存实例,至少保证当帧赋值非空
+                var imported = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelPath);
+                if (imported != null) panel = imported;
             }
 
             // 2. 资产校验
@@ -64,11 +78,37 @@ namespace IamZhuli.Unity.EditorTools
             var doc = uiObj.AddComponent<UIDocument>();
             doc.panelSettings = panel;
             doc.visualTreeAsset = uxml;
+            // Unity 6 编辑器(NewScene/batchmode 下)UIDocument 属性赋值会被预览层丢弃,
+            // 兜底直写序列化字段(字段名以场景 YAML 为准:sourceAsset 即 visualTreeAsset)
+            var so = new SerializedObject(doc);
+            var pPanel = so.FindProperty("m_PanelSettings");
+            if (pPanel != null && pPanel.objectReferenceValue == null)
+                pPanel.objectReferenceValue = panel;
+            var pSource = so.FindProperty("sourceAsset");
+            if (pSource != null && pSource.objectReferenceValue == null)
+                pSource.objectReferenceValue = uxml;
+            so.ApplyModifiedPropertiesWithoutUndo();
             uiObj.AddComponent<MainUI>();
 
             // 6. 保存
             if (!Directory.Exists("Assets/Scenes")) Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);
+
+            // Unity 6:NewScene 状态下 UIDocument 的属性赋值会被编辑器预览层丢弃;
+            // 且 OpenScene 触发的资产卸载会把无引用的 panel 实例原生销毁(C# 侧变假 null)。
+            // 因此重开场景后一律从磁盘重新加载资产实例再补赋值,二次保存落盘序列化引用。
+            var reopened = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var panelLive = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelPath);
+            var uxmlLive = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UxmlPath);
+            var docs = UnityEngine.Object.FindObjectsByType<UIDocument>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var d in docs)
+            {
+                if (d.panelSettings == null && panelLive != null) d.panelSettings = panelLive;
+                if (d.visualTreeAsset == null && uxmlLive != null) d.visualTreeAsset = uxmlLive;
+            }
+            EditorSceneManager.SaveScene(reopened, ScenePath);
+            scene = reopened;
             if (interactive)
                 EditorUtility.DisplayDialog("我是主力", "场景搭建完成:\n" + ScenePath + "\n\n点击 ▶ Play 开始游戏(先选关卡)。", "好");
             Debug.Log("场景搭建完成: " + ScenePath);

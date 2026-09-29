@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Passed" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-29 16:47:39Z" end-time="2026-09-29 16:47:40Z" duration="1.1832095">
+  <test-suite type="TestSuite" id="1008" name="IamZhuli.Unity" fullname="IamZhuli.Unity" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 16:47:39Z" end-time="2026-09-29 16:47:40Z" duration="1.183210" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1004" name="IamZhuli.Tests.Runtime.dll" fullname="/home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/ScriptAssemblies/IamZhuli.Tests.Runtime.dll" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 16:47:39Z" end-time="2026-09-29 16:47:40Z" duration="1.148800" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="1200410" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1005" name="IamZhuli" fullname="IamZhuli" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 16:47:39Z" end-time="2026-09-29 16:47:40Z" duration="1.133980" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1006" name="Tests" fullname="IamZhuli.Tests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 16:47:39Z" end-time="2026-09-29 16:47:40Z" duration="1.123275" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="GameHostPlayTests" fullname="IamZhuli.Tests.GameHostPlayTests" classname="IamZhuli.Tests.GameHostPlayTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 16:47:39Z" end-time="2026-09-29 16:47:40Z" duration="1.117425" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1003" name="GameHost_CardPlayPhase_FreezesClock" fullname="IamZhuli.Tests.GameHostPlayTests.GameHost_CardPlayPhase_FreezesClock" methodname="GameHost_CardPlayPhase_FreezesClock" classname="IamZhuli.Tests.GameHostPlayTests" runstate="Runnable" seed="639157729" result="Passed" start-time="2026-09-29 16:47:39Z" end-time="2026-09-29 16:47:39Z" duration="0.766034" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1002" name="GameHost_LoadsLevel_AndEmitsSnapshot" fullname="IamZhuli.Tests.GameHostPlayTests.GameHost_LoadsLevel_AndEmitsSnapshot" methodname="GameHost_LoadsLevel_AndEmitsSnapshot" classname="IamZhuli.Tests.GameHostPlayTests" runstate="Runnable" seed="378804431" result="Passed" start-time="2026-09-29 16:47:39Z" end-time="2026-09-29 16:47:40Z" duration="0.327580" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: /home/leo/Projects/IamZhuli/unity/test-results/PlayMode.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

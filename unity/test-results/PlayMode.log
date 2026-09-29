@@ -1,0 +1,539 @@
+Unity Editor version:    6000.6.2f1 (770e33f6875c)
+Branch:                  6000.6/staging
+Build type:              Release
+Batch mode:              NO
+System name:             Linux
+Distro version:          #40~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Tue Jun 23 16:48:12 UTC 2
+Kernel version:          6.17.0-40-generic
+Architecture:            x86_64
+Available memory:        15875 MB
+Date:                    2026-09-29T16:47:16Z
+VBCSCompilerPreWarmer: ERROR: Couldn't pre-warm as failed to write stub code temporary file (/tmpUnityVBCSPreWarm_1200410.cs)
+VBCSCompiler prewarm took 0.61 ms
+[Licensing::Module] Trying to connect to existing licensing client channel...
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-leo" at "2026-09-29T16:47:16.140895Z"
+[SignatureVerifier] Application signature verification not supported on this platform.
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.3+d7ffd15
+  Session Id:              41a3b1b2812a41bf89974ff473da6f77
+  Correlation Id:          3fc497b74527960226c979ff8d6f5e13
+  External correlation Id: 775167980281898689
+  Machine Id:              CPfljjQCY8r5q6fY+NZg56J9TzI=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-leo" (connect: 0.00s, validation: 0.00s, handshake: 0.00s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-leo-notifications" at "2026-09-29T16:47:16.142071Z"
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: ewogICJzdWJzR3JvdXAiIDogInVuaXR5IGVkaXRvciIsCiAgIm5hbWVzcGFjZSIgOiAidW5pdHlfZWRpdG9yIiwKICAidHlwZSIgOiAiRURJVE9SIiwKICAidGFnIiA6ICJVbml0eVBlcnNvbmFsXXXX
+  Product: Unity Personal Version
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.00
+[Licensing::Module] Licensing Background thread has ended after 0.00s
+Selected window backend: (null) 
+Desktop is 4480 x 1440 @ 60 Hz
+Initialize udev device monitor.
+
+COMMAND LINE ARGUMENTS:
+/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Unity
+-projectPath
+/home/leo/Projects/IamZhuli/unity/IamZhuli.Unity
+-runTests
+-testPlatform
+PlayMode
+-testResults
+/home/leo/Projects/IamZhuli/unity/test-results/PlayMode.xml
+-logFile
+/home/leo/Projects/IamZhuli/unity/test-results/PlayMode.log
+-quitOnTestFinished
+Successfully changed project path to: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity
+/home/leo/Projects/IamZhuli/unity/IamZhuli.Unity
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-remapper-allocator-initial-capacity=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-main-allocator-mimalloc-enabled=1"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+Logging is directed to a specific file, skipping project log.
+Player connection [138968237562304]  Target information:
+
+Player connection [138968237562304]  * "[IP] 192.168.2.179 [Port] 55504 [Flags] 2 [Guid] 1802487899 [EditorId] 1802487899 [Version] 1048832 [Id] LinuxEditor(16,192.168.2.179) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [138968237562304]  * "[IP] 192.168.191.183 [Port] 55504 [Flags] 2 [Guid] 1802487899 [EditorId] 1802487899 [Version] 1048832 [Id] LinuxEditor(16,192.168.2.179) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [138968237562304]  * "[IP] 172.17.0.1 [Port] 55504 [Flags] 2 [Guid] 1802487899 [EditorId] 1802487899 [Version] 1048832 [Id] LinuxEditor(16,192.168.2.179) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [138968237562304] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [138968237562304] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-1200410" after 0.3 seconds.
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+Initialising UDS system complete:
+  - System type: Client
+  - Resource namespace: e66f4a726e63d61c08c0006b5942a9b5
+  - Shared memory size: 1073741824
+  - Command buffer id: 1052624
+  - Command buffer size: 8192
+  - Hashmap size: 4194304
+  - Service connected: false
+Launching Unity Data Store - /home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/Tools/Unity.DataStore 
+Unity Data Store artifact dir = Library/DataStore, working dir = /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Unity Data Store running and initialised
+Initialize engine version: 6000.6.2f1 (770e33f6875c)
+[EntityIdStore] init: VM path (explicit commit), pageSize=4096, blockCount=1048576, entitiesPerBlock=256, slots reserved=4294967296 bytes
+[Subsystems] Discovering subsystems at path /home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Assets
+kGfxThreadingModeNonThreaded is not supported on OpenGL Core. Reverting to kGfxThreadingModeDirect instead.
+GfxDevice: creating device client; kGfxThreadingModeDirect
+GLX Extensions: GLX_ARB_context_flush_control GLX_ARB_create_context GLX_ARB_create_context_no_error GLX_ARB_create_context_profile GLX_ARB_create_context_robustness GLX_ARB_fbconfig_float GLX_ARB_framebuffer_sRGB GLX_ARB_get_proc_address GLX_ARB_multisample GLX_EXT_buffer_age GLX_EXT_create_context_es2_profile GLX_EXT_create_context_es_profile GLX_EXT_fbconfig_packed_float GLX_EXT_framebuffer_sRGB GLX_EXT_no_config_context GLX_EXT_swap_control GLX_EXT_swap_control_tear GLX_EXT_texture_from_pixmap GLX_EXT_visual_info GLX_EXT_visual_rating GLX_INTEL_swap_event GLX_MESA_copy_sub_buffer GLX_MESA_gl_interop GLX_MESA_query_renderer GLX_MESA_swap_control GLX_OML_sync_control GLX_SGIS_multisample GLX_SGIX_fbconfig GLX_SGIX_pbuffer GLX_SGIX_visual_select_group GLX_SGI_make_current_read GLX_SGI_swap_control GLX_SGI_video_sync 
+Renderer: Mesa Intel(R) HD Graphics 630 (KBL GT2)
+Vendor:   Intel
+Version:  4.6 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.2
+GLES:     0
+ GL_3DFX_texture_compression_FXT1 GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_gpu_shader_int64 GL_AMD_multi_draw_indirect GL_AMD_performance_monitor GL_AMD_pinned_memory GL_AMD_query_buffer_object GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_AMD_vertex_shader_layer GL_AMD_vertex_shader_viewport_index GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_ARB_ES2_compatibility GL_ARB_ES3_1_compatibility GL_ARB_ES3_2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_clear_texture GL_ARB_clip_control GL_ARB_compressed_texture_pixel_storage GL_ARB_compute_shader GL_ARB_compute_variable_group_size GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_copy_image GL_ARB_cull_distance GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB
+_depth_clamp GL_ARB_derivative_control GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_layer_viewport GL_ARB_fragment_shader GL_ARB_fragment_shader_interlock GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_gl_spirv GL_ARB_gpu_shader5 GL_ARB_gpu_shader_fp64 GL_ARB_gpu_shader_int64 GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_indirect_parameters GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pipeline_statistics_query GL_ARB_pixel_buffer_object GL_ARB_po
+int_sprite GL_ARB_polygon_offset_clamp GL_ARB_post_depth_coverage GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_query_buffer_object GL_ARB_robust_buffer_access_behavior GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_ballot GL_ARB_shader_bit_encoding GL_ARB_shader_clock GL_ARB_shader_draw_parameters GL_ARB_shader_group_vote GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_precision GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_image_samples GL_ARB_shader_texture_lod GL_ARB_shader_viewport_layer_array GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_spirv_extensions GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_tessellation_shader GL_ARB_texture_barrier G
+L_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map_array GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_query_lod GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_timer_query GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transform_feedback_overflow_query GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_64bit GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2
+_10_10_10_rev GL_ARB_viewport_array GL_ATI_blend_equation_separate GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_image_storage_compression GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_blend_equation_separate GL_EXT_debug_label GL_EXT_demote_to_helper_invocation GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_memory_object GL_EXT_memory_object_fd GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_pixel_buffer_object GL_EXT_polygon_offset_clamp GL_EXT_provoking_vertex GL_EXT_semaphore GL_EXT_semaphore_fd GL_EXT_shader_clock GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_integer_mix GL_EXT_shader_samples_identical GL_EXT_texture_array GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_sRGB GL_EXT_text
+ure_sRGB_R8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shadow_lod GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_storage GL_EXT_texture_swizzle GL_EXT_timer_query GL_EXT_transform_feedback GL_EXT_vertex_array_bgra GL_EXT_vertex_attrib_64bit GL_IBM_multimode_draw_arrays GL_INTEL_blackhole_render GL_INTEL_conservative_rasterization GL_INTEL_performance_query GL_INTEL_shader_atomic_float_minmax GL_INTEL_shader_integer_functions2 GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_robust_buffer_access_behavior GL_KHR_robustness GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_framebuffer_flip_y GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_const_bandwidth GL_MESA_texture_signed_rgba GL_NV_alpha_to_coverage_dither_control GL_NV_compute_shader_derivatives GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fra
+gment_shader_interlock GL_NV_packed_depth_stencil GL_NV_texture_barrier GL_OES_EGL_image GL_S3_s3tc
+OPENGL LOG: Creating OpenGL 4.6 graphics device ; Context level  <OpenGL 4.5> ; Context handle 934855728
+Initialize mono
+Mono path[0] = '/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/Managed'
+Mono path[1] = '/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/BCLExtensions/runtime/netstandard2.1'
+Mono path[2] = '/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-linux'
+Mono config path = '/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56410
+CodeReloadManager initialized
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: /home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll
+Registered in 0.002667 seconds.
+Native extension for LinuxStandalone target not found
+Package Manager log level set to [2]
+[Licensing::Client] Successfully resolved entitlement details
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:False
+Scripting: successfully reloaded assembly
+- Finished resetting the current domain, in  2.280 seconds
+Domain Reload Profiling: 3093ms
+	BeginReloadAssembly (150ms)
+		CreateAndSetChildDomain (7ms)
+	RebuildCommonClasses (7ms)
+	RebuildNativeTypeToScriptingClass (21ms)
+	initialDomainReloadingComplete (102ms)
+	LoadAllAssembliesAndSetupDomain (531ms)
+		LoadAssemblies (142ms)
+		TypeCache.Refresh (367ms)
+			TypeCache.ScanAssembly (343ms)
+		AnalyzeDomain (1ms)
+	FinalizeReload (2282ms)
+		SetupLoadedEditorAssemblies (0ms)
+			LogAssemblyErrors (3ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (188ms)
+			ProcessInitializeOnLoadAttributes (157ms)
+			ProcessInitializeOnLoadMethodAttributes (1598ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 21 packages:
+  Built-in packages:
+    com.unity.multiplayer.center@2.0.1 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.multiplayer.center@5d9b40807a7d)
+    com.unity.test-framework@1.8.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.test-framework@f0b61198e8dc)
+    com.unity.ugui@2.6.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.ugui@986a5cbe1762)
+    com.unity.modules.accessibility@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.accessibility)
+    com.unity.modules.adaptiveperformance@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.adaptiveperformance)
+    com.unity.modules.imgui@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.jsonserialize)
+    com.unity.modules.physicscore2d@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.physicscore2d)
+    com.unity.modules.tetgen@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.tetgen)
+    com.unity.modules.timelinefoundation@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.timelinefoundation)
+    com.unity.modules.ui@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.ui)
+    com.unity.modules.uielements@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.uielements)
+    com.unity.modules.vectorgraphics@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.vectorgraphics)
+    com.unity.modules.imageconversion@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.imageconversion)
+    com.unity.modules.hierarchycore@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.hierarchycore)
+    com.unity.modules.physics@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.physics)
+    com.unity.modules.animation@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.animation)
+    com.unity.modules.subsystems@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.subsystems)
+    com.unity.modules.audio@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.audio)
+    com.unity.modules.physics2d@1.0.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.modules.physics2d)
+    com.unity.ext.nunit@2.1.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.ext.nunit@508b95ff9afe)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.01 seconds
+Starting: /home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/Tools/BuildPipeline/bee_backend --ipc --defer-dag-verification --dagfile="Library/Bee/2400b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity
+ExitCode: 4 Duration: 0s171ms
+[251/294    0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+Rebuilding DAG because FileSignature timestamp changed: Library/Bee/2400b0aE-inputdata.json
+*** Tundra requires additional run (0.13 seconds), 1 items updated, 294 evaluated
+Starting: /home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/DotNetSdk/dotnet "/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/Tools/BuildPipeline/ScriptCompilationBuildProgram.exe" "Library/Bee/2400b0aE.dag.json" "Library/Bee/2400b0aE-inputdata.json" "Library/Bee/buildprogram0.traceevents"
+WorkingDir: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity
+ExitCode: 0 Duration: 0s887ms
+Starting: /home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/Tools/BuildPipeline/bee_backend --ipc --defer-dag-verification --dagfile="Library/Bee/2400b0aE.dag" --continue-on-failure --dagfilejson="Library/Bee/2400b0aE.dag.json" --profile="Library/Bee/backend2.traceevents" ScriptAssemblies
+WorkingDir: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity
+ExitCode: 0 Duration: 0s123ms
+Finished compiling graph: 297 nodes, 3077 flattened edges (2837 ToBuild, 28 ToUse), maximum node priority 166
+[251/294    0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+*** Tundra build success (0.09 seconds), 1 items updated, 294 evaluated
+Total cache size 3224976
+Total cache size after purge 3224976, took 00:00:00.0128228
+AssetDatabase: script compilation time: 1.739285s
+Begin MonoManager ReloadAssembly
+Native extension for LinuxStandalone target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:False
+Scripting: successfully reloaded assembly
+- Finished resetting the current domain, in  0.900 seconds
+Domain Reload Profiling: 1757ms
+	BeginReloadAssembly (343ms)
+		DisableScriptedObjects (31ms)
+		CreateAndSetChildDomain (90ms)
+	RebuildCommonClasses (15ms)
+	RebuildNativeTypeToScriptingClass (21ms)
+	initialDomainReloadingComplete (67ms)
+	LoadAllAssembliesAndSetupDomain (409ms)
+		LoadAssemblies (299ms)
+		TypeCache.Refresh (38ms)
+			TypeCache.ScanAssembly (28ms)
+		AnalyzeDomain (20ms)
+			BuildScriptInfoCaches (16ms)
+	FinalizeReload (902ms)
+		SetupLoadedEditorAssemblies (0ms)
+			LogAssemblyErrors (3ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (221ms)
+			ProcessInitializeOnLoadAttributes (143ms)
+			ProcessInitializeOnLoadMethodAttributes (83ms)
+			AfterProcessingInitializeOnLoad (10ms)
+		AwakeInstancesAfterBackupRestoration (39ms)
+Starting new worker id: 0 with log in /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Logs/AssetImportWorkerHW0.log
+
+Asset Pipeline Refresh (id=119eb3a698e71f4aebe46124c2e70bff): Total: 3.935 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=1223 ms
+		Asset DB Callback time: managed=50 ms, native=8 ms
+		Scripting: domain reloads=1, domain reload time=891 ms, compile time=1743 ms, other=17 ms
+		Project Asset Count: scripts=238, non-scripts=160
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 1
+	InvokePackagesCallback: 9.075ms
+	ApplyChangesToAssetFolders: 0.384ms
+	Scan: 153.833ms
+	Collect global state as custom dependencies: 20.805ms
+	CategorizeScriptCompilationAssets: 12.955ms
+	ProcessAssetsWithTransientArtifactChanges: 21.704ms
+	CategorizeAssets: 9.618ms
+	CompileScripts: 1743.046ms
+	ImportOutOfDateAssets: 935.290ms (903.535ms without children)
+		UnloadImportedAssets: 0.364ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.272ms
+		ImportSchedulerStart: 31.118ms
+	PostProcessAllAssets: 50.353ms
+		MonoPostProcessAllAssets: 50.181ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 19.637ms
+			SyncVS.PostprocessSyncProject 2.415ms
+			EditModeScopePostprocessor.OnPostprocessAllAssets 2.270ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 1.258ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.615ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.381ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.321ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.153ms
+	UnloadStreamsBegin: 3.465ms
+	GenerateScriptTypeHashes: 2.124ms
+	GenerateScriptTypeSerializationHashes: 4.253ms
+	Untracked: 971.540ms
+
+Application.AssetDatabase Initial Refresh End
+AutoLocale: current locale expects 'C' but got 'zh_CN.UTF-8'Launched and connected shader compiler UnityShaderCompiler after 0.03 seconds
+Scanning for USB devices : 7.094ms
+Initializing Unity extensions:
+UpdateMenuTitleForLanguage: 10
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-IamZhuli.Unity
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 836 unused Assets / (1.0 MB). Loaded Objects now: 1620.
+Memory consumption went from 120.9 MB to 119.9 MB.
+Total: 10.669861 ms (FindLiveObjects: 0.306088 ms CreateObjectMapping: 0.064106 ms MarkObjects: 9.197531 ms  DeleteObjects: 0.884630 ms)
+
+[LAYOUT] /home/leo/.config/unity3d/Preferences/Editor-5.x/Layouts/default does not exist. Copying base layouts.
+[LAYOUT] About to load /home/leo/.config/unity3d/Preferences/Editor-5.x/Layouts/default/Default.wlt, keepMainWindow=False
+Unhandled description string [
+Unhandled description string ]
+GLX Extensions: GLX_ARB_context_flush_control GLX_ARB_create_context GLX_ARB_create_context_no_error GLX_ARB_create_context_profile GLX_ARB_create_context_robustness GLX_ARB_fbconfig_float GLX_ARB_framebuffer_sRGB GLX_ARB_get_proc_address GLX_ARB_multisample GLX_EXT_buffer_age GLX_EXT_create_context_es2_profile GLX_EXT_create_context_es_profile GLX_EXT_fbconfig_packed_float GLX_EXT_framebuffer_sRGB GLX_EXT_no_config_context GLX_EXT_swap_control GLX_EXT_swap_control_tear GLX_EXT_texture_from_pixmap GLX_EXT_visual_info GLX_EXT_visual_rating GLX_INTEL_swap_event GLX_MESA_copy_sub_buffer GLX_MESA_gl_interop GLX_MESA_query_renderer GLX_MESA_swap_control GLX_OML_sync_control GLX_SGIS_multisample GLX_SGIX_fbconfig GLX_SGIX_pbuffer GLX_SGIX_visual_select_group GLX_SGI_make_current_read GLX_SGI_swap_control GLX_SGI_video_sync 
+GLX Extensions: GLX_ARB_context_flush_control GLX_ARB_create_context GLX_ARB_create_context_no_error GLX_ARB_create_context_profile GLX_ARB_create_context_robustness GLX_ARB_fbconfig_float GLX_ARB_framebuffer_sRGB GLX_ARB_get_proc_address GLX_ARB_multisample GLX_EXT_buffer_age GLX_EXT_create_context_es2_profile GLX_EXT_create_context_es_profile GLX_EXT_fbconfig_packed_float GLX_EXT_framebuffer_sRGB GLX_EXT_no_config_context GLX_EXT_swap_control GLX_EXT_swap_control_tear GLX_EXT_texture_from_pixmap GLX_EXT_visual_info GLX_EXT_visual_rating GLX_INTEL_swap_event GLX_MESA_copy_sub_buffer GLX_MESA_gl_interop GLX_MESA_query_renderer GLX_MESA_swap_control GLX_OML_sync_control GLX_SGIS_multisample GLX_SGIX_fbconfig GLX_SGIX_pbuffer GLX_SGIX_visual_select_group GLX_SGI_make_current_read GLX_SGI_swap_control GLX_SGI_video_sync 
+GLX Extensions: GLX_ARB_context_flush_control GLX_ARB_create_context GLX_ARB_create_context_no_error GLX_ARB_create_context_profile GLX_ARB_create_context_robustness GLX_ARB_fbconfig_float GLX_ARB_framebuffer_sRGB GLX_ARB_get_proc_address GLX_ARB_multisample GLX_EXT_buffer_age GLX_EXT_create_context_es2_profile GLX_EXT_create_context_es_profile GLX_EXT_fbconfig_packed_float GLX_EXT_framebuffer_sRGB GLX_EXT_no_config_context GLX_EXT_swap_control GLX_EXT_swap_control_tear GLX_EXT_texture_from_pixmap GLX_EXT_visual_info GLX_EXT_visual_rating GLX_INTEL_swap_event GLX_MESA_copy_sub_buffer GLX_MESA_gl_interop GLX_MESA_query_renderer GLX_MESA_swap_control GLX_OML_sync_control GLX_SGIS_multisample GLX_SGIX_fbconfig GLX_SGIX_pbuffer GLX_SGIX_visual_select_group GLX_SGI_make_current_read GLX_SGI_swap_control GLX_SGI_video_sync 
+GLX Extensions: GLX_ARB_context_flush_control GLX_ARB_create_context GLX_ARB_create_context_no_error GLX_ARB_create_context_profile GLX_ARB_create_context_robustness GLX_ARB_fbconfig_float GLX_ARB_framebuffer_sRGB GLX_ARB_get_proc_address GLX_ARB_multisample GLX_EXT_buffer_age GLX_EXT_create_context_es2_profile GLX_EXT_create_context_es_profile GLX_EXT_fbconfig_packed_float GLX_EXT_framebuffer_sRGB GLX_EXT_no_config_context GLX_EXT_swap_control GLX_EXT_swap_control_tear GLX_EXT_texture_from_pixmap GLX_EXT_visual_info GLX_EXT_visual_rating GLX_INTEL_swap_event GLX_MESA_copy_sub_buffer GLX_MESA_gl_interop GLX_MESA_query_renderer GLX_MESA_swap_control GLX_OML_sync_control GLX_SGIS_multisample GLX_SGIX_fbconfig GLX_SGIX_pbuffer GLX_SGIX_visual_select_group GLX_SGI_make_current_read GLX_SGI_swap_control GLX_SGI_video_sync 
+GLX Extensions: GLX_ARB_context_flush_control GLX_ARB_create_context GLX_ARB_create_context_no_error GLX_ARB_create_context_profile GLX_ARB_create_context_robustness GLX_ARB_fbconfig_float GLX_ARB_framebuffer_sRGB GLX_ARB_get_proc_address GLX_ARB_multisample GLX_EXT_buffer_age GLX_EXT_create_context_es2_profile GLX_EXT_create_context_es_profile GLX_EXT_fbconfig_packed_float GLX_EXT_framebuffer_sRGB GLX_EXT_no_config_context GLX_EXT_swap_control GLX_EXT_swap_control_tear GLX_EXT_texture_from_pixmap GLX_EXT_visual_info GLX_EXT_visual_rating GLX_INTEL_swap_event GLX_MESA_copy_sub_buffer GLX_MESA_gl_interop GLX_MESA_query_renderer GLX_MESA_swap_control GLX_OML_sync_control GLX_SGIS_multisample GLX_SGIX_fbconfig GLX_SGIX_pbuffer GLX_SGIX_visual_select_group GLX_SGI_make_current_read GLX_SGI_swap_control GLX_SGI_video_sync 
+GLX Extensions: GLX_ARB_context_flush_control GLX_ARB_create_context GLX_ARB_create_context_no_error GLX_ARB_create_context_profile GLX_ARB_create_context_robustness GLX_ARB_fbconfig_float GLX_ARB_framebuffer_sRGB GLX_ARB_get_proc_address GLX_ARB_multisample GLX_EXT_buffer_age GLX_EXT_create_context_es2_profile GLX_EXT_create_context_es_profile GLX_EXT_fbconfig_packed_float GLX_EXT_framebuffer_sRGB GLX_EXT_no_config_context GLX_EXT_swap_control GLX_EXT_swap_control_tear GLX_EXT_texture_from_pixmap GLX_EXT_visual_info GLX_EXT_visual_rating GLX_INTEL_swap_event GLX_MESA_copy_sub_buffer GLX_MESA_gl_interop GLX_MESA_query_renderer GLX_MESA_swap_control GLX_OML_sync_control GLX_SGIS_multisample GLX_SGIX_fbconfig GLX_SGIX_pbuffer GLX_SGIX_visual_select_group GLX_SGI_make_current_read GLX_SGI_swap_control GLX_SGI_video_sync 
+[MODES] ModeService[default].InitializeCurrentMode
+[MODES] ModeService[default].RaiseModeChanged(default, default)
+Unhandled description string [
+Unhandled description string ]
+[Project] Loading completed in 11.040 seconds
+	Project init time: 				8.221 seconds
+		Template init time: 		0.000 seconds
+		Package Manager init time: 		0.274 seconds
+		Asset Database init time: 		0.293 seconds
+		Global illumination init time: 	0.004 seconds
+		Assemblies load time: 			3.141 seconds
+		Unity extensions init time: 	0.009 seconds
+		Asset Database refresh time: 	3.935 seconds
+	Scene opening time: 			1.775 seconds
+##utp:{"type":"ProjectInfo","version":2,"phase":"Immediate","time":1790700447171,"processId":1200410,"projectLoad":11.040048733,"projectInit":8.22108437,"templateInit":0.0,"packageManagerInit":0.274314778,"assetDatabaseInit":0.293104025,"globalIlluminationInit":0.00399796,"assembliesLoad":3.140820685,"unityExtensionsInit":0.009062021,"assetDatabaseRefresh":3.935209026,"sceneOpening":1.77505095}
+##utp:{"type":"EditorInfo","version":2,"phase":"Immediate","time":1790700447171,"processId":1200410,"editorVersion":"6000.6.2f1 (770e33f6875c)","branch":"6000.6/staging","buildType":"Release","platform":"Linux"}
+Asset Pipeline Refresh (id=fb0bd8018a214fda4abedb02b2f0b0ec): Total: 0.050 seconds - Initiated by RefreshV2(ForceSynchronousImport)
+Running tests for ExecutionSettings with details:
+targetPlatform = 
+playerHeartbeatTimeout = 600
+filters[0] = 
+   Filter with settings:
+   testMode = PlayMode
+   targetPlatform = 
+   testNames = null
+   groupNames = null
+   categoryNames = null
+   assemblyNames = null
+ignoreTests = {}
+featureFlags = null
+
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:23)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+UnityEditor.TestTools.TestRunner.CommandLineTest.Executer:InitializeAndExecuteRun (string[]) (at ./Library/PackageCache/com.unity.test-framework@f0b61198e8dc/UnityEditor.TestRunner/CommandLineTest/Executer.cs:53)
+UnityEditor.TestTools.TestRunner.CommandLineTest.TestStarter:InitializeAndExecuteRun () (at ./Library/PackageCache/com.unity.test-framework@f0b61198e8dc/UnityEditor.TestRunner/CommandLineTest/TestStarter.cs:64)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions () (at /home/bokken/build/output/unity/unity/Editor/Mono/EditorApplication.cs:413)
+
+(Filename: ./Library/PackageCache/com.unity.test-framework@f0b61198e8dc/UnityEditor.TestRunner/CommandLineTest/Executer.cs Line: 53)
+
+Worker ready: AssetImportWorkerHW0 0
+Created GICache directory at /home/leo/.cache/unity3d/GiCache. Took: 0.003s, timestamps: [11.065 - 11.068]
+[Licensing::Client] Successfully resolved entitlement details
+Unhandled description string [
+Unhandled description string ]
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully updated the access token
+[Licensing::Module] Successfully updated access token: "1Igi82EE"... (expires: 2026-09-29T18:16:47Z)
+Unloading 8 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 55 unused Assets / (15.8 MB). Loaded Objects now: 2616.
+Memory consumption went from 230.3 MB to 214.5 MB.
+Total: 27.367360 ms (FindLiveObjects: 0.409666 ms CreateObjectMapping: 0.041414 ms MarkObjects: 21.948567 ms  DeleteObjects: 4.736333 ms)
+
+Importing 'GUID: 0153735f05b3e7084ad42c561250df60 - Path: Assets/InitTestScene8f2a3297-5d8f-441f-b214-ae35cec0a401.unity' with importer (DefaultImporter)
+Imported 'GUID: 0153735f05b3e7084ad42c561250df60' -> (Import Result ID: 'f85235b30687cfe3b049ea42577bbb1a') in 0.007 seconds [static dependencies only]. Details - ImportResultOutputID=772b1203e88215c9220e3af1c2e299ac DependenciesID=92c754f4b0239c2a58d25981a65c8e63 StaticDependenciesID=32f94aac2c174af846462208915c25ab 
+Asset Pipeline Refresh (id=bd130ae489b80141cac63ada4763f96f): Total: 0.069 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+Begin MonoManager ReloadAssembly
+Native extension for LinuxStandalone target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:False
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+Scripting: successfully reloaded assembly
+Unhandled description string [
+Unhandled description string ]
+Unhandled description string [
+Unhandled description string ]
+- Finished resetting the current domain, in  2.936 seconds
+Domain Reload Profiling: 3954ms
+	BeginReloadAssembly (658ms)
+		DisableScriptedObjects (193ms)
+		CreateAndSetChildDomain (216ms)
+	RebuildCommonClasses (17ms)
+	RebuildNativeTypeToScriptingClass (27ms)
+	initialDomainReloadingComplete (69ms)
+	LoadAllAssembliesAndSetupDomain (246ms)
+		LoadAssemblies (126ms)
+		TypeCache.Refresh (8ms)
+		AnalyzeDomain (7ms)
+			ResolveRequiredComponents (4ms)
+	FinalizeReload (2938ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (244ms)
+			ProcessInitializeOnLoadAttributes (158ms)
+			ProcessInitializeOnLoadMethodAttributes (197ms)
+			AfterProcessingInitializeOnLoad (9ms)
+		AwakeInstancesAfterBackupRestoration (1303ms)
+No restricted APIs configured; Validation skipped.
+Checking 6 assemblies for restricted APIs found 0 usage(s) in 8 ms
+
+Asset Pipeline Refresh (id=e9520f2d775e56b5ca75698b558ee046): Total: 4.244 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=3048 ms
+		Asset DB Callback time: managed=94 ms, native=45 ms
+		Scripting: domain reloads=1, domain reload time=1052 ms, compile time=3 ms, other=0 ms
+		Project Asset Count: scripts=238, non-scripts=161
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 1.044ms
+	ApplyChangesToAssetFolders: 0.163ms
+	Collect global state as custom dependencies: 0.473ms
+	ProcessAssetsWithTransientArtifactChanges: 50.454ms
+	CategorizeAssets: 6.357ms
+	CompileScripts: 3.140ms
+	ImportOutOfDateAssets: 2942.681ms (2939.195ms without children)
+		UnloadImportedAssets: 2.593ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.153ms
+		ImportSchedulerStart: 0.708ms
+	PostProcessAllAssets: 135.049ms
+		PostProcessCallbackCreateDeferredMaterials 5.439ms
+		AssemblyValidation.PostprocessAllAssets 4.600ms
+		PostprocessAssetsUpdateCachedIcon 4.127ms
+		RaytracingShaderImportPostprocess 2.327ms
+		SpeedTreeImporter.PostprocessAllAssets 1.773ms
+		ShaderAssetModifiedCallback 1.457ms
+		BlockShaderImporter.PostprocessAllAssets 1.107ms
+		ComputeShaderImportPostprocess 1.063ms
+		LocalizationDatabase.AssetDatabasePostprocessCallback 0.694ms
+		MonoPostProcessAllAssets: 90.130ms
+			AssetPostprocessor.OnPostprocessAllAssets 16.801ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 15.307ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 11.761ms
+			AssetChangedListener.OnPostprocessAllAssets 6.111ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 5.371ms
+			SyncVS.PostprocessSyncProject 3.130ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 2.044ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 1.798ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 1.129ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 1.043ms
+			TMPro_TexturePostProcessor.OnPostprocessAllAssets 0.675ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.625ms
+			EditModeScopePostprocessor.OnPostprocessAllAssets 0.624ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 0.579ms
+			AssetEvents.OnPostprocessAllAssets 0.523ms
+			ThemePostprocessor.OnPostprocessAllAssets 0.342ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.322ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.290ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.258ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.239ms
+			AudioContainerPostProcessor.OnPostprocessAllAssets 0.229ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.190ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.134ms
+	PostAssetChangesProfiler: 4.407ms
+	GatherAllCurrentPrimaryImportResultRevisions: 0.072ms
+	UnloadStreamsBegin: 2.776ms
+	GenerateScriptTypeHashes: 1.288ms
+	GenerateScriptTypeSerializationHashes: 2.518ms
+	Untracked: 1094.955ms
+
+Warning: X server took longer than 200 milliseconds to respond to GtkWidgetFocusing
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            1.906 ms
+	Integration:            72.363 ms
+	Integration of assets:  0.004 ms
+	Thread Wait Time:       0.017 ms
+	Total Operation Time:   74.290 ms
+[Licensing::Client] Successfully resolved entitlement details
+Unhandled description string [
+Unhandled description string ]
+[Licensing::Client] Successfully resolved entitlement details
+Saving results to: /home/leo/Projects/IamZhuli/unity/test-results/PlayMode.xml
+Unloading 7 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.570 ms
+	Integration:            24.400 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.032 ms
+	Total Operation Time:   25.003 ms
+Unloading 673 unused Assets / (0.6 MB). Loaded Objects now: 2626.
+Memory consumption went from 211.1 MB to 210.5 MB.
+Total: 22.958558 ms (FindLiveObjects: 0.404570 ms CreateObjectMapping: 0.102133 ms MarkObjects: 21.949047 ms  DeleteObjects: 0.270012 ms)
+
+Unloading 6 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 0 unused Assets / (Unknown). Loaded Objects now: 2641.
+Memory consumption went from 212.0 MB to 212.0 MB.
+Total: 30.185586 ms (FindLiveObjects: 0.494694 ms CreateObjectMapping: 0.049030 ms MarkObjects: 29.403203 ms  DeleteObjects: 0.009039 ms)
+
+Asset Pipeline Refresh (id=4ac47e776178797679113f4d99165164): Total: 0.019 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Test run completed. Exiting with code 0 (Ok). Run completed.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:23)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+UnityEditor.TestTools.TestRunner.CommandLineTest.Executer:ExitApplication (UnityEditor.TestTools.TestRunner.CommandLineTest.Executer/ReturnCodes,string) (at ./Library/PackageCache/com.unity.test-framework@f0b61198e8dc/UnityEditor.TestRunner/CommandLineTest/Executer.cs:81)
+UnityEditor.TestTools.TestRunner.CommandLineTest.Executer:ExitIfRunIsCompleted () (at ./Library/PackageCache/com.unity.test-framework@f0b61198e8dc/UnityEditor.TestRunner/CommandLineTest/Executer.cs:74)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions () (at /home/bokken/build/output/unity/unity/Editor/Mono/EditorApplication.cs:413)
+
+(Filename: ./Library/PackageCache/com.unity.test-framework@f0b61198e8dc/UnityEditor.TestRunner/CommandLineTest/Executer.cs Line: 81)
+
+MonoPathRemapper: Attempts to remap: 3191; Successful remaps: 24
+Serialized file version minimum: 23, current 23
+AcceleratorClientConnectionCallback - disconnected - :0
+Importing 'GUID: 00000000000000004000000000000000 - Path: ProjectSettings/ProjectSettings.asset' with importer (LibraryAssetImporter)
+Imported 'GUID: 00000000000000004000000000000000' -> (Import Result ID: '8f0cf9123c766ddf4e6cec46713c9577') in 0.009 seconds [static dependencies only]. Details - ImportResultOutputID=054c890a8f4b6dddbea933bc5e4b7df4 DependenciesID=4151b9d4e50c8896098a6d280847898d StaticDependenciesID=2190b1f4e92f23be583b7c11fc97e705 
+Asset Pipeline Refresh (id=e7a2c7a64ee40ddf2aeaf8c2518c60d3): Total: 0.021 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Shutting down MSBuild server...
+Shutting down VB/C# compiler server...
+VB/C# compiler server shut down successfully.
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-leo-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-leo channel disconnected successfully.
+MSBuild server shut down successfully.
+Lingering sessions upon destruction of worker manager
+Unity Data Store service was successfully shut down
+UDS shutting down local client system
+Shut down UDS service system complete
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+debugger-agent: Unable to listen on 70
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+[Package Manager] Server process was shutdown
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1790700471700,"processId":1200410,"allocatedMemory":7520380,"memoryLabels":[{"Default":187339},{"Permanent":16152},{"Thread":1052216},{"Manager":30193},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":836325},{"Material":68},{"GfxDevice":36608},{"Animation":1016},{"Audio":344},{"FreeType":8},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":16472},{"Input":60256},{"JobScheduler":256},{"TextLib":14763},{"Mono":80},{"ScriptingNativeRuntime":155088},{"BaseObject":52568},{"Resource":1076},{"Renderer":2368},{"Transform":4717},{"File":22090},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":756651},{"StaticString":3808},{"Utility":2674352},{"PoolAlloc":1960},{"AI":80},{"TypeTree":15989},{"ScriptManager":18984},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":432},{"WebRequest":552},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":1017},{"Secure":10337},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":464},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":267640},{"EditorUtility":71510},{"VersionControl":8},{"Undo":963},{"AssetDatabase":681170},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":36135},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":194},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2390},{"Windowing":480},{"Licensing":12715},{"AssetReference":32},{"IPCStream":32}]}

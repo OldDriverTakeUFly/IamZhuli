@@ -88,17 +88,25 @@ namespace IamZhuli.Tests
             core.LoadLevelById("tutorial");
             core.BeginTrading();
 
-            int steps = 0;
-            while (!core.IsLevelOver && steps++ < MaxSteps)
+            // 回合驱动模型与 xUnit Harness.NextTurn 对齐:出牌→揭牌→步进→
+            // 日切显式 StartNextDay(日切不会自动发生,漏掉会永久卡在日收)
+            int steps = 0, turns = 0;
+            while (!core.IsLevelOver && !core.Loop.IsFinished && turns++ < 60)
             {
-                var s = core.Step();
-                if (s == null) break;   // 关卡时间结束
-                // 卡牌出牌阶段冻结 → 替玩家出牌并揭牌(全自动驱动)
-                if (s.CardState != null && s.CardState.Phase == "Play")
-                {
-                    for (int i = 0; i < 5; i++)
+                var cs = core.BuildSnapshot().CardState;
+                if (cs != null && cs.Phase == "Play")
+                    for (int i = 0; i < cs.Hand.Count; i++)
                         if (core.PlayCard(i, out string _)) break;
-                    core.EndCardTurn();
+
+                core.EndCardTurn();
+                for (int i = 0; i < 800 && !core.IsLevelOver; i++)
+                {
+                    if (core.Loop.IsFinished) break;
+                    if (core.Loop.IsDayClosed) { core.StartNextDay(); continue; }
+                    var s = core.Step();
+                    steps++;
+                    if (s == null) break;   // 关卡时间结束
+                    if (s.CardState != null && s.CardState.Phase == "Play") break;
                 }
             }
             Assert.Less(steps, MaxSteps, "关卡应在步数上限内结束");

@@ -32,7 +32,7 @@
 
       <!-- 中栏:分时图 + 卡牌/下单 -->
       <ui:VisualElement class="col" style="flex-grow:1;">
-        <ui:VisualElement name="timeshareChart" style="flex-grow:1;min-height:180px;" class="chart" />
+        <q:TimeshareElement xmlns:q="IamZhuli.Unity" name="timeshareChart" style="flex-grow:1;min-height:180px;" class="chart" />
         <ui:VisualElement style="flex-direction:row;font-size:10px;">
           <ui:Label text="量 --" name="volLabel" class="dim" />
           <ui:Label text="换手 --" name="turnoverLabel" class="dim" style="margin-left:12px;" />
