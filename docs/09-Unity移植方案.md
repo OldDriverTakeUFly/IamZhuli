@@ -73,7 +73,7 @@ API 纪律: 只用 2022.3 就有的 API,不用 Unity 6 独占特性。
 - **M1 Presenter 抽取** ✅(1d25131): `src/IamZhuli.Presenter` 建成,`GameCore` 收编 GameSingleton 全部游戏流程;Web 变薄壳;149 测试 + 端到端全过。顺手修 3 个存量 bug(信号牌 null 监管、融券利润双计、保证金凭空增发)。
 - **M2 UI Toolkit 界面** ✅(离线): `Main.uxml`/`Theme.uss`(四栏+卡牌手牌+揭牌+关卡选择+结算)、`MainUI` 控制器、`TimeshareElement` 自绘分时、`GameHost` 桥。
 - **M3 工程配置** ✅(离线): Runtime/Editor asmdef、SceneBuilder 一键建场景、build-dlls.sh 纳入 Presenter、README 三步开场、ProjectVersion 固定 2022.3.22f1。
-- **M4 编辑器接入**(需 Unity): 一键建场景 → 跑通一局 → 图表/布局调优。
+- **M4 编辑器接入** ✅(2026-09-30 夜,Unity 6000.6.2f1 国际版,自动化完成): 首轮编译零错(修 UxmlElement/partial、Vertex 无 zClose、测试 asmdef 补 DLL 引用、删 Assets/Scripts 7月草稿);EditMode 12/12 + PlayMode 2/2;Linux 单机版构建成功(`我是主力 → 构建Linux单机版`,产物 unity/build/IamZhuli);Xvfb 虚拟屏 + 便携 xdotool 自动试玩:选关→开始操盘→多回合推进全链路可交互。**Unity 6 坑位存档:①自定义 UXML 元素须 xmlns 前缀式标签(`<q:TimeshareElement xmlns:q="IamZhuli.Unity"/>`),裸标签会被静默丢弃;②NewScene 状态下 UIDocument 属性赋值会被预览层丢弃,须落盘重开后重载资产再赋值;③日切不会自动发生,驱动必须显式 StartNextDay(测试已对齐 Harness.NextTurn)。遗留:中栏(分时图/盘口主体/成交明细)布局塌陷待 UI 整改。
 - **M5 对齐 Web 功能**(需 Unity): 复盘回放、筹码峰、组牌界面。
 
 ## 7. 数据流(Unity)
