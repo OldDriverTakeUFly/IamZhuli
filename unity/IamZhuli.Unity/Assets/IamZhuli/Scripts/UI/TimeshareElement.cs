@@ -10,9 +10,16 @@ namespace IamZhuli.Unity
     /// 自绘 Mesh(generateVisualContent),无第三方依赖。
     /// 数据由 MainUI 每次快照推入(SetData),UI Toolkit 自动触发重绘。
     /// </summary>
-    public sealed class TimeshareElement : VisualElement
+    // Unity 6 移除了 UxmlFactory<T> 泛型注册,改用 [UxmlElement](默认元素名=类名,
+    // 与现有 UXML 的 <TimeshareElement/> 兼容);2022.3 分支保留经典 UxmlFactory。
+#if UNITY_6000_0_OR_NEWER
+    [UxmlElement]
+#endif
+    public sealed partial class TimeshareElement : VisualElement
     {
+#if !UNITY_6000_0_OR_NEWER
         public new class UxmlFactory : UxmlFactory<TimeshareElement> { }
+#endif
 
         private static readonly Color LineUp = new(0.937f, 0.325f, 0.314f);      // 红(涨)
         private static readonly Color LineDown = new(0.149f, 0.651f, 0.604f);    // 绿(跌)
@@ -111,10 +118,11 @@ namespace IamZhuli.Unity
             void DrawQuad(MeshGenerationContext c, Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, Color color)
             {
                 var mesh = c.Allocate(4, 6);
-                mesh.SetNextVertex(new Vertex { position = new Vector3(p0.x, p0.y, Vertex.zClose), tint = color });
-                mesh.SetNextVertex(new Vertex { position = new Vector3(p1.x, p1.y, Vertex.zClose), tint = color });
-                mesh.SetNextVertex(new Vertex { position = new Vector3(p2.x, p2.y, Vertex.zClose), tint = color });
-                mesh.SetNextVertex(new Vertex { position = new Vector3(p3.x, p3.y, Vertex.zClose), tint = color });
+                // Vertex 无 zClose 字段;UI Toolkit 2D 网格顶点统一落在 z=0 平面
+                mesh.SetNextVertex(new Vertex { position = new Vector3(p0.x, p0.y, 0f), tint = color });
+                mesh.SetNextVertex(new Vertex { position = new Vector3(p1.x, p1.y, 0f), tint = color });
+                mesh.SetNextVertex(new Vertex { position = new Vector3(p2.x, p2.y, 0f), tint = color });
+                mesh.SetNextVertex(new Vertex { position = new Vector3(p3.x, p3.y, 0f), tint = color });
                 mesh.SetNextIndex(0); mesh.SetNextIndex(1); mesh.SetNextIndex(2);
                 mesh.SetNextIndex(0); mesh.SetNextIndex(2); mesh.SetNextIndex(3);
             }

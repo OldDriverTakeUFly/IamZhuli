@@ -10,7 +10,12 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "nunit.framework.dll"
+        "nunit.framework.dll",
+        "IamZhuli.Core.dll",
+        "IamZhuli.Engine.dll",
+        "IamZhuli.Factors.dll",
+        "IamZhuli.Simulation.dll",
+        "IamZhuli.Presenter.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [

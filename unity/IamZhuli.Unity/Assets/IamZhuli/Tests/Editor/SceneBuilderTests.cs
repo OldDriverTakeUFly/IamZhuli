@@ -5,6 +5,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+using IamZhuli.Unity;
+using IamZhuli.Unity.EditorTools;
 namespace IamZhuli.Tests
 {
     /// <summary>
@@ -15,7 +17,7 @@ namespace IamZhuli.Tests
         [Test]
         public void SceneBuilder_ProducesWiredScene()
         {
-            EditorTools.SceneBuilder.Build(interactive: false);
+            IamZhuli.Unity.EditorTools.SceneBuilder.Build(interactive: false);
 
             Assert.IsTrue(File.Exists("Assets/Scenes/Main.unity"), "场景文件应保存");
 

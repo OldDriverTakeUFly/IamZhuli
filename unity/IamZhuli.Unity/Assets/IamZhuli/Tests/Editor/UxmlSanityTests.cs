@@ -2,6 +2,8 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine.UIElements;
 
+using IamZhuli.Unity;
+using IamZhuli.Presenter;
 namespace IamZhuli.Tests
 {
     /// <summary>
