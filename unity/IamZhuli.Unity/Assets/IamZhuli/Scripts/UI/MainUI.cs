@@ -44,13 +44,17 @@ namespace IamZhuli.Unity
         private Label _equityLabel, _cashLabel, _positionLabel, _costLabel, _floatLabel, _shortLabel;
         private VisualElement _objectivesContainer;
         // 底栏
-        private Button _speed1, _speed3, _speed10, _pauseBtn, _nextDayBtn;
+        private Button _speed1, _speed3, _speed10, _pauseBtn, _nextDayBtn, _saveBtn, _loadBtn;
         private Label _msgLabel;
         // 覆盖层
         private VisualElement _levelOverlay, _resultOverlay;
         private VisualElement _levelList;
         private Label _resultTitle, _resultBody;
         private Button _retryBtn;
+        // 存档(本地单机:PersistentData/saves,与 Web 壳文件格式互通)。
+        // 惰性初始化:persistentDataPath 禁止在 MonoBehaviour 构造期访问。
+        private SaveService? _saves;
+        private SaveService Saves => _saves ??= new SaveService();
 
         private bool _resultShown;
         private readonly Action<TradeDto> _onTrade;
@@ -130,6 +134,8 @@ namespace IamZhuli.Unity
             _speed10 = _root.Q<Button>("speed10Btn");
             _pauseBtn = _root.Q<Button>("pauseBtn");
             _nextDayBtn = _root.Q<Button>("nextDayBtn");
+            _saveBtn = _root.Q<Button>("saveBtn");
+            _loadBtn = _root.Q<Button>("loadBtn");
             _msgLabel = _root.Q<Label>("msgLabel");
 
             _levelOverlay = _root.Q("levelSelectOverlay");
@@ -159,6 +165,27 @@ namespace IamZhuli.Unity
             {
                 _host.Core.StartNextDay();
                 Render(_host.Core.BuildSnapshot());
+            };
+            _saveBtn.clicked += () =>
+            {
+                if (!_host.Core.CanSave)
+                {
+                    _msgLabel.text = "✗ 仅日切边界可存档(盘前/收盘后/段0)";
+                    return;
+                }
+                var err = Saves.Save("slot1", _host.Core);
+                _msgLabel.text = err == null ? "✓ 已保存(slot1)" : "✗ " + err;
+            };
+            _loadBtn.clicked += () =>
+            {
+                var sd = Saves.Load("slot1");
+                if (sd == null) { _msgLabel.text = "✗ 无存档(slot1)"; return; }
+                if (!_host.Core.LoadFromSave(sd)) { _msgLabel.text = "✗ 读档失败"; return; }
+                _resultShown = false;
+                _resultOverlay.style.display = DisplayStyle.None;
+                _levelOverlay.style.display = DisplayStyle.None;
+                Render(_host.Core.BuildSnapshot());
+                _msgLabel.text = $"✓ 已读档:{sd.LevelId} 第{sd.Day}日";
             };
             _retryBtn.clicked += () =>
             {

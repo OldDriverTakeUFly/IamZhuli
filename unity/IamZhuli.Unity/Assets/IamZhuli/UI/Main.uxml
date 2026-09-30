@@ -84,6 +84,8 @@
       <ui:Button text="10x" name="speed10Btn" class="btn-ghost speed-btn" />
       <ui:Button text="暂停" name="pauseBtn" class="btn-ghost" />
       <ui:Button text="下一日" name="nextDayBtn" class="btn-ghost" />
+      <ui:Button text="💾 存档" name="saveBtn" class="btn-ghost" />
+      <ui:Button text="📂 读档" name="loadBtn" class="btn-ghost" />
       <ui:Label text="" name="msgLabel" class="dim" style="margin-left:12px;flex-grow:1;" />
     </ui:VisualElement>
 
