@@ -91,7 +91,9 @@ namespace IamZhuli.Unity
                         Vector2 normal = new(-dir.y, dir.x);
                         if (normal.sqrMagnitude < 1e-6f) normal = Vector2.up;
                         Vector2 o = normal * 1f;
-                        DrawQuad(ctx, a + o, b + o, b - o, a - o, lineColor);
+                        // 线段四边形(法向扩 1px)。顶点顺序必须与 DrawRect 一致
+                        // (y-down 顺时针),逆时针会被 Unity 6 UI Toolkit 整面剔除
+                        DrawQuad(ctx, a - o, b - o, b + o, a + o, lineColor);
                     }
                     float Y(decimal price) => topPad + chartH * (1f - (float)((price - min) / range));
                 }

@@ -69,14 +69,16 @@
 .stat-big { font-size: 18px; font-weight: 700; color: #e8c44a; margin: 4px 0 8px 0; }
 
 /* 盘口行 */
-.book-row { flex-direction: row; justify-content: space-between; padding: 1px 4px; font-size: 12px; }
+.book-row { flex-direction: row; justify-content: space-between; width: 100%; height: 18px; padding: 1px 4px; font-size: 12px; }
+.book-row Label { white-space: nowrap; }
 .book-row .price { font-size: 12px; font-weight: 400; margin-left: 0; }
 .book-ask .price { color: #26a69a; }
 .book-bid .price { color: #ef5350; }
 .book-qty { color: #8892a0; }
 
 /* 成交明细行 */
-.trade-row { flex-direction: row; justify-content: space-between; padding: 1px 4px; font-size: 11px; }
+.trade-row { flex-direction: row; justify-content: space-between; width: 100%; height: 16px; padding: 1px 4px; font-size: 11px; }
+.trade-row Label { white-space: nowrap; }
 
 /* —— 按钮 —— */
 .btn-primary {
