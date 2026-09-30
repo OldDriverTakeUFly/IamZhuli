@@ -22,6 +22,8 @@ class HttpEngine {
 
   Future<void> loadLevel(String id) async { await _post('/api/loadlevel?id=$id'); }
   Future<void> begin() async { await _post('/api/begin'); }
+  Future<void> pause() async { await _post('/api/pause'); }
+  Future<void> resume() async { await _post('/api/resume'); }
   Future<Map<String, dynamic>> step() => _get('/api/snapshot');
   Future<Map<String, dynamic>> snapshot() => _get('/api/snapshot');
   Future<Map<String, dynamic>> playCard(int i) async => _post('/api/card/play?handIndex=$i');

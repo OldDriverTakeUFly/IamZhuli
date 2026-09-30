@@ -12,12 +12,23 @@ abstract class GameClient {
   Future<Map<String, dynamic>> playCard(int i);
   Future<Map<String, dynamic>> endTurn();
   Future<Map<String, dynamic>> setIntent(String id);
+
+  /// 服务端驱动时钟(HTTP模式):true=游戏在服务器自走,客户端只轮询;
+  /// ▶/⏸ 应调 [setClockRunning] 暂停/恢复服务端时钟。
+  bool get serverDriven;
+
+  /// 暂停/恢复游戏时钟。HTTP=服务端pause/resume;本地FFI=无操作(由客户端step定时器控制)。
+  Future<void> setClockRunning(bool running);
 }
 
 /// 桌面FFI单机引擎。
 class FfiClient implements GameClient {
   final GameEngine _e;
   FfiClient(this._e);
+  @override
+  bool get serverDriven => false;
+  @override
+  Future<void> setClockRunning(bool running) async {}   // 本地时钟由GameState的step定时器驱动
   @override
   Future<void> loadLevel(String id) async => _e.loadLevel(id);
   @override
@@ -45,6 +56,10 @@ Future<GameClient> createClient({String? soPath, String? httpBase}) async {
 class _HttpAdapter implements GameClient {
   final HttpEngine _e;
   _HttpAdapter(this._e);
+  @override
+  bool get serverDriven => true;
+  @override
+  Future<void> setClockRunning(bool running) => running ? _e.resume() : _e.pause();
   @override
   Future<void> loadLevel(String id) => _e.loadLevel(id);
   @override
