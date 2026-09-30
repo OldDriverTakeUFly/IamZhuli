@@ -21,6 +21,9 @@ class TradeScreen extends StatelessWidget {
     final ts = (state.snap['timeshare'] as List? ?? []);
     final prev = (state.snap['previousClose'] as num?)?.toDouble() ?? 10.0;
     final lp = (state.snap['lastPrice'] as num?)?.toDouble();
+    // 日切态:市场时钟收盘+暂停(等玩家开下一日)——横幅替代意图chips/段信息
+    final dayClosed = (state.snap['phase'] as String?) == 'Closed' &&
+        (state.snap['isPaused'] as bool? ?? false);
     return Column(children: [
       // ── 图表区(分时/K线切换,占屏38%) + 右上迷你盘口 ──
       Expanded(
@@ -77,7 +80,57 @@ class TradeScreen extends StatelessWidget {
           Text('现金 ${((state.acct?['availableCash'] as num? ?? 0) / 10000).toStringAsFixed(0)}万', style: const TextStyle(fontSize: 12)),
         ]),
       ),
-      // ── 意图chips ──
+      // ── 上回合揭牌条(集中撮合结果;Web揭牌面板的手机版) ──
+      if (cs['lastAuction'] is Map<String, dynamic>) ...[
+        Builder(builder: (context) {
+          final ra = cs['lastAuction'] as Map<String, dynamic>;
+          final trades = (ra['trades'] as List? ?? []).cast<Map<String, dynamic>>();
+          int myBuy = 0, mySell = 0;
+          bool shortSell = false, shortBuy = false;
+          for (final t in trades) {
+            if (t['buyer'] == '你') { myBuy += (t['qty'] as num).toInt(); shortBuy = shortBuy || t['buyerIsShort'] == true; }
+            if (t['seller'] == '你') { mySell += (t['qty'] as num).toInt(); shortSell = shortSell || t['sellerIsShort'] == true; }
+          }
+          final vol = (ra['volume'] as num?)?.toInt() ?? 0;
+          final mine = myBuy == 0 && mySell == 0 ? ''
+              : ' · 你 ${myBuy > 0 ? '买$myBuy手${shortBuy ? '(融)' : ''}' : ''}${myBuy > 0 && mySell > 0 ? '/' : ''}${mySell > 0 ? '卖$mySell手${shortSell ? '(融)' : ''}' : ''}';
+          return Container(
+            margin: const EdgeInsets.fromLTRB(8, 2, 8, 2),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(color: const Color(0xFF1E2430), borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0x33E8C44A))),
+            child: Text(
+              vol > 0
+                  ? '🏛 段${(ra['turn'] as num).toInt() + 1}揭牌 · 竞价价 ${ra['price']} · ${vol}手$mine'
+                  : '🏛 段${(ra['turn'] as num).toInt() + 1}申报 · 无撮合,挂单保留$mine',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, color: Color(0xFFD8C58A)),
+            ),
+          );
+        }),
+      ],
+      // ── 意图chips / 日切横幅(互斥) ──
+      if (dayClosed)
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(color: const Color(0xFF2B2517), borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE8C44A))),
+          child: Row(children: [
+            const Text('🏁 收盘', style: TextStyle(color: Color(0xFFE8C44A), fontSize: 13, fontWeight: FontWeight.w700)),
+            const SizedBox(width: 8),
+            Expanded(child: Text('第${state.snap['currentDay']}日结束 · T+1解锁/消息日切',
+                style: const TextStyle(fontSize: 11, color: Color(0xFFBDB28A)))),
+            FilledButton.tonal(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFE8C44A), foregroundColor: const Color(0xFF14171E),
+                padding: const EdgeInsets.symmetric(horizontal: 14), minimumSize: const Size(0, 34)),
+              onPressed: state.nextDay,
+              child: const Text('开始下一日 ▶', style: TextStyle(fontSize: 12)),
+            ),
+          ]),
+        )
+      else ...[
       SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(children: [
@@ -105,6 +158,7 @@ class TradeScreen extends StatelessWidget {
           Text('已出 $played/${cs['maxCardsPerTurn']}'),
         ]),
       ),
+      ],
       Expanded(
         flex: 30,
         child: ListView.builder(

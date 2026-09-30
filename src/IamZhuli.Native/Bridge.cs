@@ -57,6 +57,9 @@ internal static unsafe class Bridge
     [UnmanagedCallersOnly(EntryPoint = "ig_end_turn")]
     public static byte* EndTurn() { _core!.EndCardTurn(); return ReturnJson(_core.LastAuction); }
 
+    [UnmanagedCallersOnly(EntryPoint = "ig_next_day")]
+    public static int NextDay() { try { _core!.StartNextDay(); return 0; } catch { return -1; } }
+
     [UnmanagedCallersOnly(EntryPoint = "ig_set_intent")]
     public static byte* SetIntent(byte* utf8)
     {

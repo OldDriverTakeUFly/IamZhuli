@@ -28,5 +28,6 @@ class HttpEngine {
   Future<Map<String, dynamic>> snapshot() => _get('/api/snapshot');
   Future<Map<String, dynamic>> playCard(int i) async => _post('/api/card/play?handIndex=$i');
   Future<Map<String, dynamic>> endTurn() async => _post('/api/card/endturn');
+  Future<void> nextDay() async { await _post('/api/nextday'); }
   Future<Map<String, dynamic>> setIntent(String id) async => _post('/api/intent?id=$id');
 }

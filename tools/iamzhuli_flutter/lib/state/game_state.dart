@@ -84,6 +84,12 @@ class GameState extends ChangeNotifier {
     await refresh();
   }
 
+  /// 日切:开始下一交易日(收盘横幅触发;T+1解锁/消息日切/卡牌回合归0)。
+  Future<void> nextDay() async {
+    await engine.nextDay();
+    await refresh();
+  }
+
   Future<void> setIntent(String id) async {
     await engine.setIntent(id);
     await refresh();
