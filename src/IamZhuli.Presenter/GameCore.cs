@@ -147,13 +147,14 @@ public sealed class GameCore
     // 关卡加载与生命周期
     // ══════════════════════════════════════
 
-    /// <summary>按 ID 加载关卡。支持 tutorial/accumulate/wash_pump/adversarial/pump_dump。</summary>
+    /// <summary>按 ID 加载关卡。支持 tutorial/accumulate/quick/wash_pump/adversarial/pump_dump。</summary>
     public void LoadLevelById(string id)
     {
         var level = id.ToLowerInvariant() switch
         {
             "tutorial" => LevelDefinition.Tutorial(),
             "accumulate" => LevelDefinition.Accumulate(),
+            "quick" => LevelDefinition.QuickAccumulate(),
             "wash_pump" => LevelDefinition.WashAndPump(),
             "adversarial" => LevelDefinition.Adversarial(),
             _ => LevelDefinition.PumpAndDump()

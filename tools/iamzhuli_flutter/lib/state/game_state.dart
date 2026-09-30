@@ -29,6 +29,8 @@ class GameState extends ChangeNotifier {
   Map<String, dynamic>? result;
   List<dynamic> rankings = const [];
   bool _settling = false;
+  /// 当前关卡(重开/选关用)
+  String levelId = 'accumulate';
 
   Map<String, dynamic>? get cs => snap['cardState'] as Map<String, dynamic>?;
   Map<String, dynamic>? get acct => snap['account'] as Map<String, dynamic>?;
@@ -36,6 +38,7 @@ class GameState extends ChangeNotifier {
   bool get autoRun => _autoRun;
 
   Future<void> startNewGame(String levelId) async {
+    this.levelId = levelId;
     await engine.loadLevel(levelId);
     await engine.begin();
     await engine.setClockRunning(_autoRun);   // 对齐服务端时钟与本地假设态(上次可能停在暂停)
@@ -69,11 +72,47 @@ class GameState extends ChangeNotifier {
   }
 
   /// 结算后再来一局(同关卡重开)。
-  Future<void> restart() async {
+  Future<void> restart() => startNewGame(levelId);
+
+  /// 切换关卡(选关入口)。
+  Future<void> switchLevel(String id) {
     result = null;
     rankings = const [];
     _settling = false;
-    await startNewGame('accumulate');
+    return startNewGame(id);
+  }
+
+  /// 存档(服务端/本地因引擎而异;仅日切边界,CanSave 由引擎判定)。
+  Future<void> saveGame() async {
+    bool ok;
+    try {
+      ok = await engine.saveGame('slot1');
+    } catch (_) {
+      ok = false;
+    }
+    lastMsg = ok ? '✓ 已保存(slot1)' : '✗ 仅日切边界可存档(盘前/收盘后/段0)';
+    notifyListeners();
+  }
+
+  /// 读档(slot1):恢复存档日状态,结算态清零重估。
+  Future<void> loadGame() async {
+    bool ok;
+    try {
+      ok = await engine.loadGame('slot1');
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok) {
+      lastMsg = '✗ 无存档或读档失败(slot1)';
+      notifyListeners();
+      return;
+    }
+    result = null;
+    rankings = const [];
+    _settling = false;
+    await refresh();
+    lastMsg = '✓ 已读档 → 第${snap['currentDay']}日';
+    notifyListeners();
   }
 
   void _pollOnce() {

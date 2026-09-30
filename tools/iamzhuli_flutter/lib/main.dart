@@ -14,6 +14,16 @@ Future<void> main() async {
   runApp(const IamZhuliApp());
 }
 
+/// 选关表(与逻辑层关卡目录一致;quick 为手机快局)。
+const kLevels = [
+  ('quick', '快局:速战吸筹', '5天·建仓10%(2万手)·热度<55% · 碎片时间一局'),
+  ('tutorial', '新手教学', '少量资金,学习吸筹→拉升→出货的基本循环'),
+  ('accumulate', '耐心吸筹', '30天·建仓15%(3万手)·热度<50% · 完整体验'),
+  ('pump_dump', '拉高出货', '经典坐庄:暴力拉升后高位派发'),
+  ('wash_pump', '洗盘再拉升', '先砸出浮筹,再集中拉升'),
+  ('adversarial', '对手博弈', 'AI主力与你正面竞争,存活20天不亏损'),
+];
+
 class IamZhuliApp extends StatelessWidget {
   const IamZhuliApp({super.key});
   @override
@@ -65,6 +75,47 @@ class _GameShellState extends State<GameShell> {
     super.dispose();
   }
 
+  /// 选关底弹层:确认即切换(当前局丢弃)。
+  void _pickLevel(BuildContext context, GameState state) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1B2130),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Padding(padding: EdgeInsets.all(12), child: Text('选择关卡(将开始新的一局)',
+              style: TextStyle(color: Color(0xFF97A3B5), fontSize: 12))),
+          for (final (id, name, brief) in kLevels)
+            ListTile(
+              dense: true,
+              selected: state.levelId == id,
+              selectedColor: const Color(0xFFE8C44A),
+              title: Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              subtitle: Text(brief, style: const TextStyle(fontSize: 11, color: Color(0xFF8A94A6))),
+              onTap: () { Navigator.pop(ctx); state.switchLevel(id); },
+            ),
+          const Divider(height: 1, color: Color(0xFF39414F)),
+          // 存/读档常驻入口(日切横幅里的按钮只在收盘态可见,日中从这里进)
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.save_outlined, size: 20, color: Color(0xFFD8C58A)),
+            title: const Text('保存进度', style: TextStyle(fontSize: 14)),
+            subtitle: const Text('slot1 · 仅日切边界可存(盘前/收盘后/段0)', style: TextStyle(fontSize: 10, color: Color(0xFF8A94A6))),
+            onTap: () { Navigator.pop(ctx); state.saveGame(); },
+          ),
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.folder_open_outlined, size: 20, color: Color(0xFFD8C58A)),
+            title: const Text('读档', style: const TextStyle(fontSize: 14)),
+            subtitle: const Text('slot1 · 恢复上次保存的一日开局(当前局丢弃)', style: TextStyle(fontSize: 10, color: Color(0xFF8A94A6))),
+            onTap: () { Navigator.pop(ctx); state.loadGame(); },
+          ),
+          const SizedBox(height: 6),
+        ])),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = _state;
@@ -94,6 +145,11 @@ class _GameShellState extends State<GameShell> {
               title: Text('我是主力 · ${lp ?? '--'}',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.map_outlined),
+                  tooltip: '选择关卡',
+                  onPressed: () => _pickLevel(context, state),
+                ),
                 IconButton(
                   icon: Icon(state.autoRun ? Icons.pause : Icons.play_arrow),
                   onPressed: state.toggleAuto,

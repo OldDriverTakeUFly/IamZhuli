@@ -114,3 +114,28 @@ public sealed class GameRichnessTests
         Assert.True(end.Asks.Count > 0 && end.Bids.Count > 0, "做市商持续提供深度");
     }
 }
+
+public sealed class QuickLevelTests
+{
+    /// <summary>手机快局(quick):5天/目标建仓10%/可正常跑到日切——碎片时间一局的注册与规则回归。</summary>
+    [Fact]
+    public void QuickLevel_FiveDays_LoadsAndRuns()
+    {
+        var core = new GameCore();
+        core.LoadLevelById("quick");
+        core.BeginTrading();
+        var snap = core.BuildSnapshot();
+        Assert.Equal(5, snap.TotalDays);
+        Assert.NotEmpty(snap.Objectives);
+        Assert.Contains("10%", snap.Objectives[0].Description);
+        // 跑到首个日切(空手过段模型)
+        for (int guard = 0; guard < 3000 && !core.Loop.IsDayClosed && !core.Loop.IsFinished; guard++)
+        {
+            if (core.BuildSnapshot().CardState is { Phase: "Play" } and { CardsPlayed: 0 })
+                core.EndCardTurn();
+            core.Step();
+        }
+        Assert.True(core.Loop.IsDayClosed, "第1天应能跑到日切");
+        Assert.True(core.CanSave, "日切边界可存档");
+    }
+}

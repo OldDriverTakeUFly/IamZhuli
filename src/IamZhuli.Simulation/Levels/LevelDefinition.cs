@@ -108,6 +108,20 @@ public sealed class LevelDefinition
         MaxHeatAllowed = 50m
     };
 
+    /// <summary>手机快局:5天版隐蔽吸筹——碎片时间一局(约15-25分钟)。</summary>
+    public static LevelDefinition QuickAccumulate() => new()
+    {
+        Id = "quick", Name = "快局:速战吸筹",
+        Briefing = "5天内建仓至流通盘的10%(2万手),且全程监管关注值不超过55%。",
+        IntrinsicValue = 10m, InitialPrice = 10m, FloatShares = 200000,
+        Scenario = ScenarioType.VReversal,
+        PlayerCash = 150_000_000m,
+        Objectives = new() { new() { Type = ObjectiveType.AccumulateQuietly,
+            Description = "建仓至10%(2万手)", TargetRatio = 0.10m, MaxHeat = 55m } },
+        MaxHeatAllowed = 55m,
+        TotalDays = 5,
+    };
+
     /// <summary>洗盘再拉:先砸盘清洗散户止损,再拉升到目标价。</summary>
     public static LevelDefinition WashAndPump() => new()
     {

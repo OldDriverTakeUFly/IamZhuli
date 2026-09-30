@@ -1,5 +1,6 @@
 // 引擎抽象: FFI(桌面单机) 或 HTTP(手机回退,连局域网Web服务) 同一接口。
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'bindings.dart';
 import 'http_engine.dart';
@@ -14,6 +15,8 @@ abstract class GameClient {
   Future<void> nextDay();
   Future<Map<String, dynamic>> endLevel();
   Future<Map<String, dynamic>> score();
+  Future<bool> saveGame(String slot);
+  Future<bool> loadGame(String slot);
   Future<Map<String, dynamic>> setIntent(String id);
 
   /// 服务端驱动时钟(HTTP模式):true=游戏在服务器自走,客户端只轮询;
@@ -51,6 +54,23 @@ class FfiClient implements GameClient {
   @override
   Future<Map<String, dynamic>> score() async => _e.score();
   @override
+  Future<bool> saveGame(String slot) async {
+    // 本地单机:导出存档JSON落用户目录(~/.iamzhuli/saves),与桥的格式一致
+    final home = Platform.environment['HOME'] ?? '.';
+    final d = Directory('$home/.iamzhuli/saves');
+    await d.create(recursive: true);
+    await File('${d.path}/$slot.json').writeAsString(jsonEncode(_e.exportSave()));
+    return true;
+  }
+  @override
+  Future<bool> loadGame(String slot) async {
+    final home = Platform.environment['HOME'] ?? '.';
+    final f = File('$home/.iamzhuli/saves/$slot.json');
+    if (!f.existsSync()) return false;
+    final r = _e.importSave(await f.readAsString());
+    return r['ok'] == true;
+  }
+  @override
   Future<Map<String, dynamic>> setIntent(String id) async => _e.setIntent(id);
 }
 
@@ -87,6 +107,10 @@ class _HttpAdapter implements GameClient {
   Future<Map<String, dynamic>> endLevel() => _e.endLevel();
   @override
   Future<Map<String, dynamic>> score() => _e.score();
+  @override
+  Future<bool> saveGame(String slot) async => (await _e.saveGame(slot))['ok'] == true;
+  @override
+  Future<bool> loadGame(String slot) async => (await _e.loadGame(slot))['ok'] == true;
   @override
   Future<Map<String, dynamic>> setIntent(String id) => _e.setIntent(id);
 }

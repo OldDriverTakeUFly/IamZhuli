@@ -31,5 +31,7 @@ class HttpEngine {
   Future<void> nextDay() async { await _post('/api/nextday'); }
   Future<Map<String, dynamic>> endLevel() async => _post('/api/endlevel');
   Future<Map<String, dynamic>> score() => _get('/api/score');
+  Future<Map<String, dynamic>> saveGame(String slot) async => _post('/api/save/$slot');
+  Future<Map<String, dynamic>> loadGame(String slot) async => _post('/api/load/$slot');
   Future<Map<String, dynamic>> setIntent(String id) async => _post('/api/intent?id=$id');
 }
