@@ -28,6 +28,8 @@ class GameEngine {
   late final _PtrIntD _playCard;
   late final _PtrD _endTurn;
   late final _InitD _nextDay;
+  late final _PtrD _endLevel;
+  late final _PtrD _score;
   late final _PtrStrD _setIntent;
   late final _PtrD _exportSave;
   late final _PtrStrD _importSave;
@@ -43,6 +45,8 @@ class GameEngine {
     _playCard = _lib.lookupFunction<_PtrIntC, _PtrIntD>('ig_play_card');
     _endTurn = _lib.lookupFunction<_PtrC, _PtrD>('ig_end_turn');
     _nextDay = _lib.lookupFunction<_InitC, _InitD>('ig_next_day');
+    _endLevel = _lib.lookupFunction<_PtrC, _PtrD>('ig_end_level');
+    _score = _lib.lookupFunction<_PtrC, _PtrD>('ig_score');
     _setIntent = _lib.lookupFunction<_PtrStrC, _PtrStrD>('ig_set_intent');
     _exportSave = _lib.lookupFunction<_PtrC, _PtrD>('ig_export_save');
     _importSave = _lib.lookupFunction<_PtrStrC, _PtrStrD>('ig_import_save');
@@ -82,6 +86,8 @@ class GameEngine {
   Map<String, dynamic> playCard(int i) => jsonDecode(_take(_playCard(i))) as Map<String, dynamic>;
   Map<String, dynamic> endTurn() => jsonDecode(_take(_endTurn())) as Map<String, dynamic>;
   void nextDay() => _nextDay(0);
+  Map<String, dynamic> endLevel() => jsonDecode(_take(_endLevel())) as Map<String, dynamic>;
+  Map<String, dynamic> score() => jsonDecode(_take(_score())) as Map<String, dynamic>;
   Map<String, dynamic> setIntent(String id) => jsonDecode(_take(_setIntent(_str(id)))) as Map<String, dynamic>;
   Map<String, dynamic> exportSave() => jsonDecode(_take(_exportSave())) as Map<String, dynamic>;
   Map<String, dynamic> importSave(String json) => jsonDecode(_take(_importSave(_str(json)))) as Map<String, dynamic>;

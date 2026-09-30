@@ -12,6 +12,8 @@ abstract class GameClient {
   Future<Map<String, dynamic>> playCard(int i);
   Future<Map<String, dynamic>> endTurn();
   Future<void> nextDay();
+  Future<Map<String, dynamic>> endLevel();
+  Future<Map<String, dynamic>> score();
   Future<Map<String, dynamic>> setIntent(String id);
 
   /// 服务端驱动时钟(HTTP模式):true=游戏在服务器自走,客户端只轮询;
@@ -45,6 +47,10 @@ class FfiClient implements GameClient {
   @override
   Future<void> nextDay() async => _e.nextDay();
   @override
+  Future<Map<String, dynamic>> endLevel() async => _e.endLevel();
+  @override
+  Future<Map<String, dynamic>> score() async => _e.score();
+  @override
   Future<Map<String, dynamic>> setIntent(String id) async => _e.setIntent(id);
 }
 
@@ -77,6 +83,10 @@ class _HttpAdapter implements GameClient {
   Future<Map<String, dynamic>> endTurn() => _e.endTurn();
   @override
   Future<void> nextDay() => _e.nextDay();
+  @override
+  Future<Map<String, dynamic>> endLevel() => _e.endLevel();
+  @override
+  Future<Map<String, dynamic>> score() => _e.score();
   @override
   Future<Map<String, dynamic>> setIntent(String id) => _e.setIntent(id);
 }

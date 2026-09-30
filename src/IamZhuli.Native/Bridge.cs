@@ -13,6 +13,8 @@ public record PlayResult(bool Ok, string Error);
 /// <summary>JSON source-gen 上下文(NativeAOT 无反射序列化)。</summary>
 [JsonSerializable(typeof(MarketSnapshotDto))]
 [JsonSerializable(typeof(AuctionResultDto))]
+[JsonSerializable(typeof(LevelResultDto))]
+[JsonSerializable(typeof(ScoreSettlement))]
 [JsonSerializable(typeof(PlayResult))]
 [JsonSerializable(typeof(SaveData))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -59,6 +61,16 @@ internal static unsafe class Bridge
 
     [UnmanagedCallersOnly(EntryPoint = "ig_next_day")]
     public static int NextDay() { try { _core!.StartNextDay(); return 0; } catch { return -1; } }
+
+    /// <summary>结束关卡并结算(幂等:已结算返回缓存结果)。返回 LevelResultDto JSON。</summary>
+    [UnmanagedCallersOnly(EntryPoint = "ig_end_level")]
+    public static byte* EndLevel()
+    { try { return ReturnJson(_core!.EndLevelDto()); } catch { return null; } }
+
+    /// <summary>积分结算(未结算会先 EndLevel)。返回 ScoreSettlement JSON。</summary>
+    [UnmanagedCallersOnly(EntryPoint = "ig_score")]
+    public static byte* Score()
+    { try { return ReturnJson(_core!.SettleScore()); } catch { return null; } }
 
     [UnmanagedCallersOnly(EntryPoint = "ig_set_intent")]
     public static byte* SetIntent(byte* utf8)

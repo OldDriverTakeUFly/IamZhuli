@@ -24,6 +24,11 @@ class GameState extends ChangeNotifier {
   late bool _autoRun;
   String lastMsg = '';
   int _fetchSeq = 0;      // 响应乱序守卫
+  // 结算:关卡结束(isLevelOver)或时间走完(isFinished,最后一日点"下一日"后
+  // 服务端不会自动结算)→客户端拉 endLevel(幂等)+score
+  Map<String, dynamic>? result;
+  List<dynamic> rankings = const [];
+  bool _settling = false;
 
   Map<String, dynamic>? get cs => snap['cardState'] as Map<String, dynamic>?;
   Map<String, dynamic>? get acct => snap['account'] as Map<String, dynamic>?;
@@ -43,7 +48,32 @@ class GameState extends ChangeNotifier {
     final s = await engine.snapshot();
     if (seq != _fetchSeq) return;   // 已有更新请求:丢弃旧响应,防覆盖回退
     snap = s;
+    if ((s['isLevelOver'] == true || s['isFinished'] == true) &&
+        result == null && !_settling) {
+      unawaited(_settle());
+    }
     notifyListeners();
+  }
+
+  Future<void> _settle() async {
+    _settling = true;
+    try {
+      result = await engine.endLevel();
+      final sc = await engine.score();
+      rankings = (sc['rankings'] as List?) ?? const [];
+    } catch (_) {
+      _settling = false;   // 轮询下一拍重试
+      return;
+    }
+    notifyListeners();
+  }
+
+  /// 结算后再来一局(同关卡重开)。
+  Future<void> restart() async {
+    result = null;
+    rankings = const [];
+    _settling = false;
+    await startNewGame('accumulate');
   }
 
   void _pollOnce() {
