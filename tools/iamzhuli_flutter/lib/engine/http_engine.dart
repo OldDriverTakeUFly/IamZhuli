@@ -20,6 +20,13 @@ class HttpEngine {
     return jsonDecode(await resp.transform(utf8.decoder).join());
   }
 
+  /// 原始GET(数组根的响应,如 /api/ai)。
+  Future<dynamic> _getRaw(String path) async {
+    final r = await _http.getUrl(Uri.parse('$base$path'));
+    final resp = await r.close();
+    return jsonDecode(await resp.transform(utf8.decoder).join());
+  }
+
   Future<void> loadLevel(String id) async { await _post('/api/loadlevel?id=$id'); }
   Future<void> begin() async { await _post('/api/begin'); }
   Future<void> pause() async { await _post('/api/pause'); }
@@ -37,5 +44,6 @@ class HttpEngine {
   Future<Map<String, dynamic>> upgradeWaterArmy() async => _post('/api/waterarmy/upgrade');
   Future<Map<String, dynamic>> toggleWaterArmy() async => _post('/api/waterarmy/toggle');
   Future<Map<String, dynamic>> publishSignal(String type) async => _post('/api/signal?type=$type');
+  Future<List<dynamic>> aiThoughts(int count) async => (await _getRaw('/api/ai?count=$count') as List).cast<dynamic>();
   Future<Map<String, dynamic>> setIntent(String id) async => _post('/api/intent?id=$id');
 }

@@ -15,6 +15,7 @@ public record PlayResult(bool Ok, string Error);
 [JsonSerializable(typeof(AuctionResultDto))]
 [JsonSerializable(typeof(LevelResultDto))]
 [JsonSerializable(typeof(ScoreSettlement))]
+[JsonSerializable(typeof(List<AIDto>))]
 [JsonSerializable(typeof(PlayResult))]
 [JsonSerializable(typeof(SaveData))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -101,6 +102,11 @@ internal static unsafe class Bridge
         try { bool ok = _core!.PublishSignal(ReadUtf8(utf8Type), out var error); return ReturnJson(new PlayResult(ok, error)); }
         catch { return null; }
     }
+
+    /// <summary>AI主力最近内心独白(新→旧)。返回 AIDto 列表 JSON。</summary>
+    [UnmanagedCallersOnly(EntryPoint = "ig_ai_thoughts")]
+    public static byte* AiThoughts(int count)
+    { try { return ReturnJson(_core!.GetAIThoughts(count)); } catch { return null; } }
 
     [UnmanagedCallersOnly(EntryPoint = "ig_set_intent")]
     public static byte* SetIntent(byte* utf8)

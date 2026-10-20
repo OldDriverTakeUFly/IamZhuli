@@ -21,6 +21,7 @@ abstract class GameClient {
   Future<Map<String, dynamic>> upgradeWaterArmy();
   Future<Map<String, dynamic>> toggleWaterArmy();
   Future<Map<String, dynamic>> publishSignal(String type);
+  Future<List<dynamic>> aiThoughts(int count);
   Future<Map<String, dynamic>> setIntent(String id);
 
   /// 服务端驱动时钟(HTTP模式):true=游戏在服务器自走,客户端只轮询;
@@ -83,13 +84,21 @@ class FfiClient implements GameClient {
   @override
   Future<Map<String, dynamic>> publishSignal(String type) async => _e.publishSignal(type);
   @override
+  Future<List<dynamic>> aiThoughts(int count) async => _e.aiThoughts(count);
+  @override
   Future<Map<String, dynamic>> setIntent(String id) async => _e.setIntent(id);
 }
 
-/// 工厂: 优先FFI(.so随桌面bundle),失败(手机/无库)回退HTTP局域网服务器。
+/// 工厂: .so路径回退链——显式参数(开发传源码树默认) → 桌面bundle可执行
+/// 同目录(分发形态);全miss则回退HTTP局域网服务器(手机)。
 Future<GameClient> createClient({String? soPath, String? httpBase}) async {
-  if (soPath != null && File(soPath).existsSync()) {
-    return FfiClient(GameEngine(soPath));
+  final exe = Platform.resolvedExecutable;
+  final candidates = [
+    soPath,
+    exe.isNotEmpty ? '${File(exe).parent.path}/IamZhuli.Native.so' : null,
+  ].whereType<String>();
+  for (final p in candidates) {
+    if (File(p).existsSync()) return FfiClient(GameEngine(p));
   }
   return _HttpAdapter(HttpEngine(httpBase ?? 'http://192.168.2.179:5023'));
 }
@@ -131,6 +140,8 @@ class _HttpAdapter implements GameClient {
   Future<Map<String, dynamic>> toggleWaterArmy() => _e.toggleWaterArmy();
   @override
   Future<Map<String, dynamic>> publishSignal(String type) => _e.publishSignal(type);
+  @override
+  Future<List<dynamic>> aiThoughts(int count) => _e.aiThoughts(count);
   @override
   Future<Map<String, dynamic>> setIntent(String id) => _e.setIntent(id);
 }

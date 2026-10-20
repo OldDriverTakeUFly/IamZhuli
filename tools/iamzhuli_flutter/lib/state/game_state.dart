@@ -31,6 +31,10 @@ class GameState extends ChangeNotifier {
   bool _settling = false;
   /// 当前关卡(重开/选关用)
   String levelId = 'accumulate';
+  /// AI主力内心独白(新→旧;低频侧拉,独立序号防乱序)
+  List<dynamic> ai = const [];
+  int _aiSeq = 0;
+  int _aiCounter = 0;
 
   Map<String, dynamic>? get cs => snap['cardState'] as Map<String, dynamic>?;
   Map<String, dynamic>? get acct => snap['account'] as Map<String, dynamic>?;
@@ -55,7 +59,18 @@ class GameState extends ChangeNotifier {
         result == null && !_settling) {
       unawaited(_settle());
     }
+    if (++_aiCounter % 4 == 0) unawaited(_fetchAi());   // 每4拍(≈3s)侧拉一次AI动向
     notifyListeners();
+  }
+
+  Future<void> _fetchAi() async {
+    final seq = ++_aiSeq;
+    try {
+      final list = await engine.aiThoughts(8);
+      if (seq != _aiSeq) return;
+      ai = list;
+      notifyListeners();
+    } catch (_) {/* 闪断忽略 */}
   }
 
   Future<void> _settle() async {

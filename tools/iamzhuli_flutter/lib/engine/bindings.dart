@@ -34,6 +34,7 @@ class GameEngine {
   late final _PtrD _waterArmyUpgrade;
   late final _PtrD _waterArmyToggle;
   late final _PtrStrD _publishSignal;
+  late final _PtrIntD _aiThoughts;
   late final _PtrStrD _setIntent;
   late final _PtrD _exportSave;
   late final _PtrStrD _importSave;
@@ -55,6 +56,7 @@ class GameEngine {
     _waterArmyUpgrade = _lib.lookupFunction<_PtrC, _PtrD>('ig_waterarmy_upgrade');
     _waterArmyToggle = _lib.lookupFunction<_PtrC, _PtrD>('ig_waterarmy_toggle');
     _publishSignal = _lib.lookupFunction<_PtrStrC, _PtrStrD>('ig_publish_signal');
+    _aiThoughts = _lib.lookupFunction<_PtrIntC, _PtrIntD>('ig_ai_thoughts');
     _setIntent = _lib.lookupFunction<_PtrStrC, _PtrStrD>('ig_set_intent');
     _exportSave = _lib.lookupFunction<_PtrC, _PtrD>('ig_export_save');
     _importSave = _lib.lookupFunction<_PtrStrC, _PtrStrD>('ig_import_save');
@@ -100,6 +102,7 @@ class GameEngine {
   Map<String, dynamic> upgradeWaterArmy() => jsonDecode(_take(_waterArmyUpgrade())) as Map<String, dynamic>;
   Map<String, dynamic> toggleWaterArmy() => jsonDecode(_take(_waterArmyToggle())) as Map<String, dynamic>;
   Map<String, dynamic> publishSignal(String type) => jsonDecode(_take(_publishSignal(_str(type)))) as Map<String, dynamic>;
+  List<dynamic> aiThoughts(int count) => jsonDecode(_take(_aiThoughts(count))) as List<dynamic>;
   Map<String, dynamic> setIntent(String id) => jsonDecode(_take(_setIntent(_str(id)))) as Map<String, dynamic>;
   Map<String, dynamic> exportSave() => jsonDecode(_take(_exportSave())) as Map<String, dynamic>;
   Map<String, dynamic> importSave(String json) => jsonDecode(_take(_importSave(_str(json)))) as Map<String, dynamic>;
