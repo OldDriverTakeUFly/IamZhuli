@@ -5,6 +5,7 @@ import 'state/game_state.dart';
 import 'screens/trade_screen.dart';
 import 'screens/data_screen.dart';
 import 'screens/account_screen.dart';
+import 'screens/info_war_screen.dart';
 
 const kSoPath = String.fromEnvironment('IAMZHULI_SO',
     defaultValue: '/home/leo/Projects/IamZhuli/src/IamZhuli.Native/bin/Release/net8.0/linux-x64/publish/IamZhuli.Native.so');
@@ -158,7 +159,7 @@ class _GameShellState extends State<GameShell> {
             ),
             body: IndexedStack(
               index: _tab,
-              children: [TradeScreen(state: state), DataScreen(state: state), AccountScreen(state: state)],
+              children: [TradeScreen(state: state), DataScreen(state: state), InfoWarScreen(state: state), AccountScreen(state: state)],
             ),
             bottomNavigationBar: NavigationBar(
               selectedIndex: _tab,
@@ -166,6 +167,7 @@ class _GameShellState extends State<GameShell> {
               destinations: const [
                 NavigationDestination(icon: Icon(Icons.candlestick_chart), label: '交易'),
                 NavigationDestination(icon: Icon(Icons.bar_chart), label: '数据'),
+                NavigationDestination(icon: Icon(Icons.campaign_outlined), label: '盘外'),
                 NavigationDestination(icon: Icon(Icons.account_balance_wallet), label: '账户'),
               ],
             ),

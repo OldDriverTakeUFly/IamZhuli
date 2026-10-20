@@ -459,6 +459,7 @@
     <div style="margin-top:10px;padding-top:8px;border-top:1px solid #333;">
       <div style="font-size:11px;color:#666;margin-bottom:4px;">切换关卡</div>
       <div class="ctrl-row">
+        <button class="btn btn-ctrl level-btn" data-level="quick" style="font-size:10px;padding:4px 8px;">快局</button>
         <button class="btn btn-ctrl level-btn" data-level="tutorial" style="font-size:10px;padding:4px 8px;">教程</button>
         <button class="btn btn-ctrl level-btn" data-level="accumulate" style="font-size:10px;padding:4px 8px;">吸筹</button>
         <button class="btn btn-ctrl level-btn" data-level="pump_dump" style="font-size:10px;padding:4px 8px;">拉升出货</button>
@@ -1523,6 +1524,8 @@ $('beginBtn').onclick = async () => {
 };
 // 关卡选择卡片
 const levelDefs = [
+  { id: 'quick', name: '快局:速战吸筹', icon: '⚡',
+    briefing: '5天内建仓至流通盘的10%(2万手),且全程监管关注值不超过55%。碎片时间一局(约15-25分钟)。V型反转场景。' },
   { id: 'tutorial', name: '教程:首次拉升', icon: '📘',
     briefing: '把鼎鼎集团从10元拉升到12元,完成你的第一次操盘。适合新手熟悉操作。横盘场景。' },
   { id: 'accumulate', name: '隐蔽吸筹', icon: '🤫',

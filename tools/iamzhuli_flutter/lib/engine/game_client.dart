@@ -17,6 +17,10 @@ abstract class GameClient {
   Future<Map<String, dynamic>> score();
   Future<bool> saveGame(String slot);
   Future<bool> loadGame(String slot);
+  Future<Map<String, dynamic>> publishNews(String type);
+  Future<Map<String, dynamic>> upgradeWaterArmy();
+  Future<Map<String, dynamic>> toggleWaterArmy();
+  Future<Map<String, dynamic>> publishSignal(String type);
   Future<Map<String, dynamic>> setIntent(String id);
 
   /// 服务端驱动时钟(HTTP模式):true=游戏在服务器自走,客户端只轮询;
@@ -71,6 +75,14 @@ class FfiClient implements GameClient {
     return r['ok'] == true;
   }
   @override
+  Future<Map<String, dynamic>> publishNews(String type) async => _e.publishNews(type);
+  @override
+  Future<Map<String, dynamic>> upgradeWaterArmy() async => _e.upgradeWaterArmy();
+  @override
+  Future<Map<String, dynamic>> toggleWaterArmy() async => _e.toggleWaterArmy();
+  @override
+  Future<Map<String, dynamic>> publishSignal(String type) async => _e.publishSignal(type);
+  @override
   Future<Map<String, dynamic>> setIntent(String id) async => _e.setIntent(id);
 }
 
@@ -111,6 +123,14 @@ class _HttpAdapter implements GameClient {
   Future<bool> saveGame(String slot) async => (await _e.saveGame(slot))['ok'] == true;
   @override
   Future<bool> loadGame(String slot) async => (await _e.loadGame(slot))['ok'] == true;
+  @override
+  Future<Map<String, dynamic>> publishNews(String type) => _e.publishNews(type);
+  @override
+  Future<Map<String, dynamic>> upgradeWaterArmy() => _e.upgradeWaterArmy();
+  @override
+  Future<Map<String, dynamic>> toggleWaterArmy() => _e.toggleWaterArmy();
+  @override
+  Future<Map<String, dynamic>> publishSignal(String type) => _e.publishSignal(type);
   @override
   Future<Map<String, dynamic>> setIntent(String id) => _e.setIntent(id);
 }

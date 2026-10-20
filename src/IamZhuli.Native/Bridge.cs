@@ -72,6 +72,36 @@ internal static unsafe class Bridge
     public static byte* Score()
     { try { return ReturnJson(_core!.SettleScore()); } catch { return null; } }
 
+    // —— 信息战(消息/水军/信号;盘后与卡牌舆论牌共用底层,时机由 GameCore 闸门) ——
+
+    [UnmanagedCallersOnly(EntryPoint = "ig_publish_news")]
+    public static byte* PublishNews(byte* utf8Type)
+    {
+        try { bool ok = _core!.PublishNews(ReadUtf8(utf8Type), out var error); return ReturnJson(new PlayResult(ok, error)); }
+        catch { return null; }
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "ig_waterarmy_upgrade")]
+    public static byte* WaterArmyUpgrade()
+    {
+        try { bool ok = _core!.UpgradeWaterArmy(out var error); return ReturnJson(new PlayResult(ok, error)); }
+        catch { return null; }
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "ig_waterarmy_toggle")]
+    public static byte* WaterArmyToggle()
+    {
+        try { bool ok = _core!.ToggleWaterArmy(out var error); return ReturnJson(new PlayResult(ok, error)); }
+        catch { return null; }
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "ig_publish_signal")]
+    public static byte* PublishSignal(byte* utf8Type)
+    {
+        try { bool ok = _core!.PublishSignal(ReadUtf8(utf8Type), out var error); return ReturnJson(new PlayResult(ok, error)); }
+        catch { return null; }
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "ig_set_intent")]
     public static byte* SetIntent(byte* utf8)
     {

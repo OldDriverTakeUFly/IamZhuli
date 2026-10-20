@@ -33,5 +33,9 @@ class HttpEngine {
   Future<Map<String, dynamic>> score() => _get('/api/score');
   Future<Map<String, dynamic>> saveGame(String slot) async => _post('/api/save/$slot');
   Future<Map<String, dynamic>> loadGame(String slot) async => _post('/api/load/$slot');
+  Future<Map<String, dynamic>> publishNews(String type) async => _post('/api/news?type=$type');
+  Future<Map<String, dynamic>> upgradeWaterArmy() async => _post('/api/waterarmy/upgrade');
+  Future<Map<String, dynamic>> toggleWaterArmy() async => _post('/api/waterarmy/toggle');
+  Future<Map<String, dynamic>> publishSignal(String type) async => _post('/api/signal?type=$type');
   Future<Map<String, dynamic>> setIntent(String id) async => _post('/api/intent?id=$id');
 }

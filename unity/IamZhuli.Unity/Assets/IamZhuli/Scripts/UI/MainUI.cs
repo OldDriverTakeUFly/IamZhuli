@@ -16,6 +16,7 @@ namespace IamZhuli.Unity
 
         private static readonly (string id, string name, string brief)[] Levels =
         {
+            ("quick",      "快局:速战吸筹", "5天·建仓10%·热度<55%——碎片时间一局"),
             ("tutorial",    "新手教学", "少量资金,学习吸筹→拉升→出货的基本循环"),
             ("accumulate",  "耐心吸筹", "低位悄悄收集筹码,不惊动监管"),
             ("pump_dump",   "拉高出货", "经典坐庄:暴力拉升后高位派发"),

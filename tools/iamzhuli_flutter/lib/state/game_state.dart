@@ -164,6 +164,24 @@ class GameState extends ChangeNotifier {
     await refresh();
   }
 
+  // ── 信息战(消息/水军/信号):结果写入 lastMsg,快照含 activeNews/waterArmy*/infoHeat ──
+
+  Future<void> _act(String doing, Future<Map<String, dynamic>> Function() op) async {
+    try {
+      final r = await op();
+      lastMsg = r['ok'] == true ? '✓ $doing' : '✗ ${r['error']}';
+    } catch (_) {
+      lastMsg = '✗ $doing失败(连接)';
+    }
+    notifyListeners();
+    await refresh();
+  }
+
+  Future<void> publishNews(String type) => _act('已发布消息', () => engine.publishNews(type));
+  Future<void> upgradeWaterArmy() => _act('水军网络升级', () => engine.upgradeWaterArmy());
+  Future<void> toggleWaterArmy() => _act('水军运营切换', () => engine.toggleWaterArmy());
+  Future<void> publishSignal(String type) => _act('已发布信号', () => engine.publishSignal(type));
+
   @override
   void dispose() {
     _poll?.cancel();
