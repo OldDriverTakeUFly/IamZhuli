@@ -1,107 +1,107 @@
 <?xml version="1.0" encoding="utf-8"?>
-<test-run id="2" testcasecount="19" result="Passed" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-20 23:44:41Z" end-time="2026-10-20 23:44:46Z" duration="5.1994114">
-  <test-suite type="TestSuite" id="1000" name="IamZhuli.Unity" fullname="IamZhuli.Unity" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-20 23:44:41Z" end-time="2026-10-20 23:44:46Z" duration="5.199411" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+<test-run id="2" testcasecount="19" result="Passed" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-21 00:41:28Z" end-time="2026-10-21 00:41:32Z" duration="4.6858106">
+  <test-suite type="TestSuite" id="1000" name="IamZhuli.Unity" fullname="IamZhuli.Unity" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-21 00:41:28Z" end-time="2026-10-21 00:41:32Z" duration="4.685811" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
     <properties>
       <property name="platform" value="EditMode" />
     </properties>
-    <test-suite type="Assembly" id="1024" name="IamZhuli.Tests.Editor.dll" fullname="/home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/ScriptAssemblies/IamZhuli.Tests.Editor.dll" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-20 23:44:41Z" end-time="2026-10-20 23:44:46Z" duration="5.185490" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <test-suite type="Assembly" id="1024" name="IamZhuli.Tests.Editor.dll" fullname="/home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/ScriptAssemblies/IamZhuli.Tests.Editor.dll" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-21 00:41:28Z" end-time="2026-10-21 00:41:32Z" duration="4.671071" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
       <properties>
-        <property name="_PID" value="484040" />
+        <property name="_PID" value="498900" />
         <property name="_APPDOMAIN" value="Unity Child Domain" />
         <property name="platform" value="EditMode" />
         <property name="EditorOnly" value="True" />
       </properties>
-      <test-suite type="TestSuite" id="1025" name="IamZhuli" fullname="IamZhuli" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-20 23:44:41Z" end-time="2026-10-20 23:44:46Z" duration="5.184848" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <test-suite type="TestSuite" id="1025" name="IamZhuli" fullname="IamZhuli" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-21 00:41:28Z" end-time="2026-10-21 00:41:32Z" duration="4.670305" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
         <properties />
-        <test-suite type="TestSuite" id="1026" name="Tests" fullname="IamZhuli.Tests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-20 23:44:41Z" end-time="2026-10-20 23:44:46Z" duration="5.184597" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <test-suite type="TestSuite" id="1026" name="Tests" fullname="IamZhuli.Tests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-21 00:41:28Z" end-time="2026-10-21 00:41:32Z" duration="4.670026" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
           <properties />
-          <test-suite type="TestFixture" id="1001" name="GameCoreSmokeTests" fullname="IamZhuli.Tests.GameCoreSmokeTests" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-20 23:44:41Z" end-time="2026-10-20 23:44:43Z" duration="2.404793" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <test-suite type="TestFixture" id="1001" name="GameCoreSmokeTests" fullname="IamZhuli.Tests.GameCoreSmokeTests" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-21 00:41:28Z" end-time="2026-10-21 00:41:30Z" duration="2.128580" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
             <properties />
-            <test-case id="1004" name="BeginTrading_CardMode_DealsHandOfFive" fullname="IamZhuli.Tests.GameCoreSmokeTests.BeginTrading_CardMode_DealsHandOfFive" methodname="BeginTrading_CardMode_DealsHandOfFive" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="517311308" result="Passed" start-time="2026-10-20 23:44:41Z" end-time="2026-10-20 23:44:41Z" duration="0.382058" asserts="0">
+            <test-case id="1004" name="BeginTrading_CardMode_DealsHandOfFive" fullname="IamZhuli.Tests.GameCoreSmokeTests.BeginTrading_CardMode_DealsHandOfFive" methodname="BeginTrading_CardMode_DealsHandOfFive" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="1358102369" result="Passed" start-time="2026-10-21 00:41:28Z" end-time="2026-10-21 00:41:28Z" duration="0.377437" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1002" name="DllLoads_CoreCreates_WithDefaults" fullname="IamZhuli.Tests.GameCoreSmokeTests.DllLoads_CoreCreates_WithDefaults" methodname="DllLoads_CoreCreates_WithDefaults" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="973043818" result="Passed" start-time="2026-10-20 23:44:41Z" end-time="2026-10-20 23:44:41Z" duration="0.001146" asserts="0">
+            <test-case id="1002" name="DllLoads_CoreCreates_WithDefaults" fullname="IamZhuli.Tests.GameCoreSmokeTests.DllLoads_CoreCreates_WithDefaults" methodname="DllLoads_CoreCreates_WithDefaults" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="1037748119" result="Passed" start-time="2026-10-21 00:41:28Z" end-time="2026-10-21 00:41:28Z" duration="0.000995" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1006" name="FullGame_RunsToSettlement_WithScoreRankings" fullname="IamZhuli.Tests.GameCoreSmokeTests.FullGame_RunsToSettlement_WithScoreRankings" methodname="FullGame_RunsToSettlement_WithScoreRankings" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="692502533" result="Passed" start-time="2026-10-20 23:44:41Z" end-time="2026-10-20 23:44:42Z" duration="0.910799" asserts="0">
+            <test-case id="1006" name="FullGame_RunsToSettlement_WithScoreRankings" fullname="IamZhuli.Tests.GameCoreSmokeTests.FullGame_RunsToSettlement_WithScoreRankings" methodname="FullGame_RunsToSettlement_WithScoreRankings" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="1706946878" result="Passed" start-time="2026-10-21 00:41:28Z" end-time="2026-10-21 00:41:29Z" duration="0.810169" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1003" name="LoadLevel_PreplayProducesHistory" fullname="IamZhuli.Tests.GameCoreSmokeTests.LoadLevel_PreplayProducesHistory" methodname="LoadLevel_PreplayProducesHistory" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="949543616" result="Passed" start-time="2026-10-20 23:44:42Z" end-time="2026-10-20 23:44:43Z" duration="0.325346" asserts="0">
+            <test-case id="1003" name="LoadLevel_PreplayProducesHistory" fullname="IamZhuli.Tests.GameCoreSmokeTests.LoadLevel_PreplayProducesHistory" methodname="LoadLevel_PreplayProducesHistory" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="920676725" result="Passed" start-time="2026-10-21 00:41:29Z" end-time="2026-10-21 00:41:29Z" duration="0.255388" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1005" name="PlayCard_EndCardTurn_AuctionRevealAndConservation" fullname="IamZhuli.Tests.GameCoreSmokeTests.PlayCard_EndCardTurn_AuctionRevealAndConservation" methodname="PlayCard_EndCardTurn_AuctionRevealAndConservation" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="1254599428" result="Passed" start-time="2026-10-20 23:44:43Z" end-time="2026-10-20 23:44:43Z" duration="0.286527" asserts="0">
+            <test-case id="1005" name="PlayCard_EndCardTurn_AuctionRevealAndConservation" fullname="IamZhuli.Tests.GameCoreSmokeTests.PlayCard_EndCardTurn_AuctionRevealAndConservation" methodname="PlayCard_EndCardTurn_AuctionRevealAndConservation" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="1589084785" result="Passed" start-time="2026-10-21 00:41:29Z" end-time="2026-10-21 00:41:29Z" duration="0.234994" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1007" name="Retry_ReloadsSameLevel" fullname="IamZhuli.Tests.GameCoreSmokeTests.Retry_ReloadsSameLevel" methodname="Retry_ReloadsSameLevel" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="223141464" result="Passed" start-time="2026-10-20 23:44:43Z" end-time="2026-10-20 23:44:43Z" duration="0.475310" asserts="0">
+            <test-case id="1007" name="Retry_ReloadsSameLevel" fullname="IamZhuli.Tests.GameCoreSmokeTests.Retry_ReloadsSameLevel" methodname="Retry_ReloadsSameLevel" classname="IamZhuli.Tests.GameCoreSmokeTests" runstate="Runnable" seed="1496519708" result="Passed" start-time="2026-10-21 00:41:29Z" end-time="2026-10-21 00:41:30Z" duration="0.428908" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
           </test-suite>
-          <test-suite type="TestFixture" id="1008" name="SaveServiceTests" fullname="IamZhuli.Tests.SaveServiceTests" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-10-20 23:44:43Z" end-time="2026-10-20 23:44:46Z" duration="2.186450" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <test-suite type="TestFixture" id="1008" name="SaveServiceTests" fullname="IamZhuli.Tests.SaveServiceTests" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-10-21 00:41:30Z" end-time="2026-10-21 00:41:32Z" duration="1.990243" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
             <properties />
-            <test-case id="1014" name="ListSaves_NewestFirst_CorruptSkipped" fullname="IamZhuli.Tests.SaveServiceTests.ListSaves_NewestFirst_CorruptSkipped" methodname="ListSaves_NewestFirst_CorruptSkipped" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="1347201052" result="Passed" start-time="2026-10-20 23:44:43Z" end-time="2026-10-20 23:44:44Z" duration="0.296525" asserts="0">
+            <test-case id="1014" name="ListSaves_NewestFirst_CorruptSkipped" fullname="IamZhuli.Tests.SaveServiceTests.ListSaves_NewestFirst_CorruptSkipped" methodname="ListSaves_NewestFirst_CorruptSkipped" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="568144173" result="Passed" start-time="2026-10-21 00:41:30Z" end-time="2026-10-21 00:41:30Z" duration="0.278546" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1013" name="Load_MissingSlot_ReturnsNull" fullname="IamZhuli.Tests.SaveServiceTests.Load_MissingSlot_ReturnsNull" methodname="Load_MissingSlot_ReturnsNull" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="635461478" result="Passed" start-time="2026-10-20 23:44:44Z" end-time="2026-10-20 23:44:44Z" duration="0.001059" asserts="0">
+            <test-case id="1013" name="Load_MissingSlot_ReturnsNull" fullname="IamZhuli.Tests.SaveServiceTests.Load_MissingSlot_ReturnsNull" methodname="Load_MissingSlot_ReturnsNull" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="1566892955" result="Passed" start-time="2026-10-21 00:41:30Z" end-time="2026-10-21 00:41:30Z" duration="0.000982" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1012" name="Load_RestoresIntoFreshCore_AndGameContinues" fullname="IamZhuli.Tests.SaveServiceTests.Load_RestoresIntoFreshCore_AndGameContinues" methodname="Load_RestoresIntoFreshCore_AndGameContinues" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="1781352008" result="Passed" start-time="2026-10-20 23:44:44Z" end-time="2026-10-20 23:44:44Z" duration="0.697732" asserts="0">
+            <test-case id="1012" name="Load_RestoresIntoFreshCore_AndGameContinues" fullname="IamZhuli.Tests.SaveServiceTests.Load_RestoresIntoFreshCore_AndGameContinues" methodname="Load_RestoresIntoFreshCore_AndGameContinues" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="305895438" result="Passed" start-time="2026-10-21 00:41:30Z" end-time="2026-10-21 00:41:31Z" duration="0.641519" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1009" name="Save_AtDayBoundary_WritesFileWithValidJson" fullname="IamZhuli.Tests.SaveServiceTests.Save_AtDayBoundary_WritesFileWithValidJson" methodname="Save_AtDayBoundary_WritesFileWithValidJson" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="382979226" result="Passed" start-time="2026-10-20 23:44:44Z" end-time="2026-10-20 23:44:45Z" duration="0.422463" asserts="0">
+            <test-case id="1009" name="Save_AtDayBoundary_WritesFileWithValidJson" fullname="IamZhuli.Tests.SaveServiceTests.Save_AtDayBoundary_WritesFileWithValidJson" methodname="Save_AtDayBoundary_WritesFileWithValidJson" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="1158250920" result="Passed" start-time="2026-10-21 00:41:31Z" end-time="2026-10-21 00:41:31Z" duration="0.349690" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1011" name="Save_AtTurn0Start_IsAllowed" fullname="IamZhuli.Tests.SaveServiceTests.Save_AtTurn0Start_IsAllowed" methodname="Save_AtTurn0Start_IsAllowed" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="245706909" result="Passed" start-time="2026-10-20 23:44:45Z" end-time="2026-10-20 23:44:45Z" duration="0.254493" asserts="0">
+            <test-case id="1011" name="Save_AtTurn0Start_IsAllowed" fullname="IamZhuli.Tests.SaveServiceTests.Save_AtTurn0Start_IsAllowed" methodname="Save_AtTurn0Start_IsAllowed" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="596899092" result="Passed" start-time="2026-10-21 00:41:31Z" end-time="2026-10-21 00:41:31Z" duration="0.226992" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1010" name="Save_MidDay_RejectedByGate" fullname="IamZhuli.Tests.SaveServiceTests.Save_MidDay_RejectedByGate" methodname="Save_MidDay_RejectedByGate" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="523368601" result="Passed" start-time="2026-10-20 23:44:45Z" end-time="2026-10-20 23:44:45Z" duration="0.258691" asserts="0">
+            <test-case id="1010" name="Save_MidDay_RejectedByGate" fullname="IamZhuli.Tests.SaveServiceTests.Save_MidDay_RejectedByGate" methodname="Save_MidDay_RejectedByGate" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="1230043676" result="Passed" start-time="2026-10-21 00:41:31Z" end-time="2026-10-21 00:41:32Z" duration="0.235546" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1015" name="SlotName_IsSanitized_AgainstPathTraversal" fullname="IamZhuli.Tests.SaveServiceTests.SlotName_IsSanitized_AgainstPathTraversal" methodname="SlotName_IsSanitized_AgainstPathTraversal" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="1340524582" result="Passed" start-time="2026-10-20 23:44:45Z" end-time="2026-10-20 23:44:46Z" duration="0.248516" asserts="0">
+            <test-case id="1015" name="SlotName_IsSanitized_AgainstPathTraversal" fullname="IamZhuli.Tests.SaveServiceTests.SlotName_IsSanitized_AgainstPathTraversal" methodname="SlotName_IsSanitized_AgainstPathTraversal" classname="IamZhuli.Tests.SaveServiceTests" runstate="Runnable" seed="1527100878" result="Passed" start-time="2026-10-21 00:41:32Z" end-time="2026-10-21 00:41:32Z" duration="0.250751" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
           </test-suite>
-          <test-suite type="TestFixture" id="1016" name="SceneBuilderTests" fullname="IamZhuli.Tests.SceneBuilderTests" classname="IamZhuli.Tests.SceneBuilderTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-20 23:44:46Z" end-time="2026-10-20 23:44:46Z" duration="0.568727" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <test-suite type="TestFixture" id="1016" name="SceneBuilderTests" fullname="IamZhuli.Tests.SceneBuilderTests" classname="IamZhuli.Tests.SceneBuilderTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-21 00:41:32Z" end-time="2026-10-21 00:41:32Z" duration="0.528762" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
             <properties />
-            <test-case id="1017" name="SceneBuilder_ProducesWiredScene" fullname="IamZhuli.Tests.SceneBuilderTests.SceneBuilder_ProducesWiredScene" methodname="SceneBuilder_ProducesWiredScene" classname="IamZhuli.Tests.SceneBuilderTests" runstate="Runnable" seed="1312727938" result="Passed" start-time="2026-10-20 23:44:46Z" end-time="2026-10-20 23:44:46Z" duration="0.566454" asserts="0">
+            <test-case id="1017" name="SceneBuilder_ProducesWiredScene" fullname="IamZhuli.Tests.SceneBuilderTests.SceneBuilder_ProducesWiredScene" methodname="SceneBuilder_ProducesWiredScene" classname="IamZhuli.Tests.SceneBuilderTests" runstate="Runnable" seed="1794857276" result="Passed" start-time="2026-10-21 00:41:32Z" end-time="2026-10-21 00:41:32Z" duration="0.527891" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
@@ -111,33 +111,33 @@
 ]]></output>
             </test-case>
           </test-suite>
-          <test-suite type="TestFixture" id="1018" name="UxmlSanityTests" fullname="IamZhuli.Tests.UxmlSanityTests" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-20 23:44:46Z" end-time="2026-10-20 23:44:46Z" duration="0.022463" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <test-suite type="TestFixture" id="1018" name="UxmlSanityTests" fullname="IamZhuli.Tests.UxmlSanityTests" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-21 00:41:32Z" end-time="2026-10-21 00:41:32Z" duration="0.020447" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
             <properties />
-            <test-case id="1022" name="TimeshareElement_InstantiatesFromUxml" fullname="IamZhuli.Tests.UxmlSanityTests.TimeshareElement_InstantiatesFromUxml" methodname="TimeshareElement_InstantiatesFromUxml" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="945482605" result="Passed" start-time="2026-10-20 23:44:46Z" end-time="2026-10-20 23:44:46Z" duration="0.012234" asserts="0">
+            <test-case id="1022" name="TimeshareElement_InstantiatesFromUxml" fullname="IamZhuli.Tests.UxmlSanityTests.TimeshareElement_InstantiatesFromUxml" methodname="TimeshareElement_InstantiatesFromUxml" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="1132012581" result="Passed" start-time="2026-10-21 00:41:32Z" end-time="2026-10-21 00:41:32Z" duration="0.011300" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1023" name="TimeshareElement_SetData_EmptyAndNormal_DoesNotThrow" fullname="IamZhuli.Tests.UxmlSanityTests.TimeshareElement_SetData_EmptyAndNormal_DoesNotThrow" methodname="TimeshareElement_SetData_EmptyAndNormal_DoesNotThrow" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="231502146" result="Passed" start-time="2026-10-20 23:44:46Z" end-time="2026-10-20 23:44:46Z" duration="0.002533" asserts="0">
+            <test-case id="1023" name="TimeshareElement_SetData_EmptyAndNormal_DoesNotThrow" fullname="IamZhuli.Tests.UxmlSanityTests.TimeshareElement_SetData_EmptyAndNormal_DoesNotThrow" methodname="TimeshareElement_SetData_EmptyAndNormal_DoesNotThrow" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="1267839757" result="Passed" start-time="2026-10-21 00:41:32Z" end-time="2026-10-21 00:41:32Z" duration="0.001962" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1020" name="Uss_IsValidAsset" fullname="IamZhuli.Tests.UxmlSanityTests.Uss_IsValidAsset" methodname="Uss_IsValidAsset" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="1926427530" result="Passed" start-time="2026-10-20 23:44:46Z" end-time="2026-10-20 23:44:46Z" duration="0.000313" asserts="0">
+            <test-case id="1020" name="Uss_IsValidAsset" fullname="IamZhuli.Tests.UxmlSanityTests.Uss_IsValidAsset" methodname="Uss_IsValidAsset" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="1067976413" result="Passed" start-time="2026-10-21 00:41:32Z" end-time="2026-10-21 00:41:32Z" duration="0.000229" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1021" name="Uxml_ContainsEveryElement_MainUIQueries" fullname="IamZhuli.Tests.UxmlSanityTests.Uxml_ContainsEveryElement_MainUIQueries" methodname="Uxml_ContainsEveryElement_MainUIQueries" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="2143454769" result="Passed" start-time="2026-10-20 23:44:46Z" end-time="2026-10-20 23:44:46Z" duration="0.002959" asserts="0">
+            <test-case id="1021" name="Uxml_ContainsEveryElement_MainUIQueries" fullname="IamZhuli.Tests.UxmlSanityTests.Uxml_ContainsEveryElement_MainUIQueries" methodname="Uxml_ContainsEveryElement_MainUIQueries" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="1367926134" result="Passed" start-time="2026-10-21 00:41:32Z" end-time="2026-10-21 00:41:32Z" duration="0.002547" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1019" name="Uxml_IsValidAsset" fullname="IamZhuli.Tests.UxmlSanityTests.Uxml_IsValidAsset" methodname="Uxml_IsValidAsset" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="1481688942" result="Passed" start-time="2026-10-20 23:44:46Z" end-time="2026-10-20 23:44:46Z" duration="0.000684" asserts="0">
+            <test-case id="1019" name="Uxml_IsValidAsset" fullname="IamZhuli.Tests.UxmlSanityTests.Uxml_IsValidAsset" methodname="Uxml_IsValidAsset" classname="IamZhuli.Tests.UxmlSanityTests" runstate="Runnable" seed="801363081" result="Passed" start-time="2026-10-21 00:41:32Z" end-time="2026-10-21 00:41:32Z" duration="0.000363" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />

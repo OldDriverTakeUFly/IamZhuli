@@ -7,12 +7,12 @@ Distro version:          #40~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Tue Jun 23 16:48
 Kernel version:          6.17.0-40-generic
 Architecture:            x86_64
 Available memory:        15875 MB
-Date:                    2026-10-20T23:44:15Z
-VBCSCompilerPreWarmer: ERROR: Couldn't pre-warm as failed to write stub code temporary file (/tmpUnityVBCSPreWarm_484040.cs)
-VBCSCompiler prewarm took 4.37 ms
+Date:                    2026-10-21T00:41:16Z
+VBCSCompilerPreWarmer: ERROR: Couldn't pre-warm as failed to write stub code temporary file (/tmpUnityVBCSPreWarm_498900.cs)
+VBCSCompiler prewarm took 0.31 ms
 [Licensing::Module] Trying to connect to existing licensing client channel...
 [Licensing::IpcConnector] Channel LicenseClient-leo doesn't exist
-[Licensing::Module] Successfully launched the LicensingClient (PId: 484052)
+[Licensing::Module] Successfully launched the LicensingClient (PId: 498912)
 Selected window backend: (null) 
 Desktop is 2560 x 1440 @ 60 Hz
 Initialize udev device monitor.
@@ -70,32 +70,32 @@ Successfully changed project path to: /home/leo/Projects/IamZhuli/unity/IamZhuli
     "memorysetup-job-temp-allocator-block-size-background=1048576"
     "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
 Logging is directed to a specific file, skipping project log.
-Player connection [138989459331520]  Target information:
+Player connection [129454483405248]  Target information:
 
-Player connection [138989459331520]  * "[IP] 192.168.2.179 [Port] 55504 [Flags] 2 [Guid] 78751136 [EditorId] 78751136 [Version] 1048832 [Id] LinuxEditor(16,28.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+Player connection [129454483405248]  * "[IP] 192.168.2.179 [Port] 55504 [Flags] 2 [Guid] 1006595680 [EditorId] 1006595680 [Version] 1048832 [Id] LinuxEditor(16,28.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
 
-Player connection [138989459331520]  * "[IP] 192.168.191.183 [Port] 55504 [Flags] 2 [Guid] 78751136 [EditorId] 78751136 [Version] 1048832 [Id] LinuxEditor(16,28.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+Player connection [129454483405248]  * "[IP] 192.168.191.183 [Port] 55504 [Flags] 2 [Guid] 1006595680 [EditorId] 1006595680 [Version] 1048832 [Id] LinuxEditor(16,28.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
 
-Player connection [138989459331520]  * "[IP] 172.17.0.1 [Port] 55504 [Flags] 2 [Guid] 78751136 [EditorId] 78751136 [Version] 1048832 [Id] LinuxEditor(16,28.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+Player connection [129454483405248]  * "[IP] 172.17.0.1 [Port] 55504 [Flags] 2 [Guid] 1006595680 [EditorId] 1006595680 [Version] 1048832 [Id] LinuxEditor(16,28.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
 
-Player connection [138989459331520]  * "[IP] 28.0.0.1 [Port] 55504 [Flags] 2 [Guid] 78751136 [EditorId] 78751136 [Version] 1048832 [Id] LinuxEditor(16,28.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+Player connection [129454483405248]  * "[IP] 28.0.0.1 [Port] 55504 [Flags] 2 [Guid] 1006595680 [EditorId] 1006595680 [Version] 1048832 [Id] LinuxEditor(16,28.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
 
-Player connection [138989459331520] Host joined multi-casting on [225.0.0.222:54997]...
-Player connection [138989459331520] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Player connection [129454483405248] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [129454483405248] Host joined alternative multi-casting on [225.0.0.222:34997]...
 Input System module state changed to: Initialized.
 [Physics::Module] Initialized fallback backend.
 [Physics::Module] Id: 0xdecafbad
-[Licensing::IpcConnector] Successfully connected to: "LicenseClient-leo" at "2026-10-20T23:44:16.851562Z"
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-leo" at "2026-10-21T00:41:16.621372Z"
 [SignatureVerifier] Application signature verification not supported on this platform.
 [Licensing::Client] Handshaking with LicensingClient:
   Version:                 1.18.3+d7ffd15
-  Session Id:              06b927c6f7ea464494a90644c117604b
-  Correlation Id:          0ba71a4f3fc036f496fffead85c77862
-  External correlation Id: 6075505428779101736
+  Session Id:              383d41192a1746328901782739d62c7b
+  Correlation Id:          91d403b37f07fbf49cd3425d029f544c
+  External correlation Id: 536588045773548120
   Machine Id:              CPfljjQCY8r5q6fY+NZg56J9TzI=
-[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-leo" (connect: 0.86s, validation: 0.10s, handshake: 0.00s)
-[Licensing::IpcConnector] Successfully connected to: "LicenseClient-leo-notifications" at "2026-10-20T23:44:16.954737Z"
-[Licensing::Module] Connected to LicensingClient (PId: 484052, launch time: 0.00, total connection time: 0.96s)
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-leo" (connect: 0.38s, validation: 0.10s, handshake: 0.00s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-leo-notifications" at "2026-10-21T00:41:16.72163Z"
+[Licensing::Module] Connected to LicensingClient (PId: 498912, launch time: 0.00, total connection time: 0.48s)
 [Licensing::Module] Error: Access token is unavailable; failed to update
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::Module] License group:
@@ -104,7 +104,7 @@ Input System module state changed to: Initialized.
   Type: Assigned
   Expiration: Unlimited
 [Licensing::Client] Successfully updated license, isAsync: True, time: 0.02
-[Licensing::Module] Licensing Background thread has ended after 1.01s
+[Licensing::Module] Licensing Background thread has ended after 0.65s
 Initialising UDS system complete:
   - System type: Client
   - Resource namespace: e66f4a726e63d61c08c0006b5942a9b5
@@ -113,7 +113,7 @@ Initialising UDS system complete:
   - Command buffer size: 8192
   - Hashmap size: 4194304
   - Service connected: false
-[Package Manager] Connected to IPC stream "Upm-484040" after 0.7 seconds.
+[Package Manager] Connected to IPC stream "Upm-498900" after 0.4 seconds.
 [Licensing::Client] Successfully resolved entitlement details
 Library Redirect Path: Library/
 Launching Unity Data Store - /home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/Tools/Unity.DataStore 
@@ -142,45 +142,43 @@ L_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_ob
 _10_10_10_rev GL_ARB_viewport_array GL_ATI_blend_equation_separate GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_image_storage_compression GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_blend_equation_separate GL_EXT_debug_label GL_EXT_demote_to_helper_invocation GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_memory_object GL_EXT_memory_object_fd GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_pixel_buffer_object GL_EXT_polygon_offset_clamp GL_EXT_provoking_vertex GL_EXT_semaphore GL_EXT_semaphore_fd GL_EXT_shader_clock GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_integer_mix GL_EXT_shader_samples_identical GL_EXT_texture_array GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_sRGB GL_EXT_text
 ure_sRGB_R8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shadow_lod GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_storage GL_EXT_texture_swizzle GL_EXT_timer_query GL_EXT_transform_feedback GL_EXT_vertex_array_bgra GL_EXT_vertex_attrib_64bit GL_IBM_multimode_draw_arrays GL_INTEL_blackhole_render GL_INTEL_conservative_rasterization GL_INTEL_performance_query GL_INTEL_shader_atomic_float_minmax GL_INTEL_shader_integer_functions2 GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_robust_buffer_access_behavior GL_KHR_robustness GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_framebuffer_flip_y GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_const_bandwidth GL_MESA_texture_signed_rgba GL_NV_alpha_to_coverage_dither_control GL_NV_compute_shader_derivatives GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fra
 gment_shader_interlock GL_NV_packed_depth_stencil GL_NV_texture_barrier GL_OES_EGL_image GL_S3_s3tc
-OPENGL LOG: Creating OpenGL 4.6 graphics device ; Context level  <OpenGL 4.5> ; Context handle 1239868208
+OPENGL LOG: Creating OpenGL 4.6 graphics device ; Context level  <OpenGL 4.5> ; Context handle -1601263520
 Initialize mono
 Mono path[0] = '/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/Managed'
 Mono path[1] = '/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/BCLExtensions/runtime/netstandard2.1'
 Mono path[2] = '/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-linux'
 Mono config path = '/home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/MonoBleedingEdge/etc'
-Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56040
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56900
 CodeReloadManager initialized
 ImportWorker Server TCP listen port: 0
 AcceleratorClientConnectionCallback - disconnected - :0
 Begin MonoManager ReloadAssembly
 Registering precompiled unity dll's ...
 Register platform support module: /home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll
-Registered in 0.004212 seconds.
+Registered in 0.002371 seconds.
 Native extension for LinuxStandalone target not found
 Package Manager log level set to [2]
 [Licensing::Client] Successfully resolved entitlement details
 ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:False
 Scripting: successfully reloaded assembly
-- Finished resetting the current domain, in  4.729 seconds
-Domain Reload Profiling: 5853ms
-	BeginReloadAssembly (288ms)
-		CreateAndSetChildDomain (4ms)
-	RebuildCommonClasses (9ms)
-	RebuildNativeTypeToScriptingClass (67ms)
-	initialDomainReloadingComplete (145ms)
-	LoadAllAssembliesAndSetupDomain (614ms)
-		LoadAssemblies (285ms)
-		TypeCache.Refresh (427ms)
-			TypeCache.ScanAssembly (399ms)
+- Finished resetting the current domain, in  2.150 seconds
+Domain Reload Profiling: 2945ms
+	BeginReloadAssembly (132ms)
+		CreateAndSetChildDomain (3ms)
+	RebuildCommonClasses (8ms)
+	RebuildNativeTypeToScriptingClass (20ms)
+	initialDomainReloadingComplete (101ms)
+	LoadAllAssembliesAndSetupDomain (533ms)
+		LoadAssemblies (129ms)
+		TypeCache.Refresh (367ms)
+			TypeCache.ScanAssembly (344ms)
 		AnalyzeDomain (1ms)
-	FinalizeReload (4730ms)
+	FinalizeReload (2152ms)
 		SetupLoadedEditorAssemblies (0ms)
-			LogAssemblyErrors (3ms)
-			InitializePlatformSupportModulesInManaged (4ms)
-			BeforeProcessingInitializeOnLoad (266ms)
-			ProcessInitializeOnLoadAttributes (185ms)
-			ProcessInitializeOnLoadMethodAttributes (3894ms)
-			EditorAssembliesLoaded (4ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (187ms)
+			ProcessInitializeOnLoadAttributes (167ms)
+			ProcessInitializeOnLoadMethodAttributes (1481ms)
 [Licensing::Client] Successfully resolved entitlement details
 Application.AssetDatabase Initial Refresh Start
 [Package Manager] Restoring resolved packages state from cache
@@ -210,242 +208,163 @@ Application.AssetDatabase Initial Refresh Start
     com.unity.ext.nunit@2.1.0 (location: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Library/PackageCache/com.unity.ext.nunit@508b95ff9afe)
 [Subsystems] No new subsystems found in resolved package list.
 [Package Manager] Done registering packages in 0.00 seconds
-[API Updater] Processing imported assemblies took 185 ms (0/0 assembly(ies)).
-Assembly Updater Post Process Assets time: 0.188390s
 [ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
 Starting: /home/leo/Unity/Hub/Editor/6000.6.2f1/Editor/Data/Tools/BuildPipeline/bee_backend --ipc --defer-dag-verification --dagfile="Library/Bee/2400b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
 WorkingDir: /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity
 DisplayProgressbar: Compiling Scripts
-ExitCode: 0 Duration: 10s
-[218/294    0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/UnityEngine.UI.dll (+2 others) [CacheMiss f89f9bcb2142c448f315183832ed3a9700000000000000000000000000000006]
-[230/294    4s] Csc Library/Bee/artifacts/2400b0aE.dag/UnityEngine.UI.dll (+2 others)
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/UnityEngine.UI.dll (+2 others) [CacheWrite f89f9bcb2142c448f315183832ed3a9700000000000000000000000000000006]
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/UnityEditor.UI.dll (+2 others) [CacheMiss ef2b1a66d054051e86df2835a12bee6900000000000000000000000000000006]
-[233/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/UnityEngine.UI.dll (+pdb)
-Processing assembly Library/Bee/artifacts/2400b0aE.dag/UnityEngine.UI.dll, with 142 defines and 271 references
-processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
-1 processor(s) skipped this assembly
-[234/294    0s] CopyFiles Library/ScriptAssemblies/UnityEngine.UI.pdb
-[235/294    0s] CopyFiles Library/ScriptAssemblies/UnityEngine.UI.dll
-[236/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/UnityEditor.UI.dll (+2 others)
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/UnityEditor.UI.dll (+2 others) [CacheWrite ef2b1a66d054051e86df2835a12bee6900000000000000000000000000000006]
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.InternalAPIEngineBridge.004.dll (+2 others) [CacheMiss 0985642a77859ff194ebcb474e59898e00000000000000000000000000000006]
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.Multiplayer.Center.Common.dll (+2 others) [CacheMiss 39d1bd6ecadbc732b51731fc15dc299b00000000000000000000000000000006]
-[244/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/UnityEditor.UI.dll (+pdb)
-Processing assembly Library/Bee/artifacts/2400b0aE.dag/UnityEditor.UI.dll, with 139 defines and 304 references
-processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
-1 processor(s) skipped this assembly
-[245/294    0s] CopyFiles Library/ScriptAssemblies/UnityEditor.UI.pdb
-[246/294    0s] CopyFiles Library/ScriptAssemblies/UnityEditor.UI.dll
-[247/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.InternalAPIEngineBridge.004.dll (+2 others)
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.InternalAPIEngineBridge.004.dll (+2 others) [CacheWrite 0985642a77859ff194ebcb474e59898e00000000000000000000000000000006]
-[250/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/Unity.InternalAPIEngineBridge.004.dll (+pdb)
-Processing assembly Library/Bee/artifacts/2400b0aE.dag/Unity.InternalAPIEngineBridge.004.dll, with 138 defines and 273 references
-processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
-1 processor(s) skipped this assembly
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.TextMeshPro.dll (+2 others) [CacheMiss 9dc176656bc397665d2f67bb773ea45e00000000000000000000000000000006]
-[251/294    0s] CopyFiles Library/ScriptAssemblies/Unity.InternalAPIEngineBridge.004.dll
-[252/294    0s] CopyFiles Library/ScriptAssemblies/Unity.InternalAPIEngineBridge.004.pdb
-[253/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.Multiplayer.Center.Common.dll (+2 others)
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.Multiplayer.Center.Common.dll (+2 others) [CacheWrite 39d1bd6ecadbc732b51731fc15dc299b00000000000000000000000000000006]
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.Multiplayer.Center.Editor.dll (+2 others) [CacheMiss df53acf7acaf30c24634b6ed1a9745b400000000000000000000000000000006]
-[256/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/Unity.Multiplayer.Center.Common.dll (+pdb)
-Processing assembly Library/Bee/artifacts/2400b0aE.dag/Unity.Multiplayer.Center.Common.dll, with 136 defines and 305 references
-processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
-1 processor(s) skipped this assembly
-[257/294    0s] CopyFiles Library/ScriptAssemblies/Unity.Multiplayer.Center.Common.dll
-[258/294    0s] CopyFiles Library/ScriptAssemblies/Unity.Multiplayer.Center.Common.pdb
-[259/294    1s] Csc Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Runtime.dll (+2 others)
+ExitCode: 0 Duration: 3s516ms
+[247/294    0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+[278/294    2s] Csc Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Runtime.dll (+2 others)
 Assets/IamZhuli/Scripts/UI/MainUI.cs(57,28): warning CS8632: The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
 Assets/IamZhuli/Scripts/UI/MainUI.cs(71,21): warning CS0618: 'Object.FindObjectOfType<T>()' is obsolete: 'Object.FindObjectOfType has been deprecated. Use Object.FindAnyObjectByType instead.'
-[260/294    1s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.Multiplayer.Center.Editor.dll (+2 others)
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.Multiplayer.Center.Editor.dll (+2 others) [CacheWrite df53acf7acaf30c24634b6ed1a9745b400000000000000000000000000000006]
-[261/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/Unity.Multiplayer.Center.Editor.dll (+pdb)
-Processing assembly Library/Bee/artifacts/2400b0aE.dag/Unity.Multiplayer.Center.Editor.dll, with 136 defines and 306 references
-processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
-1 processor(s) skipped this assembly
-[262/294    0s] CopyFiles Library/ScriptAssemblies/Unity.Multiplayer.Center.Editor.dll
-[263/294    0s] CopyFiles Library/ScriptAssemblies/Unity.Multiplayer.Center.Editor.pdb
-[264/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/IamZhuli.Runtime.dll (+pdb)
+[279/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/IamZhuli.Runtime.dll (+pdb)
 Processing assembly Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Runtime.dll, with 138 defines and 273 references
 processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
 1 processor(s) skipped this assembly
-[265/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Tests.Runtime.dll (+2 others)
-[266/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Editor.dll (+2 others)
+[280/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Runtime.pdb
+[281/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Runtime.dll
+[282/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Editor.dll (+2 others)
 Assets/IamZhuli/Editor/SceneBuilder.cs(104,46): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
 Assets/IamZhuli/Editor/SceneBuilder.cs(103,24): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
-[267/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Runtime.pdb
-[268/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Runtime.dll
-[269/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/IamZhuli.Editor.dll (+pdb)
+[283/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Tests.Runtime.dll (+2 others)
+[284/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/IamZhuli.Editor.dll (+pdb)
 Processing assembly Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Editor.dll, with 136 defines and 306 references
 processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
 1 processor(s) skipped this assembly
-[270/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/IamZhuli.Tests.Runtime.dll (+pdb)
+[285/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/IamZhuli.Tests.Runtime.dll (+pdb)
 Processing assembly Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Tests.Runtime.dll, with 138 defines and 273 references
 processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
 1 processor(s) skipped this assembly
-[271/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Editor.pdb
-[272/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Editor.dll
-[273/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Tests.Runtime.dll
-[274/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Tests.Runtime.pdb
-[275/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Tests.Editor.dll (+2 others)
-[276/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/IamZhuli.Tests.Editor.dll (+pdb)
+[286/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Editor.dll
+[287/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Editor.pdb
+[288/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Tests.Runtime.dll
+[289/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Tests.Runtime.pdb
+[290/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Tests.Editor.dll (+2 others)
+[291/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/IamZhuli.Tests.Editor.dll (+pdb)
 Processing assembly Library/Bee/artifacts/2400b0aE.dag/IamZhuli.Tests.Editor.dll, with 136 defines and 306 references
 processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
 1 processor(s) skipped this assembly
-[277/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Tests.Editor.dll
-[278/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Tests.Editor.pdb
-[279/294    3s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.TextMeshPro.dll (+2 others)
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.TextMeshPro.dll (+2 others) [CacheWrite 9dc176656bc397665d2f67bb773ea45e00000000000000000000000000000006]
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.TextMeshPro.Editor.dll (+2 others) [CacheMiss 00720fdf871d56b0064c459241acf98400000000000000000000000000000006]
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/UnityEditor.UI.Analytics.dll (+2 others) [CacheMiss d03142856e68eaaf407cfe011f3227c600000000000000000000000000000006]
-[283/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/Unity.TextMeshPro.dll (+pdb)
-Processing assembly Library/Bee/artifacts/2400b0aE.dag/Unity.TextMeshPro.dll, with 139 defines and 274 references
-processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
-1 processor(s) skipped this assembly
-[284/294    0s] CopyFiles Library/ScriptAssemblies/Unity.TextMeshPro.pdb
-[285/294    0s] CopyFiles Library/ScriptAssemblies/Unity.TextMeshPro.dll
-[286/294    0s] Csc Library/Bee/artifacts/2400b0aE.dag/UnityEditor.UI.Analytics.dll (+2 others)
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/UnityEditor.UI.Analytics.dll (+2 others) [CacheWrite d03142856e68eaaf407cfe011f3227c600000000000000000000000000000006]
-[287/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/UnityEditor.UI.Analytics.dll (+pdb)
-Processing assembly Library/Bee/artifacts/2400b0aE.dag/UnityEditor.UI.Analytics.dll, with 136 defines and 306 references
-processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
-1 processor(s) skipped this assembly
-[288/294    0s] CopyFiles Library/ScriptAssemblies/UnityEditor.UI.Analytics.dll
-[289/294    0s] CopyFiles Library/ScriptAssemblies/UnityEditor.UI.Analytics.pdb
-[290/294    1s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.TextMeshPro.Editor.dll (+2 others)
-[           0s] Csc Library/Bee/artifacts/2400b0aE.dag/Unity.TextMeshPro.Editor.dll (+2 others) [CacheWrite 00720fdf871d56b0064c459241acf98400000000000000000000000000000006]
-[291/294    0s] ILPostProcess Library/Bee/artifacts/2400b0aE.dag/post-processed/Unity.TextMeshPro.Editor.dll (+pdb)
-Processing assembly Library/Bee/artifacts/2400b0aE.dag/Unity.TextMeshPro.Editor.dll, with 136 defines and 306 references
-processors: zzzUnity.Burst.CodeGen.BurstILPostProcessor
-1 processor(s) skipped this assembly
-[292/294    0s] CopyFiles Library/ScriptAssemblies/Unity.TextMeshPro.Editor.pdb
-[293/294    0s] CopyFiles Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll
-*** Tundra build success (10.25 seconds), 49 items updated, 294 evaluated
+[292/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Tests.Editor.dll
+[293/294    0s] CopyFiles Library/ScriptAssemblies/IamZhuli.Tests.Editor.pdb
+*** Tundra build success (3.49 seconds), 17 items updated, 294 evaluated
+Total cache size 55568513
 Assets/IamZhuli/Scripts/UI/MainUI.cs(57,28): warning CS8632: The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
 Assets/IamZhuli/Scripts/UI/MainUI.cs(71,21): warning CS0618: 'Object.FindObjectOfType<T>()' is obsolete: 'Object.FindObjectOfType has been deprecated. Use Object.FindAnyObjectByType instead.'
 Assets/IamZhuli/Editor/SceneBuilder.cs(104,46): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
 Assets/IamZhuli/Editor/SceneBuilder.cs(103,24): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
 Assets/IamZhuli/Editor/SceneBuilder.cs(103,24): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
-AssetDatabase: script compilation time: 11.325340s
-Total cache size 54312565
-Total cache size after purge 54312565, took 00:00:00.1287570
+AssetDatabase: script compilation time: 4.101389s
+Total cache size after purge 55568513, took 00:00:00.0196680
 Begin MonoManager ReloadAssembly
 Native extension for LinuxStandalone target not found
 ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:False
 Scripting: successfully reloaded assembly
-- Finished resetting the current domain, in  1.342 seconds
-Domain Reload Profiling: 3630ms
-	BeginReloadAssembly (1017ms)
-		DisableScriptedObjects (83ms)
-		CreateAndSetChildDomain (221ms)
-	RebuildCommonClasses (28ms)
-	RebuildNativeTypeToScriptingClass (100ms)
-	initialDomainReloadingComplete (141ms)
-	LoadAllAssembliesAndSetupDomain (1000ms)
-		LoadAssemblies (1004ms)
-		TypeCache.Refresh (84ms)
-			TypeCache.ScanAssembly (63ms)
-		AnalyzeDomain (32ms)
-			BuildScriptInfoCaches (23ms)
-			ResolveRequiredComponents (6ms)
-	FinalizeReload (1344ms)
+- Finished resetting the current domain, in  0.880 seconds
+Domain Reload Profiling: 1786ms
+	BeginReloadAssembly (374ms)
+		DisableScriptedObjects (40ms)
+		CreateAndSetChildDomain (97ms)
+	RebuildCommonClasses (16ms)
+	RebuildNativeTypeToScriptingClass (21ms)
+	initialDomainReloadingComplete (68ms)
+	LoadAllAssembliesAndSetupDomain (426ms)
+		LoadAssemblies (319ms)
+		TypeCache.Refresh (41ms)
+			TypeCache.ScanAssembly (31ms)
+		AnalyzeDomain (18ms)
+			BuildScriptInfoCaches (14ms)
+	FinalizeReload (882ms)
 		SetupLoadedEditorAssemblies (0ms)
-			InitializePlatformSupportModulesInManaged (4ms)
-			BeforeProcessingInitializeOnLoad (308ms)
-			ProcessInitializeOnLoadAttributes (132ms)
-			ProcessInitializeOnLoadMethodAttributes (108ms)
-			AfterProcessingInitializeOnLoad (11ms)
-		AwakeInstancesAfterBackupRestoration (80ms)
+			InitializePlatformSupportModulesInManaged (5ms)
+			BeforeProcessingInitializeOnLoad (231ms)
+			ProcessInitializeOnLoadAttributes (112ms)
+			ProcessInitializeOnLoadMethodAttributes (95ms)
+			AfterProcessingInitializeOnLoad (10ms)
+		AwakeInstancesAfterBackupRestoration (41ms)
 Starting new worker id: 0 with log in /home/leo/Projects/IamZhuli/unity/IamZhuli.Unity/Logs/AssetImportWorkerHW0.log
-No restricted APIs configured; Validation skipped.
-Checking 5 assemblies for restricted APIs found 0 usage(s) in 14 ms
 
-Asset Pipeline Refresh (id=d175bb7b3bb8f7197bb84a6a26210563): Total: 15.947 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+Asset Pipeline Refresh (id=46ba568f0d9b89d3fbe17750cb359c9b): Total: 6.421 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
 	(Values over 0.05ms)
 	Summary:
 		Imports: total=0 (actual=0, local cache=0, cache server=0)
-		Asset DB Process Time: managed=0 ms, native=1835 ms
-		Asset DB Callback time: managed=166 ms, native=36 ms
-		Scripting: domain reloads=1, domain reload time=2371 ms, compile time=11517 ms, other=20 ms
+		Asset DB Process Time: managed=0 ms, native=1187 ms
+		Asset DB Callback time: managed=150 ms, native=12 ms
+		Scripting: domain reloads=1, domain reload time=945 ms, compile time=4105 ms, other=20 ms
 		Project Asset Count: scripts=238, non-scripts=160
-		Asset File Changes: new=0, changed=6, moved=0, deleted=0
+		Asset File Changes: new=0, changed=2, moved=0, deleted=0
 		Scan Filter Count: 1
-	InvokePackagesCallback: 7.357ms
-	ApplyChangesToAssetFolders: 0.353ms
-	Scan: 263.339ms
-	Collect global state as custom dependencies: 17.687ms
-	OnSourceAssetsModified: 0.910ms
-	CategorizeScriptCompilationAssets: 9.240ms
-	ProcessAssetsWithTransientArtifactChanges: 66.397ms
-	CategorizeAssets: 10.620ms
-	CompileScripts: 11517.422ms
-	ImportOutOfDateAssets: 1368.765ms (1345.111ms without children)
-		UnloadImportedAssets: 0.537ms
-		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.258ms
-		ImportSchedulerStart: 22.848ms
-	PostProcessAllAssets: 187.263ms
-		AssemblyValidation.PostprocessAllAssets 4.342ms
-		VCAutoAddAssetPostprocess 1.452ms
-		PostProcessCallbackCreateDeferredMaterials 0.203ms
-		ShaderAssetModifiedCallback 0.095ms
-		MonoPostProcessAllAssets: 165.242ms
-			AssetPostprocessor.OnPostprocessAllAssets 51.503ms
-			BuilderAssetPostprocessor.OnPostprocessAllAssets 26.318ms
-			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 21.172ms
-			StyleCatalogPostProcessor.OnPostprocessAllAssets 19.070ms
-			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 3.175ms
-			AssetChangedListener.OnPostprocessAllAssets 3.027ms
-			SyncVS.PostprocessSyncProject 2.521ms
-			EditModeScopePostprocessor.OnPostprocessAllAssets 2.455ms
-			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 1.250ms
-			SpeedTree9Postprocessor.OnPostprocessAllAssets 1.121ms
-			TextAssetPostProcessor.OnPostprocessAllAssets 0.886ms
-			TMPro_TexturePostProcessor.OnPostprocessAllAssets 0.771ms
-			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.643ms
-			AudioMixerPostprocessor.OnPostprocessAllAssets 0.626ms
-			ConfigAssetsTracker.OnPostprocessAllAssets 0.601ms
-			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.508ms
-			AssetEvents.OnPostprocessAllAssets 0.427ms
-			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.393ms
-			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.305ms
-			SpeedTreePostProcessor.OnPostprocessAllAssets 0.252ms
-			ThemePostprocessor.OnPostprocessAllAssets 0.190ms
-			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.136ms
-			AudioContainerPostProcessor.OnPostprocessAllAssets 0.115ms
-	PostAssetChangesProfiler: 7.645ms
-	UnloadStreamsBegin: 2.649ms
-	GenerateScriptTypeHashes: 2.149ms
-	GenerateScriptTypeSerializationHashes: 4.242ms
-	Untracked: 2477.066ms
+	InvokePackagesCallback: 6.569ms
+	ApplyChangesToAssetFolders: 0.349ms
+	Scan: 149.876ms
+	Collect global state as custom dependencies: 15.087ms
+	OnSourceAssetsModified: 0.823ms
+	CategorizeScriptCompilationAssets: 8.752ms
+	ProcessAssetsWithTransientArtifactChanges: 27.095ms
+	CategorizeAssets: 8.266ms
+	CompileScripts: 4104.558ms
+	ImportOutOfDateAssets: 912.629ms (883.635ms without children)
+		UnloadImportedAssets: 0.345ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.208ms
+		ImportSchedulerStart: 28.432ms
+	PostProcessAllAssets: 152.693ms
+		VCAutoAddAssetPostprocess 1.689ms
+		PostProcessCallbackCreateDeferredMaterials 0.103ms
+		MonoPostProcessAllAssets: 149.997ms
+			AssetPostprocessor.OnPostprocessAllAssets 45.530ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 22.472ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 22.026ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 16.247ms
+			SyncVS.PostprocessSyncProject 4.071ms
+			EditModeScopePostprocessor.OnPostprocessAllAssets 3.328ms
+			AssetChangedListener.OnPostprocessAllAssets 3.151ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 2.715ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 1.528ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 1.276ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 1.175ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 1.039ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 0.784ms
+			TMPro_TexturePostProcessor.OnPostprocessAllAssets 0.618ms
+			AssetEvents.OnPostprocessAllAssets 0.567ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.452ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.285ms
+			ThemePostprocessor.OnPostprocessAllAssets 0.283ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.282ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.259ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.211ms
+			AudioContainerPostProcessor.OnPostprocessAllAssets 0.188ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.132ms
+	PostAssetChangesProfiler: 4.434ms
+	UnloadStreamsBegin: 2.435ms
+	GenerateScriptTypeHashes: 1.300ms
+	GenerateScriptTypeSerializationHashes: 2.492ms
+	Untracked: 1025.410ms
 
 Application.AssetDatabase Initial Refresh End
-AutoLocale: current locale expects 'C' but got 'zh_CN.UTF-8'Launched and connected shader compiler UnityShaderCompiler after 0.09 seconds
-Scanning for USB devices : 7.013ms
+AutoLocale: current locale expects 'C' but got 'zh_CN.UTF-8'Launched and connected shader compiler UnityShaderCompiler after 0.03 seconds
+Scanning for USB devices : 9.013ms
 Initializing Unity extensions:
 UpdateMenuTitleForLanguage: 10
 [MODES] ModeService[none].Initialize
 [MODES] ModeService[none].LoadModes
 [MODES] Loading mode Default (0) for mode-current-id-IamZhuli.Unity
 Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
-Unloading 839 unused Assets / (0.7 MB). Loaded Objects now: 1617.
-Memory consumption went from 120.9 MB to 120.2 MB.
-Total: 13.718717 ms (FindLiveObjects: 0.279875 ms CreateObjectMapping: 0.055189 ms MarkObjects: 12.296687 ms  DeleteObjects: 0.870282 ms)
+Unloading 839 unused Assets / (0.8 MB). Loaded Objects now: 1617.
+Memory consumption went from 120.8 MB to 120.0 MB.
+Total: 18.239252 ms (FindLiveObjects: 0.358683 ms CreateObjectMapping: 0.154564 ms MarkObjects: 16.104541 ms  DeleteObjects: 1.365336 ms)
 
-[Project] Loading completed in 24.615 seconds
-	Project init time: 				24.037 seconds
+[Project] Loading completed in 11.072 seconds
+	Project init time: 				10.603 seconds
 		Template init time: 		0.000 seconds
-		Package Manager init time: 		0.693 seconds
-		Asset Database init time: 		0.328 seconds
-		Global illumination init time: 	0.008 seconds
-		Assemblies load time: 			6.044 seconds
-		Unity extensions init time: 	0.005 seconds
-		Asset Database refresh time: 	15.948 seconds
-	Scene opening time: 			0.236 seconds
-##utp:{"type":"ProjectInfo","version":2,"phase":"Immediate","time":1792539880569,"processId":484040,"projectLoad":24.61467954,"projectInit":24.036798131,"templateInit":0.0,"packageManagerInit":0.693014918,"assetDatabaseInit":0.328311127,"globalIlluminationInit":0.007647056,"assembliesLoad":6.043540144,"unityExtensionsInit":0.004642984,"assetDatabaseRefresh":15.947767851,"sceneOpening":0.236177424}
-##utp:{"type":"EditorInfo","version":2,"phase":"Immediate","time":1792539880569,"processId":484040,"editorVersion":"6000.6.2f1 (770e33f6875c)","branch":"6000.6/staging","buildType":"Release","platform":"Linux"}
-Asset Pipeline Refresh (id=8404bae484f17948b8e70722dbec99e8): Total: 0.068 seconds - Initiated by RefreshV2(ForceSynchronousImport)
+		Package Manager init time: 		0.382 seconds
+		Asset Database init time: 		0.261 seconds
+		Global illumination init time: 	0.005 seconds
+		Assemblies load time: 			2.986 seconds
+		Unity extensions init time: 	0.007 seconds
+		Asset Database refresh time: 	6.422 seconds
+	Scene opening time: 			0.178 seconds
+##utp:{"type":"ProjectInfo","version":2,"phase":"Immediate","time":1792543287307,"processId":498900,"projectLoad":11.071576511,"projectInit":10.602904143,"templateInit":0.0,"packageManagerInit":0.381997662,"assetDatabaseInit":0.260613087,"globalIlluminationInit":0.00462036,"assembliesLoad":2.986058279,"unityExtensionsInit":0.007017405,"assetDatabaseRefresh":6.42176022,"sceneOpening":0.178258365}
+##utp:{"type":"EditorInfo","version":2,"phase":"Immediate","time":1792543287307,"processId":498900,"editorVersion":"6000.6.2f1 (770e33f6875c)","branch":"6000.6/staging","buildType":"Release","platform":"Linux"}
+Asset Pipeline Refresh (id=c57857096ee4fdaafbbf2a89b8e04b76): Total: 0.088 seconds - Initiated by RefreshV2(ForceSynchronousImport)
 [Licensing::Client] Successfully resolved entitlement details
 Running tests for ExecutionSettings with details:
 targetPlatform = 
@@ -474,11 +393,11 @@ UnityEditor.EditorApplication:Internal_CallUpdateFunctions () (at /home/bokken/b
 (Filename: ./Library/PackageCache/com.unity.test-framework@f0b61198e8dc/UnityEditor.TestRunner/CommandLineTest/Executer.cs Line: 53)
 
 [UnityConnectServicesConfig] config is NOT valid, switching to default
-Created GICache directory at /home/leo/.cache/unity3d/GiCache. Took: 0.007s, timestamps: [24.623 - 24.630]
+Created GICache directory at /home/leo/.cache/unity3d/GiCache. Took: 0.007s, timestamps: [11.078 - 11.085]
 Unloading 1 Unused Serialized files (Serialized files now loaded: 0)
 Unloading 1 unused Assets / (1.7 KB). Loaded Objects now: 1773.
 Memory consumption went from 121.0 MB to 121.0 MB.
-Total: 13.162240 ms (FindLiveObjects: 0.275088 ms CreateObjectMapping: 0.042618 ms MarkObjects: 12.446732 ms  DeleteObjects: 0.054618 ms)
+Total: 12.200642 ms (FindLiveObjects: 0.413296 ms CreateObjectMapping: 0.119766 ms MarkObjects: 11.360004 ms  DeleteObjects: 0.027828 ms)
 
 Worker ready: AssetImportWorkerHW0 0
 逻辑层 DLL 就绪: GameCore@IamZhuli.Presenter
@@ -533,28 +452,28 @@ UnityEditor.EditorApplication:Internal_CallUpdateFunctions () (at /home/bokken/b
 (Filename: Assets/IamZhuli/Editor/SceneBuilder.cs Line: 62)
 
 Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
-Unloading 40 unused Assets / (494.9 KB). Loaded Objects now: 1774.
-Memory consumption went from 122.5 MB to 122.0 MB.
-Total: 14.025894 ms (FindLiveObjects: 0.186274 ms CreateObjectMapping: 0.027280 ms MarkObjects: 13.017608 ms  DeleteObjects: 0.595676 ms)
+Unloading 40 unused Assets / (0.6 MB). Loaded Objects now: 1774.
+Memory consumption went from 122.5 MB to 121.9 MB.
+Total: 10.853254 ms (FindLiveObjects: 0.244810 ms CreateObjectMapping: 0.045835 ms MarkObjects: 9.571476 ms  DeleteObjects: 0.783583 ms)
 
 Importing 'GUID: 56ca4738a4a2709f99c2f44641fe72ce - Path: Assets/Scenes/Main.unity' with importer (DefaultImporter)
-Imported 'GUID: 56ca4738a4a2709f99c2f44641fe72ce' -> (Import Result ID: 'bb473048fd0d0162747252d13c847d49') in 0.008 seconds [static dependencies only]. Details - ImportResultOutputID=c03f23e26a4f042c9199094839b5ccf8 DependenciesID=b4d70d0b0ab07d77fc93224804d4a75f StaticDependenciesID=b0ef8a91856064d6a383effcc1153e15 
-Asset Pipeline Refresh (id=0d1cf1b59c7db8ccdb3f0945ff682c6c): Total: 0.022 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Imported 'GUID: 56ca4738a4a2709f99c2f44641fe72ce' -> (Import Result ID: 'ad3bd49c3709e922c1d79a1e090ec7e4') in 0.007 seconds [static dependencies only]. Details - ImportResultOutputID=c03f23e26a4f042c9199094839b5ccf8 DependenciesID=8b09b8bae7680aac43d0e773c357c7c9 StaticDependenciesID=5d7cb5fb390d58ee21897f8cd2c2246e 
+Asset Pipeline Refresh (id=68bddaccdea65a9b4b48dc7da04b963e): Total: 0.019 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
 Opening scene 'Assets/Scenes/Main.unity'
 Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
 Loaded scene 'Assets/Scenes/Main.unity'
-	Deserialize:            1.255 ms
-	Integration:            94.935 ms
-	Integration of assets:  0.005 ms
-	Thread Wait Time:       0.012 ms
-	Total Operation Time:   96.207 ms
-Unloading 39 unused Assets / (113.5 KB). Loaded Objects now: 1784.
-Memory consumption went from 158.0 MB to 157.9 MB.
-Total: 12.971432 ms (FindLiveObjects: 0.249918 ms CreateObjectMapping: 0.049742 ms MarkObjects: 12.149237 ms  DeleteObjects: 0.287250 ms)
+	Deserialize:            0.969 ms
+	Integration:            84.115 ms
+	Integration of assets:  0.002 ms
+	Thread Wait Time:       0.034 ms
+	Total Operation Time:   85.119 ms
+Unloading 39 unused Assets / (489.8 KB). Loaded Objects now: 1784.
+Memory consumption went from 158.0 MB to 157.5 MB.
+Total: 12.155729 ms (FindLiveObjects: 0.215459 ms CreateObjectMapping: 0.097361 ms MarkObjects: 11.442038 ms  DeleteObjects: 0.206472 ms)
 
 Importing 'GUID: 56ca4738a4a2709f99c2f44641fe72ce - Path: Assets/Scenes/Main.unity' with importer (DefaultImporter)
-Imported 'GUID: 56ca4738a4a2709f99c2f44641fe72ce' -> (Import Result ID: 'ebfb11c78295522eb6d261545758f557') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=c03f23e26a4f042c9199094839b5ccf8 DependenciesID=3b15d2aec7c647bc9baf4d473f41bf26 StaticDependenciesID=2c440bdcd4beb6d34887395b164df801 
-Asset Pipeline Refresh (id=fc1c0f81cdc2c2e7f920ffb9d8da1ef7): Total: 0.009 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Imported 'GUID: 56ca4738a4a2709f99c2f44641fe72ce' -> (Import Result ID: 'ced0189ed55d3582c7b896ec78b3d476') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=c03f23e26a4f042c9199094839b5ccf8 DependenciesID=56f7fc828b172bd3bc0fdceb341d2036 StaticDependenciesID=852623d02e408994cb86cdcff45bf7c9 
+Asset Pipeline Refresh (id=e2dcb6d44db33fd95a907bc37cafbd7e): Total: 0.008 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
 场景搭建完成: Assets/Scenes/Main.unity
 UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
 UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:23)
@@ -607,15 +526,15 @@ UnityEditor.EditorApplication:Internal_CallUpdateFunctions () (at /home/bokken/b
 (Filename: Assets/IamZhuli/Editor/SceneBuilder.cs Line: 114)
 
 Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
-Unloading 40 unused Assets / (105.5 KB). Loaded Objects now: 1770.
-Memory consumption went from 158.0 MB to 157.9 MB.
-Total: 16.239205 ms (FindLiveObjects: 0.396685 ms CreateObjectMapping: 0.082266 ms MarkObjects: 15.135225 ms  DeleteObjects: 0.389826 ms)
+Unloading 40 unused Assets / (0.5 MB). Loaded Objects now: 1770.
+Memory consumption went from 158.0 MB to 157.5 MB.
+Total: 15.004454 ms (FindLiveObjects: 0.426044 ms CreateObjectMapping: 0.090112 ms MarkObjects: 13.894055 ms  DeleteObjects: 0.359488 ms)
 
 Saving results to: /home/leo/Projects/IamZhuli/unity/test-results/EditMode.xml
 Unloading 2 Unused Serialized files (Serialized files now loaded: 0)
 Unloading 2 unused Assets / (16.6 KB). Loaded Objects now: 1776.
 Memory consumption went from 157.4 MB to 157.3 MB.
-Total: 11.602529 ms (FindLiveObjects: 0.334552 ms CreateObjectMapping: 0.067067 ms MarkObjects: 10.914945 ms  DeleteObjects: 0.070065 ms)
+Total: 11.895527 ms (FindLiveObjects: 0.288628 ms CreateObjectMapping: 0.049995 ms MarkObjects: 11.270761 ms  DeleteObjects: 0.066803 ms)
 
 DisplayProgressbar: Undo
 Test run completed. Exiting with code 0 (Ok). Run completed.
@@ -631,8 +550,10 @@ UnityEditor.EditorApplication:Internal_CallUpdateFunctions () (at /home/bokken/b
 
 (Filename: ./Library/PackageCache/com.unity.test-framework@f0b61198e8dc/UnityEditor.TestRunner/CommandLineTest/Executer.cs Line: 81)
 
-MonoPathRemapper: Attempts to remap: 2694; Successful remaps: 8
+MonoPathRemapper: Attempts to remap: 2656; Successful remaps: 8
 Serialized file version minimum: 23, current 23
+Shutting down MSBuild server...
+Shutting down VB/C# compiler server...
 [Physics::Module] Cleanup current backend.
 [Physics::Module] Id: 0xf2b8ea05
 Input System module state changed to: ShutdownInProgress.
@@ -640,14 +561,12 @@ Input Polling Thread exited.
 Input System module state changed to: Shutdown.
 [Licensing::IpcConnector] LicenseClient-leo-notifications channel disconnected successfully.
 [Licensing::IpcConnector] LicenseClient-leo channel disconnected successfully.
-Shutting down MSBuild server...
-Shutting down VB/C# compiler server...
 VB/C# compiler server shut down successfully.
 MSBuild server shut down successfully.
-Shut down UDS service system complete
 Lingering sessions upon destruction of worker manager
 Unity Data Store service was successfully shut down
 UDS shutting down local client system
+Shut down UDS service system complete
 AcceleratorClientConnectionCallback - disconnected - :0
 Cleanup mono
 CodeReloadManager destroyed
@@ -655,4 +574,4 @@ debugger-agent: Unable to listen on 70
 Checking for leaked weakptr:
   Found no leaked weakptrs.
 [Package Manager] Server process was shutdown
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792539894693,"processId":484040,"allocatedMemory":7075135,"memoryLabels":[{"Default":191075},{"Permanent":16152},{"Thread":1052216},{"Manager":24753},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":836325},{"Material":68},{"GfxDevice":36104},{"Animation":1016},{"Audio":160},{"FreeType":8},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":16944},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"ScriptingNativeRuntime":155088},{"BaseObject":52656},{"Resource":1076},{"Renderer":2368},{"Transform":4717},{"File":7193},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":658244},{"StaticString":3808},{"Utility":2674352},{"Curl":2511},{"PoolAlloc":1960},{"AI":80},{"TypeTree":15989},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":288},{"WebRequest":552},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":2377},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":464},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":71610},{"VersionControl":8},{"Undo":963},{"AssetDatabase":652362},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40473},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":146},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2402},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792543300873,"processId":498900,"allocatedMemory":7060068,"memoryLabels":[{"Default":191075},{"Permanent":16152},{"Thread":1052216},{"Manager":24753},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":836325},{"Material":68},{"GfxDevice":36104},{"Animation":1016},{"Audio":160},{"FreeType":8},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":16944},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"ScriptingNativeRuntime":155088},{"BaseObject":52656},{"Resource":1076},{"Renderer":2368},{"Transform":4717},{"File":7193},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":643177},{"StaticString":3808},{"Utility":2674352},{"Curl":2511},{"PoolAlloc":1960},{"AI":80},{"TypeTree":15989},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":288},{"WebRequest":552},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":2377},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":464},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":71610},{"VersionControl":8},{"Undo":963},{"AssetDatabase":652362},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40473},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":146},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2402},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}

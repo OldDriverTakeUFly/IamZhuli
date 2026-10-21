@@ -78,7 +78,25 @@ namespace IamZhuli.Unity
             Bind();
             _host.SnapshotUpdated += Render;
             _host.TradeTick += _onTrade;
-            ShowLevelSelect();
+
+            // 自动化验收(Xvfb无头跑): -autostart <关卡> 跳过选关直开盘;
+            // -autoendturn Play阶段自动结束回合。像素级合成点击对SDL3不可靠,
+            // 布局验收一律走本通道。
+            var args = System.Environment.GetCommandLineArgs();
+            string autoLevel = null;
+            for (int i = 0; i < args.Length; i++)   // 无参开关也在此分支,末位参数不可跳过
+            {
+                if (args[i] == "-autostart" && i + 1 < args.Length) autoLevel = args[i + 1];
+                else if (args[i] == "-autoendturn") _host.AutoEndTurn = true;
+            }
+            if (autoLevel != null)
+            {
+                _host.Core.LoadLevelById(autoLevel);
+                _host.Core.BeginTrading();
+                _levelOverlay.style.display = DisplayStyle.None;   // UXML默认可见,不藏会空壳盖屏
+                _resultOverlay.style.display = DisplayStyle.None;
+            }
+            else ShowLevelSelect();
             Render(_host.Core.BuildSnapshot());
         }
 
@@ -305,38 +323,13 @@ namespace IamZhuli.Unity
             RenderTrades();
         }
 
-        private static bool _accDiagDone;
-
         private void RenderBook(MarketSnapshotDto snap)
         {
             _asksContainer.Clear();
+            _bidsContainer.Clear();   // 漏清买盘→每帧堆5行无限累积,撑爆左栏(ACCDIAG实测35行/630px)
             // asks 逆序:卖5在上卖1在下
             for (int i = snap.Asks.Count - 1; i >= 0; i--) _asksContainer.Add(BookRow(snap.Asks[i], true));
             for (int i = 0; i < snap.Bids.Count && i < 5; i++) _bidsContainer.Add(BookRow(snap.Bids[i], false));   // 五档
-            if (!_accDiagDone && snap.Asks.Count > 0)
-            {
-                _accDiagDone = true;
-                _asksContainer.schedule.Execute(() =>
-                {
-                    var sb = new System.Text.StringBuilder("[ACCDIAG]");
-                    void Dump(string name, VisualElement el)
-                    {
-                        sb.Append($" {name}(w={el.layout.width:F0},h={el.layout.height:F0}");
-                        if (el.parent != null) sb.Append($",parentW={el.parent.layout.width:F0}");
-                        int n = 0;
-                        foreach (var child in el.Children())
-                        {
-                            sb.Append($" 子{n}(w={child.layout.width:F0},h={child.layout.height:F0},fd={child.resolvedStyle.flexDirection})");
-                            if (++n >= 2) break;
-                        }
-                        sb.Append(")");
-                    }
-                    Dump("asks", _asksContainer);
-                    Dump("bids", _bidsContainer);
-                    if (_tradesContainer != null) Dump("trades", _tradesContainer);
-                    Debug.Log(sb.ToString());
-                }).StartingIn(2500);
-            }
         }
 
         private static VisualElement BookRow(PriceLevelDto level, bool isAsk)

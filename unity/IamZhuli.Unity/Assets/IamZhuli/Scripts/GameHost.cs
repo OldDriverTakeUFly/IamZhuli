@@ -14,6 +14,10 @@ namespace IamZhuli.Unity
 
         [Range(0f, 20f)] public float ticksPerSecond = 2.5f;
 
+        /// <summary>自动化验收:Play阶段到点自动结束回合(-autoendturn 启动参数)。</summary>
+        public bool AutoEndTurn { get; set; }
+        private float _autoTurnTimer;
+
         /// <summary>每次 tick 后触发(卡牌Play阶段/盘前也触发,UI 需刷新但时钟未走)。</summary>
         public event Action<MarketSnapshotDto> SnapshotUpdated;
 
@@ -26,6 +30,8 @@ namespace IamZhuli.Unity
 
         void OnEnable()
         {
+            // Xvfb无WM时窗口永远无焦点,播放器默认后台暂停会冻住整个游戏(Update/输入全停)
+            UnityEngine.Application.runInBackground = true;
             Core.TradePushed += OnTrade;
         }
 
@@ -68,6 +74,19 @@ namespace IamZhuli.Unity
                 bool frozen = snap.IsPreMarket
                     || (snap.CardState != null && snap.CardState.Phase == "Play");
                 if (frozen) { _accumulator = 0f; break; }
+            }
+
+            // 自动验收:Play阶段每3秒替玩家结束回合(挂单入簿/推进段)
+            if (AutoEndTurn && !Core.IsLevelOver)
+            {
+                _autoTurnTimer += Time.deltaTime;
+                if (_autoTurnTimer >= 3f)
+                {
+                    _autoTurnTimer = 0f;
+                    var cs = Core.BuildSnapshot().CardState;
+                    if (cs is { Phase: "Play" }) Core.EndCardTurn();
+                }
+
             }
         }
     }
