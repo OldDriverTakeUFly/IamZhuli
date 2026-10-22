@@ -72,3 +72,10 @@ IamZhuli/
 - **不擅自扩大范围**:严格按设计文档的 POC 范围(第一期纯交易)实施,信息战/融资融券/沙盒是后续阶段。
 - **改动前读规范**:动手写代码前先读 `docs/02-开发规范.md`。
 - **提交规范**(如启用 git):Conventional Commits 中文 scope,如 `feat(engine): 实现订单簿基础撮合`。
+
+## 环境事实与迁移注意(4060Ti 新机)
+
+- **.NET 8**(`net8.0`;Unity 侧绑定用 `netstandard2.1`);`rtk dotnet restore/build/test` 即可跑逻辑层与测试
+- 实际结构在上文基础上已扩展:`unity/`(Unity 表现层,工程在 `unity/IamZhuli.Unity/`,Editor 版本见其 `ProjectSettings/ProjectVersion.txt`)、`unity/build*`、`test-results` 均为产物,不入库、clone 后重建
+- 客户端存在 Flutter 线(commit 前缀 `feat(flutter)`),涉及桌面 `.so` 分发路径回退链——新机打包桌面版时注意 Linux 库路径
+- 迁移到新机:clone + dotnet restore + Unity/Flutter 工具链装齐即可,无外部数据依赖
